@@ -1,0 +1,46 @@
+{
+  "name": "@genoffice/sheets",
+  "productName": "TandemFolio Sheets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-native source-preserving XLSX editor for TandemFolio.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "vite --config vite.renderer.config.ts",
+    "build": "vite build --config vite.renderer.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fluentui/react-icons": "^2.0.333",
+    "@tandemfolio/host-bridge": "*",
+    "@genoffice/docx-engine": "*",
+    "@genoffice/i18n": "*",
+    "@genoffice/ui": "*",
+    "@univerjs/core": "^0.25.1",
+    "@univerjs/preset-sheets-conditional-formatting": "^0.25.1",
+    "@univerjs/preset-sheets-core": "^0.25.1",
+    "@univerjs/preset-sheets-data-validation": "^0.25.1",
+    "@univerjs/preset-sheets-drawing": "^0.25.1",
+    "@univerjs/preset-sheets-filter": "^0.25.1",
+    "@univerjs/preset-sheets-find-replace": "^0.25.1",
+    "@univerjs/preset-sheets-note": "^0.25.1",
+    "@univerjs/preset-sheets-sort": "^0.25.1",
+    "@univerjs/preset-sheets-table": "^0.25.1",
+    "@univerjs/sheets": "^0.25.1",
+    "@univerjs/themes": "^0.25.1",
+    "jszip": "^3.10.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.0"
+  }
+}

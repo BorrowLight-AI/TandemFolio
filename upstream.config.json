@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/genspark-ai/genoffice.git",
+  "remote": "upstream",
+  "branch": "main",
+  "baseline": "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
+  "pushUrl": "DISABLED",
+  "fetchFilter": "blob:none",
+  "excludedPaths": ["ee/**"]
+}

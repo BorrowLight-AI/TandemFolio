@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ready": false,
+  "formats": {
+    "docx": false,
+    "markdown": false,
+    "xlsx": false,
+    "pptx": false,
+    "pdf": false
+  },
+  "upstreamCommit": "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
+  "sourceFingerprint": "5a93c6ae57d34e5d268a9671c3d9af31f61e23ef55adf223ffe737343df9e09f"
+}

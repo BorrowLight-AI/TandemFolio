@@ -1,0 +1,40 @@
+{
+  "operations": [
+    {
+      "atomic": true,
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "fixture",
+      "format": "markdown",
+      "id": "markdown.fixture.insert_text",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "risk": "low",
+      "summary": "Insert fixture text",
+      "undoable": true,
+      "visibility": "agent"
+    }
+  ],
+  "schemaVersion": 1
+}

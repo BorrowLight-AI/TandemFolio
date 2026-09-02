@@ -1,0 +1,40 @@
+{
+  "name": "@genoffice/markdown",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "Source-preserving Markdown editor for the TandemFolio browser and MCP App hosts",
+  "scripts": {
+    "dev": "vite --config vite.renderer.config.ts",
+    "build": "vite build --config vite.renderer.config.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tandemfolio/host-bridge": "*",
+    "@tandemfolio/operation-contract": "*",
+    "@genoffice/docx-engine": "*",
+    "@genoffice/i18n": "*",
+    "@genoffice/ui": "*",
+    "@tiptap/core": "3.30.5",
+    "@tiptap/extension-code-block": "3.30.5",
+    "@tiptap/extension-image": "3.30.5",
+    "@tiptap/extension-list": "3.30.5",
+    "@tiptap/extension-table": "3.30.5",
+    "@tiptap/extensions": "3.30.5",
+    "@tiptap/markdown": "3.30.5",
+    "@tiptap/pm": "3.30.5",
+    "@tiptap/react": "3.30.5",
+    "@tiptap/starter-kit": "3.30.5",
+    "@tiptap/suggestion": "3.30.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.0.4",
+    "jsdom": "^28.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.10"
+  }
+}

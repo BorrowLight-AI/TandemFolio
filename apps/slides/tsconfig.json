@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    // Pin resolution to this repo's workspace sources (avoids stale types when node_modules links point elsewhere)
+    "baseUrl": ".",
+    "paths": {
+      "@genoffice/pptx-engine": ["../../packages/pptx-engine/src/index.ts"],
+      "@genoffice/pptx-engine/table-grid": ["../../packages/pptx-engine/src/table-grid.ts"],
+      "@genoffice/pptx-engine/background-promote": [
+        "../../packages/pptx-engine/src/background-promote.ts"
+      ],
+      "@genoffice/pptx-render": ["../../packages/pptx-render/src/index.ts"]
+    }
+  },
+  "include": [
+    "vite.renderer.config.ts",
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "src/shared/**/*.ts",
+    "tests/**/*.test.ts"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@genoffice/docs",
+  "productName": "TandemFolio Docs",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-native DOCX editor with paragraph-patch save.",
+  "scripts": {
+    "dev": "vite --config vite.renderer.config.ts",
+    "build": "vite build --config vite.renderer.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@genoffice/docx-engine": "*",
+    "@genoffice/font-metrics": "*",
+    "@genoffice/i18n": "*",
+    "@genoffice/ui": "*",
+    "@tandemfolio/host-bridge": "*",
+    "@tandemfolio/operation-contract": "*",
+    "@tiptap/core": "3.30.5",
+    "@tiptap/extensions": "3.30.5",
+    "@tiptap/pm": "3.30.5",
+    "@tiptap/react": "3.30.5",
+    "marked": "^17.0.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.0.4",
+    "jsdom": "^28.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.0"
+  }
+}

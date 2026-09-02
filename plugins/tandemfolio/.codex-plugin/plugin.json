@@ -1,0 +1,22 @@
+{
+  "name": "tandemfolio",
+  "version": "0.1.0+codex.20260902084921",
+  "description": "Local-first DOCX, XLSX, PPTX, PDF, and Markdown editing in persistent MCP App surfaces.",
+  "author": {
+    "name": "TandemFolio contributors"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "TandemFolio",
+    "shortDescription": "Edit files with a live visual editor.",
+    "longDescription": "Open a persistent DOCX, XLSX, PPTX, PDF, or Markdown TandemFolio editor and let Codex operate on the exact live file, selection, and revision that you see.",
+    "developerName": "TandemFolio contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "MCP Apps",
+      "Skills"
+    ],
+    "defaultPrompt": "Open TandemFolio and help me edit this document in the live visual editor."
+  }
+}

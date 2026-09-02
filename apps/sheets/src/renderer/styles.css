@@ -1,0 +1,3288 @@
+/* Per-app accent (excel-green family) + sheets-only tokens.
+ * Shared chrome tokens come from @genoffice/ui/tokens.css. */
+:root {
+  --excel-green: #217346;
+  --excel-green-dark: #185c37;
+  --excel-green-soft: #e9f3ed;
+  --accent: var(--excel-green);
+  --accent-dark: var(--excel-green-dark);
+  --accent-soft: var(--excel-green-soft);
+
+  --surface-hover: #edf1ee;
+  /* ribbon toggle states match the slides ribbon (--hover / --active-bg):
+     neutral gray, not the app's green-tinted surface hover */
+  --ribbon-hover: var(--color-bg-subtle);
+  --ribbon-active: #eaeaea;
+  --focus: rgb(33 115 70 / 24%);
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-small: var(--radius-4);
+  --radius-medium: var(--radius-6);
+  --shadow-panel: 0 8px 24px rgb(0 0 0 / 10%);
+  --shadow-modal: 0 3px 30px rgb(0 0 0 / 8%);
+
+  /* sheets-local chrome shades */
+  --sheets-error: #b3261e;
+  --sheets-statusbar-bg: #f3f4f6;
+  --sheets-statusbar-border: #e1e4e8;
+  --sheets-statusbar-hover: rgb(0 0 0 / 8%);
+  --sheets-zoom-slider: #8a8886;
+  --sheets-focus-ring: rgb(35 36 37 / 20%);
+  --sheets-scroll-thumb: rgb(0 0 0 / 25%);
+  --sheets-member-bg: #f6f8f7;
+  --sheets-member-ink: #5c6660;
+
+  /* content-side constants: charts, shapes and their selection chrome sit on
+   * the paper-like grid and never follow the theme */
+  --sheets-paper: #ffffff;
+  --sheets-on-accent: #ffffff;
+  --sheets-knob-dot: #ffffff;
+  --sheets-chart-border: #c9cdd1;
+  --sheets-chart-ink: #333;
+  --sheets-chart-label: #555;
+  --sheets-chart-label-dim: #888;
+  --sheets-pie-label-in: #fff;
+  --sheets-pie-label-out: #444;
+  --sheets-pie-label-stroke: rgb(0 0 0 / 25%);
+  --sheets-select-blue: #1f5aa8;
+  --sheets-select-blue-bg: rgb(31 90 168 / 6%);
+  --sheets-el-selected: #107c41;
+  --sheets-float-btn-bg: rgb(255 255 255 / 92%);
+  --sheets-shape-border: #aeb4b8;
+  --sheets-shape-bg: rgb(255 255 255 / 94%);
+  --sheets-shape-ink: #596068;
+  --sheets-shape-err-border: #d9a4a4;
+  --sheets-shape-err-ink: #9a3030;
+  --sheets-content-danger: #b42318;
+
+  /* black translucent masks/shadows hold in both themes */
+  --sheets-toast-bg: rgb(35 35 37 / 92%);
+  --sheets-toast-error-bg: rgb(196 49 75 / 95%);
+  --sheets-toast-ink: #fff;
+  --sheets-toast-ok: #34c759;
+  --sheets-on-accent-hover: rgb(255 255 255 / 22%);
+  --sheets-mask-bg: rgb(0 0 0 / 50%);
+  --sheets-shadow-drop: 0 6px 20px rgb(0 0 0 / 14%), 0 1px 3px rgb(0 0 0 / 8%);
+  --sheets-shadow-menu: 0 6px 20px rgb(0 0 0 / 18%);
+  --sheets-shadow-pane: 0 4px 18px rgb(0 0 0 / 12%);
+  --sheets-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
+  --sheets-shadow-chart: 0 1px 3px rgb(0 0 0 / 12%);
+  --sheets-shadow-slicer: 0 6px 18px rgb(15 40 30 / 14%);
+  --sheets-shadow-toast: 0 4px 16px rgb(0 0 0 / 18%);
+
+  /* Same stack as docs/slides — an Inter fallback here made ribbon labels
+     render in a different face than the other apps on machines with Inter */
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
+  color: var(--text);
+  background: var(--surface);
+  font-synthesis: none;
+}
+
+[data-theme='dark'] {
+  --accent: #34a853;
+  --accent-dark: #58b380;
+  --accent-soft: #1d3328;
+  --surface-hover: #333;
+  --ribbon-hover: #333;
+  --ribbon-active: #454545;
+  --focus: rgb(52 168 83 / 40%);
+  --shadow-panel: 0 8px 24px rgb(0 0 0 / 45%);
+  --sheets-error: #e57373;
+  --sheets-statusbar-bg: #252525;
+  --sheets-statusbar-border: #3a3a3a;
+  --sheets-statusbar-hover: rgb(255 255 255 / 10%);
+  --sheets-zoom-slider: #777;
+  --sheets-focus-ring: rgb(228 228 228 / 25%);
+  --sheets-scroll-thumb: rgb(255 255 255 / 28%);
+  --sheets-member-bg: #2f2f2f;
+  --sheets-member-ink: #a9b2ac;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --accent: #34a853;
+    --accent-dark: #58b380;
+    --accent-soft: #1d3328;
+    --surface-hover: #333;
+    --ribbon-hover: #333;
+    --ribbon-active: #454545;
+    --focus: rgb(52 168 83 / 40%);
+    --shadow-panel: 0 8px 24px rgb(0 0 0 / 45%);
+    --sheets-error: #e57373;
+    --sheets-statusbar-bg: #252525;
+    --sheets-statusbar-border: #3a3a3a;
+    --sheets-statusbar-hover: rgb(255 255 255 / 10%);
+    --sheets-zoom-slider: #777;
+    --sheets-focus-ring: rgb(228 228 228 / 25%);
+    --sheets-scroll-thumb: rgb(255 255 255 / 28%);
+    --sheets-member-bg: #2f2f2f;
+    --sheets-member-ink: #a9b2ac;
+  }
+}
+
+/* UI CJK fonts per language (documentElement.lang is set at bootstrap and on switch);
+ * the zh expansion must keep the historical stack byte-identical */
+:root {
+  --ui-cjk: 'PingFang SC', 'Microsoft YaHei';
+}
+
+:root:lang(ja) {
+  --ui-cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo';
+}
+
+:root:lang(ko) {
+  --ui-cjk: 'Apple SD Gothic Neo', 'Malgun Gothic';
+}
+
+:root:lang(zh-TW) {
+  --ui-cjk: 'PingFang TC', 'Microsoft JhengHei';
+}
+
+/* Cell-content font aliases (document data, theme-independent): without these,
+ * Office sans families the OS lacks silently fall back to Chromium's serif
+ * default on the grid canvas; local() keeps the real font first if installed. */
+@font-face {
+  font-family: Aptos;
+  src: local('Aptos'), local('Calibri'), local('Carlito'), local('Helvetica Neue'), local('Arial');
+}
+
+@font-face {
+  font-family: Aptos;
+  font-weight: bold;
+  src:
+    local('Aptos Bold'), local('Calibri Bold'), local('Carlito Bold'), local('Helvetica Neue Bold'),
+    local('Arial Bold');
+}
+
+@font-face {
+  font-family: Aptos;
+  font-style: italic;
+  src:
+    local('Aptos Italic'), local('Calibri Italic'), local('Carlito Italic'),
+    local('Helvetica Neue Italic'), local('Arial Italic');
+}
+
+@font-face {
+  font-family: Aptos;
+  font-weight: bold;
+  font-style: italic;
+  src:
+    local('Aptos Bold Italic'), local('Calibri Bold Italic'), local('Carlito Bold Italic'),
+    local('Helvetica Neue Bold Italic'), local('Arial Bold Italic');
+}
+
+@font-face {
+  font-family: Calibri;
+  src: local('Calibri'), local('Carlito'), local('Helvetica Neue'), local('Arial');
+}
+
+@font-face {
+  font-family: Calibri;
+  font-weight: bold;
+  src:
+    local('Calibri Bold'), local('Carlito Bold'), local('Helvetica Neue Bold'), local('Arial Bold');
+}
+
+@font-face {
+  font-family: Calibri;
+  font-style: italic;
+  src:
+    local('Calibri Italic'), local('Carlito Italic'), local('Helvetica Neue Italic'),
+    local('Arial Italic');
+}
+
+@font-face {
+  font-family: Calibri;
+  font-weight: bold;
+  font-style: italic;
+  src:
+    local('Calibri Bold Italic'), local('Carlito Bold Italic'), local('Helvetica Neue Bold Italic'),
+    local('Arial Bold Italic');
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  /* Grayscale antialiasing to match docs/slides: without it, same-weight text renders noticeably bolder on macOS */
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+button:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.app-shell {
+  display: grid;
+  /* minmax(0, 1fr) column: the ribbon's min-content width must clip at the
+     viewport instead of stretching the whole shell past it. */
+  grid-template-columns: minmax(0, 1fr);
+  /* header / sheet body, with the status bar inside the sheet column */
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  width: 100%;
+  min-width: 0;
+  background: var(--surface);
+}
+
+.host-command {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.visually-hidden-file {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* Excel's formula-bar row: Name Box (plus its Go To arrow) for now. */
+.name-box-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-subtle);
+}
+
+.name-box {
+  width: 120px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small) 0 0 var(--radius-small);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.name-box:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+
+.name-box.invalid {
+  border-color: var(--sheets-error);
+}
+
+.name-box-goto {
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 var(--radius-small) var(--radius-small) 0;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+/* Go To dialog: defined-name list, one row per name with its ref. */
+.goto-name-list {
+  max-height: 180px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+
+.goto-name-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.goto-name-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+
+.goto-name-list button:hover {
+  background: var(--surface-hover);
+}
+
+.goto-name-list button span {
+  color: var(--text-muted);
+}
+
+.excel-header {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  min-width: 0;
+  /* same divider weight as the docs/slides ribbons: their --border-strong, no drop shadow */
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.ribbon-tabs {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 2px;
+  /* tab-row text ink matches the ribbon band below */
+  color: var(--text-primary);
+  /* same tab-row metrics as PowerPoint's ribbon (slides app): 5px top inset, no
+     bottom padding, no divider line — the row blends into the band below */
+  padding: 5px 10px 0;
+  background: var(--surface);
+  /* the tab row doubles as the frameless-window drag region */
+  -webkit-app-region: drag;
+  user-select: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.ribbon-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* standalone-window chrome insets; in a shell tab (mode=tab) the tab strip
+   above owns the traffic lights / caption buttons */
+.ribbon-tabs-mac {
+  padding-left: 84px;
+}
+
+.ribbon-tabs-win {
+  padding-right: 150px;
+}
+
+.ribbon-tabs > button:not(.qa-btn) {
+  -webkit-app-region: no-drag;
+  position: relative;
+  border: 0;
+  padding: 7px 9px 6px;
+  /* inactive tab ink matches the ribbon band's #232425 (active stays green) */
+  color: inherit;
+  background: transparent;
+  font-size: 13px;
+  /* every tab label is semibold, not just the active one */
+  font-weight: 600;
+  /* transparent border keeps the row height; the visible underline is the
+   * ::after below, sized to the label text rather than the padded button */
+  border-bottom: 2.5px solid transparent;
+  border-radius: 4px 4px 0 0;
+  white-space: nowrap;
+}
+
+.ribbon-tabs-spacer {
+  flex: 1;
+}
+
+.qa-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.ribbon-tabs .qa-btn {
+  -webkit-app-region: no-drag;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* same box and 16px glyph as the slides ribbon's .qa-btn */
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  background: none;
+  cursor: pointer;
+}
+
+.ribbon-tabs .qa-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.ribbon-tabs .qa-btn:hover:not(:disabled) {
+  background: var(--ribbon-hover);
+}
+
+.ribbon-tabs .qa-btn:disabled {
+  color: var(--text-tertiary);
+  /* neutralize the global button:disabled opacity so the glyph reads exactly
+     the shared quick-access gray of the docs and slides buttons */
+  opacity: 1;
+  cursor: default;
+}
+
+/* AutoSave toggle in the tab row — same knob as the docs/slides ribbons,
+   with the Excel-green accent. */
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 4px;
+  margin-right: 4px;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sheets-knob-dot);
+  transition: left 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--accent);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  left: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  /* same ink as the docs/slides autosave label */
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.workbook-status {
+  max-width: min(360px, 30vw);
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hovering a tab tints the label, it doesn't paint a box */
+.ribbon-tabs > button:not(.qa-btn):hover {
+  color: var(--accent-dark);
+}
+
+.ribbon-tabs > button:not(.qa-btn).active {
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+/* active underline: about the label's width (insets past the tab padding),
+ * ends slightly rounded — same as the slides ribbon */
+.ribbon-tabs > button:not(.qa-btn).active::after {
+  position: absolute;
+  right: 13px;
+  bottom: -2.5px;
+  left: 13px;
+  height: 2.5px;
+  border-radius: 1px;
+  background: var(--accent);
+  content: '';
+}
+
+/* Contextual tabs (Chart Design) stand out even while inactive, with a
+   colored caption. */
+.ribbon-tabs > button:not(.qa-btn).contextual {
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+/* Ribbon: compact single band, hairline separators between
+   groups, no group captions. */
+.ribbon {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  /* ribbon text ink, a touch off the app's --text — same shade
+     as the .inline-tools glyphs */
+  color: var(--text-primary);
+  /* band metrics shared with the slides ribbon */
+  height: 80px;
+  /* Groups must never shrink below content (they would paint over each
+     other); anything past the window edge scrolls instead. */
+  /* `scroll`, not `auto`: styled scrollbars are classic (non-overlay), so
+     `scroll` keeps the 5px lane reserved even without overflow — the content
+     area never changes and crossing the overflow threshold cannot cause a
+     vertical layout jump. */
+  overflow-x: scroll;
+  overflow-y: hidden;
+  width: 100%;
+  min-width: 0;
+  /* Slim visible scrollbar so mouse users can reach overflowed groups
+     Its 5px lane is carved out of the bottom
+     padding, keeping the 80px band and the content area unchanged; Chromium
+     paints a thumb only while the row actually overflows. */
+  padding: 6px 12px 1px;
+  background: var(--surface);
+}
+
+.ribbon::-webkit-scrollbar {
+  height: 5px;
+}
+
+.ribbon::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ribbon::-webkit-scrollbar-thumb {
+  border-radius: 2.5px;
+  background: var(--sheets-scroll-thumb);
+}
+
+.ribbon-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+}
+
+/* group separator: a hairline inset from the band's top/bottom, like the slides
+   ribbon's .ribbon-sep (a plain border-right would span the full 80px band).
+   The 2px inset matches the groups' vertical padding, so the line spans exactly
+   the tallest group content (the two 30px rows) — same inset across all three
+   apps. */
+.ribbon-group::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 0;
+  bottom: 2px;
+  width: 1px;
+  background: var(--border);
+}
+
+.ribbon-group:last-child::after {
+  display: none;
+}
+
+.ribbon-group-content {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  /* Fill the group's height (docs/slides .ribbon-group-items get this via
+     flex: 1 in their column-direction groups): without it this wrapper sits at
+     natural height, so a .large button's own align-self: stretch tops out
+     ~4px short of the other apps' 64px and the whole stack rides higher. */
+  align-self: stretch;
+}
+
+.ribbon-tool {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 58px;
+  /* icon-beside-label rows match the slides ribbon's .rb-small */
+  padding: 3px 8px;
+  border-radius: var(--radius-small);
+}
+
+.ribbon-tool:not(.large):hover {
+  background: var(--ribbon-hover);
+}
+
+/* Icon over label for the tall Insert-tab buttons — same metrics as the
+   slides ribbon's .rb-big. */
+.ribbon-tool.large {
+  flex-direction: column;
+  justify-content: center;
+  /* content-hugged and centered, same box as the docs/slides .rb-big */
+  gap: 4px;
+  padding: 4px 7px 6px;
+  text-align: center;
+}
+
+/* 12px like the docs/slides .rb-big: buttons `font: inherit` and sheets' body
+   has no font-size, so label wrapper spans got a 16px line box. Declared with
+   .as-button so it survives that rule's own later `font: inherit` shorthand. */
+.ribbon-tool.as-button.large {
+  font-size: 12px;
+}
+
+.ribbon-tool.large small {
+  display: none;
+}
+
+.ribbon-tool.large strong {
+  /* labels never wrap, the button hugs its content (slides .rb-big) — a
+     two-line label would push the icon off the shared center line.
+     Default line-height, not a compact 1.1: the label height feeds the
+     icon-row flex, so it must match the docs/slides .rb-big label. */
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* the tall buttons carry the ribbon's big 28px glyph; letterform glyphs
+   (ƒx, $, θ, …) get a 23px face so their cap height (~16.5px) matches the
+   ~17px ink of the drawn 28px svgs beside them, and a regular 400 weight —
+   the base 600 paints ~2.4px stems at this size vs the svgs' 1.5px strokes */
+.ribbon-tool.large .tool-symbol {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  font-size: 23px;
+  font-weight: 400;
+}
+
+.ribbon-tool.large .tool-symbol svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* icon + caret row of tall buttons: stretches across the button like the
+   slides ribbon's .rb-big-icon, so hover/press paint it edge to edge while
+   the label below stays outside */
+.ribbon-tool.large .tool-icon-row {
+  align-self: stretch;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border-radius: 4px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+}
+
+/* Hovering a tall button tints only its icon row — the label below
+   stays outside the gray (slides .rb-big:hover .rb-big-icon) */
+.ribbon-tool.large:not(.reserved):hover .tool-icon-row {
+  background: var(--ribbon-hover);
+}
+
+.ribbon-tool.large.as-button:disabled:hover .tool-icon-row {
+  background: transparent;
+}
+
+/* The active workbook view (View tab's Normal) shows a pressed state. */
+.ribbon-tool:not(.large).is-current {
+  background: var(--ribbon-active);
+}
+
+.ribbon-tool.large.is-current .tool-icon-row {
+  background: var(--ribbon-active);
+}
+
+.ribbon-tool.accent {
+  min-width: 96px;
+}
+
+/* Bare colored ribbon glyphs — no chip background.
+   Icon-beside-label rows use the slides ribbon's .rb-small icon size (14px);
+   the tall .large buttons scale theirs up to 28px below. */
+.tool-symbol {
+  display: grid;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  /* ribbon glyphs share the toolbar ink (was Excel green) */
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tool-symbol svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Constant rendered stroke instead of proportional scaling: the 24-canvas
+   svgs carry a 1.5-unit strokeWidth attr, so left alone a 28px glyph paints
+   1.75px lines while a 14px row paints 0.875px hairlines. These overrides
+   pin the painted stroke at ~1.5px for 20px+ glyphs and ~1.25px for the
+   small 13-16px ones (a touch lighter so dense glyphs stay legible).
+   stroke-width is in viewBox units: units = 24 / rendered-px × target-px. */
+.tool-symbol svg {
+  stroke-width: 2.15; /* 14px rows → 1.25px */
+}
+
+.ribbon-tool.large .tool-symbol svg {
+  stroke-width: 1.3; /* 28px → ~1.5px */
+}
+
+.chart-grid .tool-symbol svg {
+  stroke-width: 2.2; /* 13px → ~1.2px */
+}
+
+.chev path {
+  stroke-width: 2.6; /* 10px caret → ~1.1px */
+}
+
+/* every inline-row glyph — toggles, dropdown triggers and labeled buttons —
+   shares one size so icons sitting side by side read identically. 20px puts
+   the padded 24-canvas ink (~61%) at ~12.5px, just under the docs ribbon's
+   optical size (16-canvas at 18px ≈ 14px ink), sized to taste. */
+.inline-tools .tool-symbol svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8; /* 20px → 1.5px */
+}
+
+.ribbon-tool.reserved .tool-symbol {
+  color: var(--text-muted);
+}
+
+.ribbon-tool strong,
+.ribbon-tool small {
+  display: block;
+  white-space: nowrap;
+}
+
+.ribbon-tool strong {
+  /* label weight matches the slides ribbon's .rb-small (regular, not medium) */
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ribbon-tool small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+/* Narrow windows: drop the detail line first, before falling back to
+   horizontal scrolling. */
+@media (max-width: 1600px) {
+  .ribbon-tool small {
+    display: none;
+  }
+
+  .ribbon-tool,
+  .ribbon-tool.accent {
+    min-width: 0;
+  }
+
+  .ribbon-tool.compact-icon span:not(.tool-symbol) {
+    display: none;
+  }
+
+  .ribbon {
+    gap: 1px;
+    /* keep the 6px 12px band padding: docs/slides never compact it */
+  }
+
+  .ribbon-group {
+    padding: 2px 6px;
+  }
+
+  .number-format {
+    min-width: 60px;
+  }
+}
+
+.inline-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  /* inline glyphs, letterforms and trigger labels share one ink color,
+     a touch off the app's --text */
+  color: var(--text-primary);
+}
+
+/* Two stacked control rows inside one group.
+   Row spacing matches the slides ribbon's .rb-col (4px). */
+.ribbon-rows {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  justify-items: start;
+}
+
+/* Cut / Copy / Format Painter column beside the tall Paste button. */
+.tool-stack {
+  display: grid;
+  align-content: center;
+  gap: 0;
+}
+
+.tool-stack button {
+  display: grid;
+  min-width: 24px;
+  /* 3 stacked mini rows line up with one tall button, as in the slides ribbon's
+     .rb-clip-col (cut / copy / format painter): 24×20 buttons, gap 0, 14px glyph */
+  height: 20px;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-small);
+  font-size: 14px;
+}
+
+.tool-stack button:hover {
+  background: var(--ribbon-hover);
+}
+
+.inline-tools button.labeled {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.select-like,
+.number-format {
+  display: inline-flex;
+  align-items: center;
+  /* control metrics from the slides ribbon's .rb-font-btn: 28px tall,
+     0 7px padding, 13px type */
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 0 7px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.select-like {
+  min-width: 104px;
+}
+
+.select-like.compact {
+  min-width: 44px;
+}
+
+/* font family / size dropdowns share the slides ribbon's fixed widths
+   (.rb-font-name 178px / .rb-font-size 68px) instead of sizing to the
+   longest option */
+.select-like.font-name {
+  width: 178px;
+  min-width: 0;
+}
+
+.select-like.font-size {
+  width: 68px;
+  min-width: 0;
+}
+
+/* the font combos are buttons inside .inline-tools, whose flat-toggle reset
+   (border: none / transparent) outranks the base .select-like chrome — put
+   the combobox border back on just these two; .compact triggers stay flat */
+.select-like.font-name,
+.select-like.font-size {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.number-format {
+  min-width: 76px;
+}
+
+.inline-tools span,
+.inline-tools button {
+  display: grid;
+  /* compact toggle metrics from the slides ribbon's .rb-icon */
+  min-width: 28px;
+  height: 30px;
+  place-items: center;
+  /* UA button padding would widen every 28px toggle; triggers that need
+     horizontal padding get it back via .menu-select > .select-like /
+     .labeled below */
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-small);
+  font-size: 15px;
+}
+
+.inline-tools span:hover,
+.inline-tools button:hover {
+  background: var(--ribbon-hover);
+}
+
+/* Selection echo: the active cell's B/I/U/S state shows as pressed
+   toggles (same neutral pressed gray as the slides ribbon). */
+.inline-tools button.is-active,
+.inline-tools button.is-active:hover {
+  background: var(--ribbon-active);
+}
+
+/* alignment glyphs use the shared 15px inline size (slides .rb-icon) */
+
+/* the glyph span nested inside a toggle / trigger / swatch must not re-apply
+   the 28px toggle box (the `.inline-tools span` rule above also matches it),
+   or every icon button inflates to 28px content + UA button padding ≈ 40px;
+   width auto drops the 20px glyph box so the svg size rules above govern */
+.inline-tools .tool-symbol {
+  min-width: 0;
+  width: auto;
+  height: auto;
+}
+
+/* Color swatches: the glyph is the SAME size as its siblings (15px letter /
+   18px svg) so the row's cap line stays level, and the 16×4 bar hangs below
+   it out of flow (docs' colored-icon pattern) instead of pushing the whole
+   stack taller than the neighbouring glyphs. */
+.inline-tools .swatch-letter {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: auto;
+  line-height: 1;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.swatch-letter i {
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 4px;
+  border-radius: 1px;
+}
+
+/* the 24-canvas svgs carry ~3px of box padding below their ink — tuck the
+   bar into it so it hugs the glyph like it hugs the letterforms */
+.swatch-letter .tool-symbol ~ i {
+  top: calc(100% - 3px);
+}
+
+.ribbon-tool.as-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.ribbon-tool.as-button:not(.large):hover {
+  background: var(--ribbon-hover);
+}
+
+.ribbon-tool.as-button:not(.large).active {
+  background: var(--ribbon-active);
+}
+
+.ribbon-tool.large.as-button.active .tool-icon-row {
+  background: var(--ribbon-active);
+}
+
+.ribbon-tool.as-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ribbon-tool.as-button:disabled:hover {
+  background: transparent;
+}
+
+/* Reserved ribbon slots that are not implemented yet. */
+.ribbon-tool.reserved {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ribbon-tool.reserved:hover {
+  background: transparent;
+}
+
+/* dropdown chevron svg (copied from the slides ribbon's RbCaret) */
+.chev {
+  flex-shrink: 0;
+  margin-left: 3px;
+  color: var(--text-muted);
+  vertical-align: -1px;
+}
+
+/* View tab's stacked show/hide checkboxes (the Show group). */
+/* Home Styles group: three stacked dropdown rows. Muted via color, not
+ * opacity — opacity spans the subtree and would render the anchored
+ * .menu-select-drop popups translucent. */
+.styles-stack {
+  display: grid;
+  gap: 1px;
+  color: var(--text-secondary);
+}
+
+.styles-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* row icons keep a compact box so labels stay close, with the slides
+   ribbon's .rb-small 14px svg size; letterform fallbacks match at 13px */
+.styles-row .tool-symbol {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  font-size: 13px;
+}
+
+.styles-row b {
+  font-weight: 400;
+}
+
+/* Stacked small command rows beside a large button (Insert/Formulas tabs). */
+.row-stack {
+  display: grid;
+  gap: 1px;
+  align-content: center;
+  justify-items: start;
+}
+
+/* Clickable rows keep the same small type as reserved ones (the generic
+   .styles-row.as-button rule resets font to the page default). */
+.ribbon .styles-row.as-button {
+  font-size: 12px;
+  padding: 1px 4px;
+  color: inherit;
+}
+
+.ribbon .styles-row.as-button:hover {
+  color: inherit;
+  background: var(--ribbon-hover);
+  border-radius: var(--radius-small);
+}
+
+.styles-row.reserved {
+  opacity: 0.45;
+}
+
+/* Invisible native select stretched over its host, so a styled row or large
+   button gets a real dropdown menu. */
+.cover-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* ── MenuSelect: custom dropdown replacing native selects ──────────────────
+   The panel is fixed + anchored below its trigger (slides .rb-drop pattern),
+   so it escapes the ribbon's scroll clip and never covers ribbon content.
+   anchor-scope keeps each panel bound to its own wrap. */
+
+.menu-select {
+  position: relative;
+  display: inline-flex;
+  anchor-name: --menu-select;
+  anchor-scope: --menu-select;
+}
+
+/* invisible trigger stretched over the host tool (old cover-select markup) */
+.menu-select-cover {
+  position: absolute;
+  inset: 0;
+}
+
+/* combobox-look trigger: a button wearing the old select's classes */
+.menu-select > .select-like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  height: 28px;
+  /* restore the trigger inset that the .inline-tools button padding reset strips */
+  padding: 0 7px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+}
+
+.menu-select .menu-select-value {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* the `.inline-tools span` toggle rule would bump this to 15px — keep the
+     trigger label on the button's 12px ribbon type */
+  font: inherit;
+}
+
+/* compact triggers hold an icon beside a short label — flex keeps the pair
+   centered; the wide font/number combos stay inline so their labels keep
+   ellipsizing */
+.select-like.compact .menu-select-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* editable combobox trigger (font name/size, #160): a span wearing the
+   .select-like chrome hosting a free-text input + caret button */
+.menu-select > .menu-select-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  height: 28px;
+  padding: 0 4px 0 7px;
+  cursor: text;
+}
+
+.menu-select-edit input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.menu-select .menu-select-edit .menu-select-caret {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  width: 16px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu-select-drop {
+  position: fixed;
+  position-anchor: --menu-select;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  /* near the right window edge, right-align to the trigger */
+  position-try-fallbacks: flip-inline;
+  /* trigger scrolled out of the ribbon → hide the panel with it */
+  position-visibility: anchors-visible;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: 148px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--sheets-shadow-drop);
+}
+
+.menu-select-drop button {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.menu-select-drop button:hover {
+  background: var(--ribbon-hover);
+}
+
+.menu-select-drop button.on {
+  background: var(--ribbon-hover);
+  font-weight: 600;
+}
+
+/* group break above the enumerated system fonts */
+.menu-select-drop button.sep-above {
+  border-top: 1px solid var(--border-strong);
+  border-radius: 0 0 4px 4px;
+  margin-top: 4px;
+}
+
+/* Insert tab shape gallery: grouped preview grid inside the dropdown */
+.shape-gallery-drop {
+  width: 322px;
+  max-height: 420px;
+}
+
+.shape-gallery-title {
+  padding: 6px 6px 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.shape-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+}
+
+.menu-select-drop .shape-gallery-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  padding: 5px 0;
+  color: var(--text);
+}
+
+/* Insert tab's small chart-type buttons, arranged as an icon cluster. */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 26px);
+  gap: 1px;
+  align-content: center;
+}
+
+/* the 26×17 grid cells hold a 13px icon */
+.chart-grid .tool-symbol {
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
+}
+
+.chart-grid .tool-symbol svg {
+  width: 13px;
+  height: 13px;
+}
+
+.chart-grid button,
+.chart-grid span {
+  display: grid;
+  height: 17px;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-small);
+  font-size: 11px;
+}
+
+.chart-grid button:hover {
+  background: var(--surface-hover);
+}
+
+.chart-grid .reserved {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.check-column {
+  display: grid;
+  gap: 2px;
+  align-content: center;
+}
+
+/* Page Layout's Gridlines/Headings column captions. */
+.check-head {
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 1px 6px;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  text-align: left;
+}
+
+button.check-item:hover {
+  background: var(--surface-hover);
+}
+
+.check-box {
+  display: grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.reserved-check {
+  opacity: 0.45;
+}
+
+select.select-like {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+}
+
+.sheet-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* formula-bar row + spreadsheet */
+.sheet-main {
+  display: grid;
+  /* name box / workbook / status bar */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workbook-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spreadsheet {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ================= status bar (unified with docs/slides) ================= */
+
+.status-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  height: 24px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--sheets-statusbar-bg);
+  border-top: 1px solid var(--sheets-statusbar-border);
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-msg {
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: var(--sheets-statusbar-hover);
+}
+
+.zoom-slider {
+  width: 110px;
+  accent-color: var(--sheets-zoom-slider);
+  height: 3px;
+}
+
+.zoom-value {
+  min-width: 38px;
+  text-align: right;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface);
+  line-height: 1.4;
+}
+
+textarea:focus {
+  border-color: var(--accent);
+}
+
+.primary-action,
+.secondary {
+  min-height: 34px;
+  border-radius: var(--radius-medium);
+  padding: 7px 12px;
+}
+
+.primary-action {
+  border: 1px solid var(--accent);
+  color: var(--sheets-on-accent);
+  background: var(--accent);
+}
+
+.primary-action:hover {
+  background: var(--accent-dark);
+}
+
+.secondary {
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.secondary:hover {
+  background: var(--surface-hover);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  padding: 12px;
+  background: var(--surface);
+  box-shadow: var(--sheets-shadow-card);
+}
+
+.preview h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.change {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 7px;
+  font-size: 11px;
+}
+
+.change span {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-body {
+    transition: none;
+  }
+}
+
+.xlsx-chart,
+.xlsx-image,
+.xlsx-shape,
+.xlsx-visual-loading,
+.xlsx-visual-error {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.xlsx-chart {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--sheets-chart-border);
+  background: var(--sheets-paper);
+  box-shadow: var(--sheets-shadow-chart);
+  color: var(--sheets-chart-ink);
+  font-family: Calibri, 'Segoe UI', sans-serif;
+}
+
+.chart-edit-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--sheets-float-btn-bg);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.chart-edit-button:hover {
+  color: var(--excel-green-dark);
+  background: var(--sheets-paper);
+}
+
+.shape-editable .chart-edit-button {
+  top: 2px;
+  right: 26px;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+.chart-editor {
+  position: absolute;
+  inset: 6px 6px auto auto;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  max-width: 230px;
+  max-height: calc(100% - 12px);
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  padding: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+  font-size: 11px;
+}
+
+.chart-editor label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.chart-editor input[type='text'],
+.chart-editor .chart-editor-title,
+.chart-editor select {
+  min-width: 120px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.chart-editor input[type='color'] {
+  width: 34px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: none;
+}
+
+.chart-editor-series {
+  display: grid;
+  gap: 4px;
+}
+
+.chart-editor-series-name {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.chart-editor input.chart-editor-range {
+  height: 22px;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.chart-editor-error {
+  color: var(--danger);
+  font-size: 10px;
+  max-width: 210px;
+}
+
+/* Sticky footer: with many series the panel scrolls, but Apply/Cancel must
+   stay reachable without scrolling to the end. */
+.chart-editor-actions {
+  position: sticky;
+  bottom: -10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: -2px -10px -10px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.chart-editor-actions button {
+  min-height: 24px;
+  border-radius: var(--radius-small);
+  padding: 2px 10px;
+  font-size: 11px;
+}
+
+.chart-editor-cancel {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.chart-editor-apply {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--sheets-on-accent);
+}
+
+.xlsx-chart {
+  position: relative;
+}
+
+.xlsx-chart figcaption {
+  flex: 0 0 auto;
+  padding: 10px 12px 2px;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-svg {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.chart-svg text {
+  fill: var(--sheets-chart-label);
+  font-size: 10px;
+}
+
+.chart-svg .axis-label {
+  fill: var(--sheets-chart-label-dim);
+  font-size: 9px;
+}
+
+.xlsx-shape-drawn {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.xlsx-shape-drawn svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.xlsx-shape-drawn .shape-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--sheets-chart-ink);
+  overflow: hidden;
+}
+
+.shape-editable {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: move;
+  touch-action: none;
+  outline: none;
+}
+
+/* Children (chart body) paint over an outline, so the selection frame is an
+   overlay pseudo-element stacked above them. */
+.shape-editable.selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--sheets-select-blue);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.shape-editable.selected .shape-delete-button {
+  opacity: 1;
+}
+
+/* Selection handles: white dots on the frame, selected only. */
+.shape-editable .shape-handle {
+  position: absolute;
+  display: none;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--sheets-select-blue);
+  border-radius: 50%;
+  background: var(--sheets-paper);
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.shape-editable.selected .shape-handle {
+  display: block;
+}
+
+/* The float container clips its box, so handles sit just inside the frame. */
+.shape-editable .handle-nw {
+  top: -1px;
+  left: -1px;
+  cursor: nwse-resize;
+}
+.shape-editable .handle-n {
+  top: -1px;
+  left: calc(50% - 4px);
+  cursor: ns-resize;
+}
+.shape-editable .handle-ne {
+  top: -1px;
+  right: -1px;
+  cursor: nesw-resize;
+}
+.shape-editable .handle-e {
+  top: calc(50% - 4px);
+  right: -1px;
+  cursor: ew-resize;
+}
+.shape-editable .handle-se {
+  right: -1px;
+  bottom: -1px;
+  cursor: nwse-resize;
+}
+.shape-editable .handle-s {
+  bottom: -1px;
+  left: calc(50% - 4px);
+  cursor: ns-resize;
+}
+.shape-editable .handle-sw {
+  bottom: -1px;
+  left: -1px;
+  cursor: nesw-resize;
+}
+.shape-editable .handle-w {
+  top: calc(50% - 4px);
+  left: -1px;
+  cursor: ew-resize;
+}
+
+.shape-editable .shape-delete-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--sheets-float-btn-bg);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.shape-editable:hover .shape-delete-button {
+  opacity: 1;
+}
+
+.shape-editable .shape-delete-button:hover {
+  color: var(--sheets-content-danger);
+  background: var(--sheets-paper);
+}
+
+/* Body-level clone shown while moving a visual: escapes the float
+   container's overflow clipping so the drag preview stays above the grid. */
+.shape-drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.shape-editable .shape-resize-outline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1.5px dashed var(--sheets-select-blue);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.shape-text-editor {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--sheets-chart-ink);
+  outline: 2px solid var(--sheets-select-blue);
+  outline-offset: -2px;
+  cursor: text;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.trace-precedent-box {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--sheets-select-blue);
+  background: var(--sheets-select-blue-bg);
+  pointer-events: none;
+}
+
+.trace-arrow-layer {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.pie-layout {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 10px 18px 18px;
+}
+
+.pie-svg {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.pie-svg .pie-label-inside {
+  font-size: 11px;
+  fill: var(--sheets-pie-label-in);
+  paint-order: stroke;
+  stroke: var(--sheets-pie-label-stroke);
+  stroke-width: 0.6px;
+}
+
+.pie-svg .pie-label-outside {
+  font-size: 10px;
+  fill: var(--sheets-pie-label-out);
+}
+
+/* In-cell sparkline minicharts */
+.sparkline-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Element-level chart selection (title / legend) */
+.chart-el-selected {
+  outline: 2px solid var(--sheets-el-selected);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+/* Chart context menu (portaled to body — the float DOM clips overflow) */
+.chart-menu-backdrop {
+  position: fixed;
+  z-index: 4000;
+  inset: 0;
+}
+
+.chart-menu {
+  position: fixed;
+  z-index: 4001;
+  display: flex;
+  min-width: 168px;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--sheets-shadow-menu);
+}
+
+.chart-menu button {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chart-menu button:hover {
+  background: var(--surface-hover);
+}
+
+/* Chart format pane, docked to the right edge as a task pane */
+.chart-format-pane {
+  position: fixed;
+  z-index: 900;
+  top: 140px;
+  right: 12px;
+  bottom: 40px;
+  display: flex;
+  width: 250px;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--sheets-shadow-pane);
+  font-size: 12px;
+  gap: 10px;
+}
+
+.chart-format-pane header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.chart-format-pane header button {
+  border: none;
+  background: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chart-format-pane .pane-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.chart-format-pane .pane-section > strong {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.chart-format-pane label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chart-format-pane input[type='number'],
+.chart-format-pane input[type='text'],
+.chart-format-pane select {
+  width: 120px;
+  padding: 3px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.chart-format-pane input[type='range'] {
+  width: 110px;
+}
+
+/* Select Data dialog */
+.select-data-dialog {
+  width: 560px;
+}
+
+.select-data-rows {
+  display: flex;
+  max-height: 300px;
+  flex-direction: column;
+  overflow-y: auto;
+  gap: 6px;
+}
+
+.select-data-row {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1.1fr 1.4fr 1.4fr auto;
+  gap: 6px;
+}
+
+.select-data-head {
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.select-data-row input {
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.select-data-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.select-data-row input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.select-data-row > span:last-child {
+  display: flex;
+  gap: 4px;
+}
+
+.select-data-row button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-small);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.select-data-row button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.select-data-actions {
+  display: flex;
+  padding-top: 8px;
+  gap: 8px;
+}
+
+.select-data-actions button {
+  padding: 0 14px;
+}
+
+.select-data-actions button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+/* Legend placement around the pie (right is the classic default). */
+.pie-legend-bottom {
+  flex-direction: column;
+}
+
+.pie-legend-top {
+  flex-direction: column-reverse;
+}
+
+.pie-legend-left {
+  flex-direction: row-reverse;
+}
+
+/* Legend placement for axis charts; default keeps the legacy below-chart row. */
+.chart-body {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.chart-body > .chart-svg {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.chart-body.chart-legend-default > .chart-legend,
+.chart-body.chart-legend-bottom > .chart-legend,
+.chart-body.chart-legend-top > .chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  padding: 0 10px 6px;
+}
+
+.chart-body.chart-legend-top {
+  flex-direction: column-reverse;
+}
+
+.chart-body.chart-legend-right,
+.chart-body.chart-legend-left {
+  align-items: center;
+}
+
+.chart-body.chart-legend-right {
+  flex-direction: row;
+}
+
+.chart-body.chart-legend-left {
+  flex-direction: row-reverse;
+}
+
+.chart-body.chart-legend-right > .chart-legend,
+.chart-body.chart-legend-left > .chart-legend {
+  flex: 0 0 auto;
+  padding: 0 12px;
+}
+
+.axis-title {
+  font-size: 11px;
+  fill: var(--sheets-chart-label);
+}
+
+.chart-legend {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.chart-legend span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.chart-legend i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+}
+
+.xlsx-image {
+  display: block;
+  object-fit: contain;
+}
+
+.xlsx-shape,
+.xlsx-visual-loading,
+.xlsx-visual-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sheets-shape-border);
+  background: var(--sheets-shape-bg);
+  color: var(--sheets-shape-ink);
+  font:
+    12px 'Segoe UI',
+    sans-serif;
+  text-align: center;
+}
+
+.xlsx-visual-error {
+  border-color: var(--sheets-shape-err-border);
+  color: var(--sheets-shape-err-ink);
+}
+
+.inline-tools .color-tool {
+  position: relative;
+  display: grid;
+  /* same 28×30 box as the sibling toggles, so the row's 3px rhythm holds */
+  min-width: 28px;
+  height: 30px;
+  place-items: center;
+  cursor: pointer;
+  border-radius: var(--radius-small);
+  font-size: 12px;
+}
+
+.inline-tools .color-tool:hover {
+  background: var(--ribbon-hover);
+}
+
+.inline-tools .color-tool input[type='color'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Format Cells dialog (⌘1) */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: var(--sheets-mask-bg);
+  backdrop-filter: blur(4px);
+}
+
+.format-cells-dialog {
+  display: grid;
+  gap: 10px;
+  width: 420px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.format-cells-dialog header {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dialog-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dialog-tabs button {
+  border: 0;
+  padding: 5px 12px;
+  background: transparent;
+  font-size: 12px;
+}
+
+.dialog-tabs button.active {
+  color: var(--accent-dark);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.dialog-body {
+  min-height: 150px;
+}
+
+.dialog-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dialog-grid label {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.dialog-grid select,
+.dialog-grid input:not([type='checkbox']):not([type='radio']) {
+  height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.dialog-grid .dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+}
+
+/* Format Cells → Number tab */
+.numfmt-tab {
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  gap: 12px;
+}
+
+.numfmt-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  align-self: start;
+}
+
+.numfmt-cats button {
+  border: 0;
+  padding: 4px 8px;
+  background: transparent;
+  border-radius: var(--radius-small);
+  font-size: 12px;
+  color: var(--text);
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.numfmt-cats button:hover:not(.active) {
+  background: var(--surface-hover);
+}
+
+.numfmt-cats button.active {
+  background: var(--accent);
+  color: var(--sheets-on-accent);
+}
+
+.numfmt-body {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+
+.numfmt-field {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.numfmt-field select,
+.numfmt-field input {
+  height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.numfmt-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.numfmt-body .dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.numfmt-sample output {
+  min-height: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.numfmt-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 138px;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+}
+
+.numfmt-list button {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 3px 8px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.numfmt-list button:hover:not(.active) {
+  background: var(--surface-hover);
+}
+
+.numfmt-list button.red {
+  color: var(--danger);
+}
+
+.numfmt-list button.active {
+  background: var(--accent);
+  color: var(--sheets-on-accent);
+}
+
+.numfmt-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Shared modal footer buttons: secondary = bg-subtle, primary = black (#232425) */
+.dialog-actions button,
+.select-data-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  /* .primary-action/.secondary set min-height: 34px globally; the DS sm size wins here */
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dialog-actions button:hover:not(:disabled),
+.select-data-actions button:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.dialog-actions button:active:not(:disabled),
+.select-data-actions button:active:not(:disabled) {
+  filter: brightness(0.88);
+  transform: scale(0.98);
+}
+
+.dialog-actions button:focus-visible,
+.select-data-actions button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--sheets-focus-ring);
+}
+
+.dialog-actions button:disabled,
+.select-data-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dialog-actions button.primary,
+.dialog-actions .primary-action,
+.select-data-actions button.primary {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.dialog-actions button.primary:hover:not(:disabled),
+.dialog-actions .primary-action:hover:not(:disabled),
+.select-data-actions button.primary:hover:not(:disabled) {
+  border-color: var(--color-btn-primary-hover);
+  background: var(--color-btn-primary-hover);
+  color: var(--color-btn-primary-text);
+}
+
+.dialog-actions button {
+  min-width: 68px;
+}
+
+/* Consolidate dialog */
+.dialog-grid .dialog-span {
+  grid-column: 1 / -1;
+}
+
+/* Pivot dialog: long localized labels and stacked field rows outgrow the
+   shared 420px card, so it gets its own bounds and a scrolling body. */
+.format-cells-dialog.pivot-dialog {
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  max-width: min(92vw, 640px);
+  max-height: 88vh;
+}
+
+.pivot-dialog .dialog-grid {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* fieldsets don't shrink below min-content unless min-width is reset */
+.pivot-dialog .dialog-grid fieldset {
+  min-width: 0;
+}
+
+.input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.input-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.reference-list {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.reference-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 3px 6px;
+}
+
+/* Insert Function dialog */
+.insert-function-dialog {
+  width: 460px;
+}
+
+.fn-filter-row {
+  display: flex;
+  gap: 8px;
+}
+
+.fn-filter-row input {
+  flex: 1;
+}
+
+.fn-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+
+.fn-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  padding: 5px 8px;
+  border: none;
+  border-bottom: 1px solid var(--surface-subtle);
+  background: var(--surface);
+  text-align: left;
+  font-size: 12px;
+}
+
+.fn-row span {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fn-row:hover {
+  background: var(--surface-hover);
+}
+
+.fn-row.active {
+  background: var(--accent-soft);
+}
+
+.fn-syntax code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+.fn-formula {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* Insert Symbol dialog */
+.symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.symbol-grid button {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.symbol-grid button:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* Insert Screenshot dialog */
+.screenshot-dialog {
+  width: 520px;
+}
+
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.screenshot-grid button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  font-size: 11px;
+}
+
+.screenshot-grid button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.screenshot-grid button.capturing {
+  opacity: 0.6;
+}
+
+.screenshot-grid img {
+  width: 100%;
+  height: 84px;
+  object-fit: contain;
+}
+
+.screenshot-grid span {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Insert Icons dialog */
+.icons-dialog {
+  width: 560px;
+}
+
+.icons-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 14px 0;
+}
+
+.icons-toolbar input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.icons-colors {
+  display: flex;
+  gap: 4px;
+}
+
+.icons-colors button {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.icons-colors button.active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.icons-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.icons-grid button {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  background: none;
+  font-size: 24px;
+}
+
+.icons-grid button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* Equation dialog */
+.equation-dialog {
+  width: 560px;
+}
+
+.equation-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.equation-presets button {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: none;
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', serif;
+  font-size: 13px;
+}
+
+.equation-presets button:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.equation-latex {
+  width: 100%;
+  margin-top: 10px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.equation-preview {
+  display: grid;
+  place-items: center;
+  min-height: 90px;
+  margin-top: 10px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+
+.equation-error {
+  padding: 0 12px;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+/* Recommended Charts dialog */
+.recommended-charts-dialog {
+  width: 640px;
+}
+
+.recommended-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.recommended-charts-grid button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  text-align: left;
+  font-size: 11px;
+}
+
+.recommended-charts-grid button:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.recommended-charts-grid svg {
+  width: 100%;
+  height: auto;
+  background: var(--surface);
+}
+
+.recommended-charts-grid span {
+  color: var(--text-secondary);
+}
+
+/* Insert/Edit Link dialog */
+.link-dialog {
+  width: 420px;
+}
+.link-dialog .dialog-body label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.link-dialog .dialog-body input {
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* Sort / Remove Duplicates dialogs */
+.sort-dialog {
+  width: 420px;
+}
+.sort-dialog .dialog-note,
+.format-cells-dialog .dialog-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.format-cells-dialog .dialog-note {
+  grid-column: 1 / -1;
+}
+.name-manager-dialog {
+  width: 520px;
+}
+.name-manager-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.name-manager-table th,
+.name-manager-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.name-manager-table tbody tr {
+  cursor: pointer;
+}
+.name-manager-table tbody tr.selected {
+  background: var(--accent-soft);
+}
+.name-manager-empty {
+  color: var(--text-muted);
+}
+.dialog-error {
+  color: var(--sheets-error);
+}
+.sort-header-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.sort-level {
+  display: grid;
+  grid-template-columns: 60px 1fr 90px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.styles-row.as-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  padding: 0;
+}
+.styles-row.as-button:hover {
+  color: var(--accent-dark);
+}
+
+.slicer-picker-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 18px 10px;
+}
+
+.slicer-picker-field {
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.slicer-picker-field:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+/* Slicer overlay stack on the right side of the worksheet */
+.slicer-stack {
+  position: fixed;
+  top: 190px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 60;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+}
+
+.slicer-panel {
+  width: 190px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--sheets-shadow-slicer);
+  overflow: hidden;
+}
+
+.slicer-panel header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 10px;
+  background: var(--accent);
+  color: var(--sheets-on-accent);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.slicer-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slicer-clear,
+.slicer-close {
+  border: none;
+  background: transparent;
+  color: var(--sheets-on-accent);
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.slicer-clear:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.slicer-clear:hover:not(:disabled),
+.slicer-close:hover {
+  background: var(--sheets-on-accent-hover);
+}
+
+.slicer-members {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.slicer-member {
+  text-align: left;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--sheets-member-bg);
+  color: var(--sheets-member-ink);
+  font-size: 12.5px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slicer-member.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--sheets-on-accent);
+}
+
+.slicer-member:hover:not(.selected) {
+  border-color: var(--accent);
+}
+
+.timeline-range {
+  padding: 6px 10px 0;
+  color: var(--sheets-member-ink);
+  font-size: 12px;
+}
+
+.timeline-months {
+  display: flex;
+  gap: 2px;
+  padding: 8px;
+  max-width: 260px;
+  overflow-x: auto;
+}
+
+.timeline-month {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 4px 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--sheets-member-bg);
+  color: var(--sheets-member-ink);
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.timeline-month.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--sheets-on-accent);
+}
+
+.timeline-month:hover:not(.selected) {
+  border-color: var(--accent);
+}
+
+/* Univer's bottom sheet-switcher: the selected tab label ships in Univer's
+   primary blue (univer-text-primary-700); recolor it to the Excel green. */
+[data-u-comp='slide-tab-item'][aria-selected='true'] {
+  color: var(--accent) !important;
+}
+
+/* The gridlines toggle at the right of the sheet bar is a two-tone icon whose
+   accent path hardcodes fill=var(--univer-primary-600); neutralize the blue. */
+.univerjs-icon-hide-gridlines-double-icon {
+  --univer-primary-600: currentColor;
+}
+
+/* ================= transient toast (save feedback) ================= */
+
+.app-toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--sheets-toast-bg);
+  color: var(--sheets-toast-ink);
+  font-size: 13px;
+  box-shadow: var(--sheets-shadow-toast);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.app-toast.error {
+  background: var(--sheets-toast-error-bg);
+}
+
+.app-toast-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.app-toast.success .app-toast-icon {
+  color: var(--sheets-toast-ok);
+}
+
+/* Shape gallery dropdown (slides/docs parity: grouped, outline-icon grid) */
+.menu-select-drop.rb-shape-gallery {
+  width: 264px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+
+.rb-drop-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 4px 2px 3px;
+}
+
+.rb-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 28px);
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.menu-select-drop.rb-shape-gallery .rb-shape-cell {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.menu-select-drop.rb-shape-gallery .rb-shape-cell:hover {
+  border-color: var(--accent);
+  background: var(--ribbon-hover);
+}
+
+/* Shape draw mode: crosshair over the whole grid while armed */
+#univer-container.sheet-shape-drawing,
+#univer-container.sheet-shape-drawing * {
+  cursor: crosshair !important;
+}

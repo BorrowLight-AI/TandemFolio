@@ -1,0 +1,1073 @@
+/* Per-app accent (word-blue family) + markdown-only tokens.
+ * Chrome tokens (surface/text/border/…) come from
+ * @genoffice/ui/tokens.css; nothing here may shadow those names. */
+:root {
+  --accent: #185abd;
+  --accent-dark: #124a9e;
+  --accent-soft: #e8f1fb;
+  --word-blue: var(--accent);
+
+  --md-link: #0a69da;
+  --md-code-bg: #f6f8fa;
+  --md-code-inline-bg: rgb(129 139 152 / 14%);
+  --md-table-header-bg: #f6f8fa;
+  --md-selection: rgb(59 130 246 / 10%);
+  --md-text-selection: rgb(56 108 255 / 32%);
+  --md-focus: #3b82f6;
+  --md-node-outline: rgb(59 130 246 / 60%);
+  --md-focus-ring: rgb(35 36 37 / 20%);
+  --md-focus-ring-blue: rgb(74 141 246 / 30%);
+  --md-error: #c62828;
+  --md-error-border: rgb(198 40 40 / 45%);
+  --md-error-bg: rgb(198 40 40 / 8%);
+  --md-shadow-color: rgb(0 0 0 / 13%);
+  --md-shadow-soft: rgb(0 0 0 / 9%);
+  --md-shimmer-base: #666666;
+  --md-shimmer-hi: #d9d9d9;
+  --md-pop-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  --md-tip-shadow: 0 4px 6px rgb(0 0 0 / 10%);
+}
+
+[data-theme='dark'] {
+  --accent: #4a9eff;
+  --accent-dark: #3a8eef;
+  --accent-soft: #1e3a5f;
+
+  --md-link: #4a9eff;
+  --md-code-bg: #23272e;
+  --md-code-inline-bg: rgb(129 139 152 / 22%);
+  --md-table-header-bg: #282c32;
+  --md-selection: rgb(74 158 255 / 20%);
+  --md-text-selection: rgb(74 158 255 / 40%);
+  --md-focus: #4a9eff;
+  --md-node-outline: rgb(74 158 255 / 70%);
+  --md-focus-ring: rgb(228 228 228 / 25%);
+  --md-focus-ring-blue: rgb(74 158 255 / 40%);
+  --md-error: #f28b82;
+  --md-error-border: rgb(242 139 130 / 45%);
+  --md-error-bg: rgb(242 139 130 / 12%);
+  --md-shadow-color: rgb(0 0 0 / 55%);
+  --md-shadow-soft: rgb(0 0 0 / 45%);
+  --md-shimmer-base: #8a8a8a;
+  --md-shimmer-hi: #d0d0d0;
+  --md-pop-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+  --md-tip-shadow: 0 4px 6px rgb(0 0 0 / 35%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --accent: #4a9eff;
+    --accent-dark: #3a8eef;
+    --accent-soft: #1e3a5f;
+
+    --md-link: #4a9eff;
+    --md-code-bg: #23272e;
+    --md-code-inline-bg: rgb(129 139 152 / 22%);
+    --md-table-header-bg: #282c32;
+    --md-selection: rgb(74 158 255 / 20%);
+    --md-text-selection: rgb(74 158 255 / 40%);
+    --md-focus: #4a9eff;
+    --md-node-outline: rgb(74 158 255 / 70%);
+    --md-focus-ring: rgb(228 228 228 / 25%);
+    --md-focus-ring-blue: rgb(74 158 255 / 40%);
+    --md-error: #f28b82;
+    --md-error-border: rgb(242 139 130 / 45%);
+    --md-error-bg: rgb(242 139 130 / 12%);
+    --md-shadow-color: rgb(0 0 0 / 55%);
+    --md-shadow-soft: rgb(0 0 0 / 45%);
+    --md-shimmer-base: #8a8a8a;
+    --md-shimmer-hi: #d0d0d0;
+    --md-pop-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+    --md-tip-shadow: 0 4px 6px rgb(0 0 0 / 35%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* UI CJK fonts per language, same table as the docs/slides chrome
+ * (documentElement.lang is set at bootstrap and on switch) */
+:root {
+  --ui-cjk: 'PingFang SC', 'Microsoft YaHei';
+}
+
+:root:lang(ja) {
+  --ui-cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo';
+}
+
+:root:lang(ko) {
+  --ui-cjk: 'Apple SD Gothic Neo', 'Malgun Gothic';
+}
+
+:root:lang(zh-TW) {
+  --ui-cjk: 'PingFang TC', 'Microsoft JhengHei';
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  /* same UI stack as the docs/slides chrome ('Segoe UI' first + per-language
+     CJK token) so shared toolbar controls measure identically across apps */
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
+  color: var(--text);
+  background: var(--surface-subtle);
+  /* grayscale AA like the docs/sheets/slides/pdf chrome — macOS subpixel
+     rendering paints the same weight visibly heavier */
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* buttons follow the chrome font instead of the UA default, like docs */
+button {
+  font-family: inherit;
+}
+
+.app {
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.center-note {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.editor-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.doc-page {
+  max-width: 860px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 40px 72px 120px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border-subtle);
+}
+
+.status-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  user-select: none;
+}
+
+.status-file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-save {
+  margin-left: auto;
+}
+
+.status-failed {
+  color: var(--danger);
+}
+
+/* ---- editor content ---- */
+
+.doc-editor {
+  outline: none;
+  font-size: 16px;
+  line-height: 1.75;
+  word-wrap: break-word;
+}
+
+.doc-editor:focus-visible {
+  box-shadow: 0 0 0 2px var(--md-focus);
+}
+
+.doc-editor > *:first-child {
+  margin-top: 0;
+}
+
+.doc-editor h1,
+.doc-editor h2,
+.doc-editor h3,
+.doc-editor h4,
+.doc-editor h5,
+.doc-editor h6 {
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+  font-weight: 650;
+}
+
+.doc-editor h1 {
+  font-size: 2em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-editor h2 {
+  font-size: 1.5em;
+}
+
+.doc-editor h3 {
+  font-size: 1.25em;
+}
+
+.doc-editor h4 {
+  font-size: 1.1em;
+}
+
+.doc-editor p {
+  margin: 0.6em 0;
+}
+
+.doc-editor ul,
+.doc-editor ol {
+  padding-left: 1.6em;
+  margin: 0.6em 0;
+}
+
+.doc-editor li > p {
+  margin: 0.15em 0;
+}
+
+.doc-editor blockquote {
+  margin: 0.8em 0;
+  padding: 0.1em 1em;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.doc-editor code {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  background: var(--md-code-inline-bg);
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+}
+
+.doc-editor pre {
+  background: var(--md-code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+
+.doc-editor pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.doc-editor hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 1.6em 0;
+}
+
+.doc-editor a {
+  color: var(--md-link);
+}
+
+.doc-editor img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---- tables ---- */
+
+.doc-editor .tableWrapper {
+  margin: 0.8em 0;
+  overflow-x: auto;
+}
+
+.doc-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0;
+}
+
+.doc-editor th,
+.doc-editor td {
+  border: 1px solid var(--border-strong);
+  padding: 6px 10px;
+  vertical-align: top;
+  text-align: start;
+}
+
+/* cells hold paragraph nodes — the document paragraph margin would bloat rows */
+.doc-editor th > p,
+.doc-editor td > p {
+  margin: 0;
+}
+
+.doc-editor th {
+  background: var(--md-table-header-bg);
+  font-weight: 600;
+}
+
+/* ---- ribbon ---- */
+
+.ribbon {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  /* white chrome + shared toolbar ink, same as the docs ribbon */
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  user-select: none;
+  color: var(--text-primary);
+}
+
+/* slim quick-access row above the toolbar (save / undo / redo / autosave),
+ * same metrics as the docs tab row; it doubles as the window drag strip */
+.ribbon-tabs {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 2px;
+  padding: 5px 10px 0;
+  /* docs/slides size this row with their menu tabs (13px semibold labels,
+     7/6 padding + 2.5px underline ⇒ 39px measured); markdown has no menu
+     tabs, so pin the row so the toolbar bottom edge lines up across tabs */
+  min-height: 39px;
+  -webkit-app-region: drag;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.ribbon-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ribbon-tabs button,
+.ribbon-tabs .autosave-toggle {
+  -webkit-app-region: no-drag;
+}
+
+/* the toolbar row below the QAT row (old single-row ribbon) */
+.ribbon-body {
+  display: flex;
+  /* stretch like the docs ribbon: groups fill the band and the large
+     buttons top-align at the same size/position as docs */
+  align-items: stretch;
+  /* band metrics shared with the docs/slides/pdf ribbons; no row gap — groups
+     own their spacing (2px 4px padding) exactly like the docs/slides ribbons */
+  padding: 6px 12px;
+  /* HARD-fixed height like the other editors' ribbons, so switching shell tabs
+     never shifts the toolbar's bottom edge (no wrap-driven growth) */
+  height: 80px;
+  /* groups never shrink, so a narrow window scrolls the row inside the ribbon
+     instead of spilling controls out of reach (matching the docs ribbon). The
+     .rb-link-pop dropdown is position: fixed + anchor-positioned, so this
+     clip cannot cut it off */
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.ribbon-body::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .doc-page {
+    padding: 28px 24px 96px;
+  }
+}
+
+.rb-sep {
+  width: 1px;
+  flex-shrink: 0;
+  align-self: stretch;
+  background: var(--border);
+  /* 2px matches the groups' vertical padding — same inset as docs/slides */
+  margin: 2px 6px;
+}
+
+.rb-spacer {
+  flex: 1;
+}
+
+/* ---- quick-access buttons (save / undo / redo), same as the docs QAT ---- */
+
+.qa-btn {
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.qa-btn svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.qa-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.qa-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.qa-text-btn {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.qa-text-btn:hover:not(:disabled),
+.qa-text-btn[aria-pressed='true'] {
+  background: var(--active-bg);
+}
+
+.qa-text-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+:where(.qa-btn, .qa-text-btn, .rb-btn, .rb-big, .rb-link-pop button):focus-visible {
+  outline: 2px solid var(--md-focus);
+  outline-offset: 2px;
+}
+
+/* ---- autosave toggle (pill), same as the docs one ---- */
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 4px;
+  margin-right: 4px;
+  user-select: none;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong, var(--border));
+  position: relative;
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: left 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--accent);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  left: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  /* same ink as the docs/slides autosave label */
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* inline toolbar button + suite-wide states (ink/hover/neutral selected
+ * plate, no brand color) — same metrics as the docs/slides .rb-icon
+ * (28px min box, 30px tall, 3px radius, 15px letterform glyphs) */
+.rb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 30px;
+  padding: 0 4px;
+  white-space: nowrap;
+  border: none;
+  border-radius: 3px;
+  font-size: 15px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.rb-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-btn.active {
+  background: var(--active-bg);
+  color: var(--text-primary);
+}
+
+.rb-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---- docs-parity ribbon group with large buttons ---- */
+
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 4px;
+  /* groups never shrink below content, same as the docs/slides ribbons */
+  flex-shrink: 0;
+}
+
+.ribbon-group-items {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.rb-big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  padding: 4px 7px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.rb-big-icon {
+  min-height: 28px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  /* same icon-row box as docs: full button width with horizontal bleed */
+  align-self: stretch;
+  border-radius: 4px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+}
+
+.rb-big:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* typographic letterform glyphs (B/I/U/S): 15px/600 like the docs inline row */
+.rb-mono {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11.5px;
+}
+
+/* block-style picker: same box as the docs/slides font pickers (.rb-font-btn:
+ * 28px tall, 3px radius, 13px label, 7px inline padding, strong border) */
+.rb-style {
+  height: 28px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 0 7px;
+  min-width: 108px;
+}
+
+/* Anchor for the link popover, which is position: fixed so it escapes the
+   ribbon-body scroll clip while tracking its trigger (same pattern as the
+   docs ribbon dropdowns) */
+.rb-link-anchor {
+  position: relative;
+  display: inline-flex;
+  anchor-name: --rb-link-anchor;
+  anchor-scope: --rb-link-anchor;
+}
+
+.rb-link-pop {
+  position: fixed;
+  position-anchor: --rb-link-anchor;
+  top: calc(anchor(bottom) + 2px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--md-shadow-color);
+}
+
+.rb-link-pop input {
+  width: 240px;
+  height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+
+.rb-link-pop button {
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+  font-size: 12.5px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+/* ---- slash menu ---- */
+
+.slash-menu {
+  z-index: 40;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px var(--md-shadow-color);
+}
+
+.slash-item {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.slash-item.active {
+  background: var(--pressed);
+}
+
+.slash-empty {
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ---- block drag handle ---- */
+
+.md-drag-handle-legacy {
+  position: absolute;
+  z-index: 20;
+  width: 18px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: var(--icon-muted);
+  cursor: grab;
+}
+
+.md-drag-handle-legacy:hover {
+  background: var(--hover);
+  color: var(--text-muted);
+}
+
+/* ---- task list ---- */
+
+.doc-editor ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.4em;
+}
+
+.doc-editor ul[data-type='taskList'] li {
+  display: flex;
+  gap: 8px;
+}
+
+.doc-editor ul[data-type='taskList'] li > label {
+  flex: 0 0 auto;
+  margin-top: 0.35em;
+  user-select: none;
+}
+
+.doc-editor ul[data-type='taskList'] li > div {
+  flex: 1;
+}
+
+.doc-editor ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* ---- table selection ---- */
+
+.doc-editor .selectedCell {
+  background: var(--md-selection);
+}
+
+.doc-editor table .column-resize-handle {
+  background: var(--md-focus);
+}
+
+/* ---- placeholder ---- */
+
+.doc-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--icon-muted);
+  pointer-events: none;
+  height: 0;
+}
+
+/* ---- frontmatter panel ---- */
+
+.fm-panel {
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-content);
+  overflow: hidden;
+}
+
+.fm-title {
+  padding: 6px 12px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fm-textarea {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: vertical;
+  padding: 6px 12px 10px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text);
+  outline: none;
+}
+
+/* ---- editor drop cursor / node selection ---- */
+
+.doc-editor .ProseMirror-selectednode {
+  outline: 2px solid var(--md-node-outline);
+  border-radius: 4px;
+}
+/* ================= status bar (unified chrome shared with docs/sheets/slides) ================= */
+
+.status-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  height: 24px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--border);
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-item {
+  margin-right: 14px;
+  flex-shrink: 0;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: var(--active-bg);
+}
+
+.zoom-slider {
+  width: 110px;
+  accent-color: var(--text-muted);
+  height: 3px;
+}
+
+.zoom-value {
+  min-width: 38px;
+  text-align: right;
+}
+
+/* body row */
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.app-main .editor-scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- code block chrome ---- */
+
+.md-codeblock {
+  position: relative;
+  margin: 0.8em 0;
+}
+
+.md-codeblock pre {
+  margin: 0;
+}
+
+.md-codeblock-bar {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.md-codeblock:hover .md-codeblock-bar,
+.md-codeblock-bar:focus-within {
+  opacity: 1;
+}
+
+.md-codeblock-lang {
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  padding: 0 4px;
+}
+
+.md-codeblock-copy {
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.md-codeblock-copy:hover {
+  background: var(--hover);
+}
+
+/* ---- floating table menu ---- */
+
+.table-menu {
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px var(--md-shadow-color);
+}
+
+.tm-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tm-btn:hover {
+  background: var(--hover);
+}
+
+.tm-btn.active {
+  background: var(--active-bg);
+  color: var(--color-text-primary);
+}
+
+.tm-btn.danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.tm-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 3px;
+}
+
+/* ---- block gutter (+ and grip) & block menu ---- */
+
+.md-block-gutter {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.md-gutter-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--icon-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.md-gutter-btn:hover {
+  background: var(--hover);
+  color: var(--text-muted);
+}
+
+.md-gutter-grip {
+  cursor: grab;
+}
+
+.md-block-menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 150px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px var(--md-shadow-color);
+}
+
+.md-block-menu-item {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.md-block-menu-item:hover {
+  background: var(--hover);
+}
+
+.md-block-menu-item.danger {
+  color: var(--danger);
+}
+
+.md-block-menu-item.danger:hover {
+  background: var(--danger-bg);
+}

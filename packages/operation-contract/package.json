@@ -1,0 +1,23 @@
+{
+  "name": "@tandemfolio/operation-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Format-neutral operation descriptors, transactions, validation, and manifest generation for TandemFolio.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "manifest:generate": "tsx ../../tools/generate-operation-manifest.ts --input tests/fixtures/catalogs.json --output tests/fixtures/operation-manifest.json",
+    "manifest:check": "tsx ../../tools/generate-operation-manifest.ts --input tests/fixtures/catalogs.json --output tests/fixtures/operation-manifest.json --check",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

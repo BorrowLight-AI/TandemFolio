@@ -1,0 +1,6188 @@
+/* Per-app accent (word-blue family) + docs-only tokens.
+ * Shared chrome tokens come from @genoffice/ui/tokens.css. */
+:root {
+  --word-blue: #185abd;
+  --word-blue-dark: #124a9e;
+  --word-heading: #2f5496;
+  --accent: var(--word-blue);
+  --accent-dark: var(--word-blue-dark);
+  --accent-soft: #e8f1fb;
+
+  --docs-heading-3: #1f3864;
+  --docs-accent-ghost: rgb(24 90 189 / 10%);
+  --docs-swatch-outline: rgb(0 0 0 / 15%);
+  --docs-swatch-outline-strong: rgb(0 0 0 / 25%);
+  --docs-swatch-border: #a6a6a6;
+  --docs-ins-ink: #166534;
+  --docs-ins-bg: rgb(22 101 52 / 6%);
+  --docs-del-ink: #b91c1c;
+  --docs-del-bg: rgb(185 28 28 / 6%);
+  --docs-ok-ink: #2e7d32;
+  --docs-ok-bg: #e6f2e6;
+  --docs-ok-border: #a5d6a7;
+  --docs-ok-dot: #2e9e44;
+  --docs-chip-bg: #f6f8fc;
+  --docs-focus-ring: rgb(35 36 37 / 20%);
+  --docs-focus-ring-blue: rgb(74 141 246 / 30%);
+  --docs-scroll-thumb: rgb(0 0 0 / 25%);
+  --docs-tooltip-bg: #232425;
+  --docs-tooltip-ink: #ffffff;
+  --docs-shimmer-base: #666666;
+  --docs-shimmer-hi: #d9d9d9;
+  --docs-statusbar-bg: #f3f4f6;
+  --docs-statusbar-border: #e1e4e8;
+  --docs-statusbar-hover: rgb(0 0 0 / 8%);
+  --docs-zoom-slider: #8a8886;
+  --docs-ruler-bg: #f3f2f1;
+  --docs-ruler-tick: #b9b9b9;
+  --docs-ruler-border: #d6d6d6;
+  --docs-ruler-ink: #666;
+  --docs-ruler-btn-bg: #e0e0e0;
+  --docs-ruler-btn-hover: #d0d0d0;
+  --docs-ruler-btn-border: #ccc;
+  --docs-ruler-btn-ink: #333;
+  --docs-ruler-tab-guide: #aaa;
+  --docs-ruler-zone: rgb(0 0 0 / 8%);
+  --docs-tstyle-border: #b8bcc4;
+  --docs-tstyle-header: #7f8b9d;
+  --docs-tstyle-row: #eef1f5;
+  --docs-gap-cut: #b6c2d2;
+  --docs-pv-canvas: #525659;
+  --docs-overlay: rgb(0 0 0 / 50%);
+  --docs-page-shadow: 0 1px 3px rgb(0 0 0 / 28%), 0 4px 16px rgb(0 0 0 / 10%);
+  --docs-gap-inset: inset 0 8px 8px -8px rgb(0 0 0 / 35%), inset 0 -3px 3px -3px rgb(0 0 0 / 18%);
+  --docs-shadow-menu: 0 8px 24px rgb(0 0 0 / 18%);
+  --docs-shadow-ctx: 0 8px 28px rgb(0 0 0 / 22%);
+  --docs-shadow-modal: 0 3px 30px rgb(0 0 0 / 8%);
+  --docs-shadow-chip: 0 2px 8px rgb(0 0 0 / 12%);
+  --docs-shadow-tooltip: 0 4px 6px rgb(0 0 0 / 10%);
+  --docs-shadow-toast: 0 4px 16px rgb(0 0 0 / 18%);
+
+  /* brand-fixed chrome: identical in both themes */
+  --docs-on-accent: #fff;
+  --docs-on-accent-dim: rgb(255 255 255 / 75%);
+  --docs-comment-accent: #e8a33d;
+  --docs-knob-dot: #fff;
+  --docs-toast-bg: rgb(35 35 37 / 92%);
+  --docs-toast-error-bg: rgb(196 49 75 / 95%);
+  --docs-toast-ink: #fff;
+  --docs-toast-ok: #34c759;
+
+  /* Content-side constants stay fixed because they paint on white paper. */
+  --external-change-highlight: #fff3c4;
+  --external-change-highlight-border: #f2b900;
+  --docs-paper: #ffffff;
+  --docs-paper-ink: #000;
+  --docs-paper-ink-dim: #333;
+  --docs-paper-ink-mid: #555;
+  --docs-paper-ink-soft: #777;
+  --docs-paper-ink-faint: #888;
+  --docs-paper-heading: #2f5496;
+  --docs-paper-h3: #1f3864;
+  --docs-paper-link: #0563c1;
+  --docs-paper-accent: #185abd;
+  --docs-paper-mark: #2b7cd3;
+  --docs-paper-grid: rgb(43 124 211 / 13%);
+  --docs-paper-hf-line: #d0d0d0;
+  --docs-paper-chip-bg: #fafafa;
+  --docs-paper-select-bg: #e8f1fb;
+  --docs-paper-stripe: #f0f0f0;
+  --docs-paper-chart-grid: #e0e0e0;
+  --docs-paper-chart-border: #d9d9d9;
+  --docs-paper-field-bg: rgb(0 0 0 / 7%);
+  --docs-paper-field-bg-inverse: rgb(255 255 255 / 12%);
+  --docs-paper-watermark: rgb(128 128 128 / 18%);
+  --docs-paper-rev-ink: #b91c1c;
+  --docs-paper-ins-bg: rgb(22 163 74 / 8%);
+  --docs-paper-del-bg: rgb(220 38 38 / 8%);
+  --docs-paper-del-line: #dc2626;
+  --docs-paper-ppr: #f59e0b;
+  --docs-paper-ppr-ink: #b45309;
+  --docs-paper-ppr-bg: #fef3c7;
+  --docs-paper-ppr-border: #fcd34d;
+  --docs-paper-rpr: #c98a00;
+  --docs-paper-sdt-border: #a0c0e8;
+  --docs-paper-sdt-ink: #5080b0;
+  --docs-paper-sdt-bg: #eef4fb;
+  --docs-paper-comment-bg: rgb(255 196 0 / 22%);
+  --docs-paper-comment-flash: rgb(255 170 0 / 55%);
+  --docs-paper-comment-line: #e8a33d;
+  --docs-paper-xe-ink: #8a6d3b;
+  --docs-paper-xe-bg: #fdf6e3;
+  --docs-paper-xe-border: #d5c48a;
+  --docs-paper-hit-bg: #ffe28a;
+  --docs-paper-hit-active-bg: #ff9632;
+  --docs-paper-hit-active-ink: #fff;
+}
+
+[data-theme='dark'] {
+  --word-blue: #4a9eff;
+  --word-blue-dark: #3a8eef;
+  --word-heading: #6cabf0;
+  --accent-soft: #1e3a5f;
+
+  --docs-heading-3: #7fa8e0;
+  --docs-accent-ghost: rgb(74 158 255 / 18%);
+  --docs-swatch-outline: rgb(255 255 255 / 25%);
+  --docs-swatch-outline-strong: rgb(255 255 255 / 30%);
+  --docs-swatch-border: #666;
+  --docs-ins-ink: #6fcf8f;
+  --docs-ins-bg: rgb(111 207 143 / 10%);
+  --docs-del-ink: #f28b82;
+  --docs-del-bg: rgb(242 139 130 / 10%);
+  --docs-ok-ink: #7bd88a;
+  --docs-ok-bg: #16351c;
+  --docs-ok-border: #2e5c36;
+  --docs-ok-dot: #34c759;
+  --docs-chip-bg: #2a2f36;
+  --docs-focus-ring: rgb(228 228 228 / 25%);
+  --docs-focus-ring-blue: rgb(74 158 255 / 40%);
+  --docs-scroll-thumb: rgb(255 255 255 / 28%);
+  --docs-tooltip-bg: #e4e4e4;
+  --docs-tooltip-ink: #1e1e1e;
+  --docs-shimmer-base: #8a8a8a;
+  --docs-shimmer-hi: #d0d0d0;
+  --docs-statusbar-bg: #252525;
+  --docs-statusbar-border: #3a3a3a;
+  --docs-statusbar-hover: rgb(255 255 255 / 10%);
+  --docs-zoom-slider: #8a8a8a;
+  --docs-ruler-bg: #2d2d2d;
+  --docs-ruler-tick: #6a6a6a;
+  --docs-ruler-border: #444;
+  --docs-ruler-ink: #a0a0a0;
+  --docs-ruler-btn-bg: #3a3a3a;
+  --docs-ruler-btn-hover: #4a4a4a;
+  --docs-ruler-btn-border: #555;
+  --docs-ruler-btn-ink: #d0d0d0;
+  --docs-ruler-tab-guide: #777;
+  --docs-ruler-zone: rgb(255 255 255 / 10%);
+  --docs-tstyle-border: #5a5f66;
+  --docs-tstyle-header: #8a93a3;
+  --docs-tstyle-row: #333;
+  --docs-gap-cut: #56606c;
+  --docs-pv-canvas: #1f1f1f;
+  --docs-overlay: rgb(0 0 0 / 55%);
+  --docs-page-shadow: 0 1px 3px rgb(0 0 0 / 60%), 0 4px 16px rgb(0 0 0 / 40%);
+  --docs-gap-inset: inset 0 8px 8px -8px rgb(0 0 0 / 65%), inset 0 -3px 3px -3px rgb(0 0 0 / 40%);
+  --docs-shadow-menu: 0 8px 24px rgb(0 0 0 / 55%);
+  --docs-shadow-ctx: 0 8px 28px rgb(0 0 0 / 60%);
+  --docs-shadow-modal: 0 20px 50px rgb(0 0 0 / 65%);
+  --docs-shadow-chip: 0 2px 8px rgb(0 0 0 / 40%);
+  --docs-shadow-tooltip: 0 4px 6px rgb(0 0 0 / 30%);
+  --docs-shadow-toast: 0 4px 16px rgb(0 0 0 / 45%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --word-blue: #4a9eff;
+    --word-blue-dark: #3a8eef;
+    --word-heading: #6cabf0;
+    --accent-soft: #1e3a5f;
+
+    --docs-heading-3: #7fa8e0;
+    --docs-accent-ghost: rgb(74 158 255 / 18%);
+    --docs-swatch-outline: rgb(255 255 255 / 25%);
+    --docs-swatch-outline-strong: rgb(255 255 255 / 30%);
+    --docs-swatch-border: #666;
+    --docs-ins-ink: #6fcf8f;
+    --docs-ins-bg: rgb(111 207 143 / 10%);
+    --docs-del-ink: #f28b82;
+    --docs-del-bg: rgb(242 139 130 / 10%);
+    --docs-ok-ink: #7bd88a;
+    --docs-ok-bg: #16351c;
+    --docs-ok-border: #2e5c36;
+    --docs-ok-dot: #34c759;
+    --docs-chip-bg: #2a2f36;
+    --docs-focus-ring: rgb(228 228 228 / 25%);
+    --docs-focus-ring-blue: rgb(74 158 255 / 40%);
+    --docs-scroll-thumb: rgb(255 255 255 / 28%);
+    --docs-tooltip-bg: #e4e4e4;
+    --docs-tooltip-ink: #1e1e1e;
+    --docs-shimmer-base: #8a8a8a;
+    --docs-shimmer-hi: #d0d0d0;
+    --docs-statusbar-bg: #252525;
+    --docs-statusbar-border: #3a3a3a;
+    --docs-statusbar-hover: rgb(255 255 255 / 10%);
+    --docs-zoom-slider: #8a8a8a;
+    --docs-ruler-bg: #2d2d2d;
+    --docs-ruler-tick: #6a6a6a;
+    --docs-ruler-border: #444;
+    --docs-ruler-ink: #a0a0a0;
+    --docs-ruler-btn-bg: #3a3a3a;
+    --docs-ruler-btn-hover: #4a4a4a;
+    --docs-ruler-btn-border: #555;
+    --docs-ruler-btn-ink: #d0d0d0;
+    --docs-ruler-tab-guide: #777;
+    --docs-ruler-zone: rgb(255 255 255 / 10%);
+    --docs-tstyle-border: #5a5f66;
+    --docs-tstyle-header: #8a93a3;
+    --docs-tstyle-row: #333;
+    --docs-gap-cut: #56606c;
+    --docs-pv-canvas: #1f1f1f;
+    --docs-overlay: rgb(0 0 0 / 55%);
+    --docs-page-shadow: 0 1px 3px rgb(0 0 0 / 60%), 0 4px 16px rgb(0 0 0 / 40%);
+    --docs-gap-inset: inset 0 8px 8px -8px rgb(0 0 0 / 65%), inset 0 -3px 3px -3px rgb(0 0 0 / 40%);
+    --docs-shadow-menu: 0 8px 24px rgb(0 0 0 / 55%);
+    --docs-shadow-ctx: 0 8px 28px rgb(0 0 0 / 60%);
+    --docs-shadow-modal: 0 20px 50px rgb(0 0 0 / 65%);
+    --docs-shadow-chip: 0 2px 8px rgb(0 0 0 / 40%);
+    --docs-shadow-tooltip: 0 4px 6px rgb(0 0 0 / 30%);
+    --docs-shadow-toast: 0 4px 16px rgb(0 0 0 / 45%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* UI CJK fonts per language (documentElement.lang is set at bootstrap and on switch);
+ * the zh expansion must keep the historical stack byte-identical */
+:root {
+  --ui-cjk: 'PingFang SC', 'Microsoft YaHei';
+}
+
+:root:lang(ja) {
+  --ui-cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo';
+}
+
+:root:lang(ko) {
+  --ui-cjk: 'Apple SD Gothic Neo', 'Malgun Gothic';
+}
+
+:root:lang(zh-TW) {
+  --ui-cjk: 'PingFang TC', 'Microsoft JhengHei';
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
+  color: var(--text);
+  background: var(--chrome-bg);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  /* The document itself never scrolls: a too-wide ribbon (or any other
+     overflowing chrome) must scroll inside its own container, not drag the
+     whole page sideways. */
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ================= title bar (doc name centered) ================= */
+
+.qa-btn {
+  width: 30px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.qa-btn svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.qa-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.qa-btn:disabled {
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
+/* ================= ribbon ================= */
+
+.ribbon {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border-strong);
+  user-select: none;
+  /* shared toolbar ink (glyphs, letterforms, labels) — same as sheets/slides */
+  color: var(--text-primary);
+}
+
+.ribbon-tabs {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  /* same tab-row metrics as PowerPoint's ribbon (slides app): 5px top inset,
+     no bottom padding — the active tab's underline sits on the row's edge */
+  padding: 5px 10px 0;
+  gap: 2px;
+  /* the title-bar row was removed; the tab row doubles as the frameless-window drag area */
+  -webkit-app-region: drag;
+  user-select: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.ribbon-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ribbon-tabs button,
+.ribbon-tabs .file-tab-wrap,
+.ribbon-tabs .autosave-toggle,
+.ribbon-tabs .qa-btn {
+  -webkit-app-region: no-drag;
+}
+
+.ribbon-tabs-mac {
+  padding-left: 84px; /* room for traffic lights */
+}
+
+.ribbon-tabs-win {
+  padding-right: 150px; /* room for windows caption buttons overlay */
+}
+
+.ribbon-file {
+  max-width: 30%;
+  font-size: 12px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 6px;
+}
+
+.ribbon-tab {
+  position: relative;
+  border: none;
+  background: none;
+  padding: 7px 9px 6px;
+  font-size: 13px;
+  /* every tab label is semibold, not just the active one */
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  /* transparent border keeps the row height; the visible underline is the
+   * ::after, sized to the label text rather than the padded button */
+  border-bottom: 2.5px solid transparent;
+  border-radius: 4px 4px 0 0;
+}
+
+/* hovering a tab tints the label, it doesn't paint a box */
+.ribbon-tab:hover {
+  color: var(--word-blue);
+}
+
+.ribbon-tab.active {
+  color: var(--word-blue);
+  font-weight: 600;
+}
+
+/* active underline: exactly the text width (insets = horizontal padding),
+ * ends slightly rounded — not a full capsule */
+.ribbon-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  bottom: -2.5px;
+  height: 2.5px;
+  border-radius: 1px;
+  background: var(--word-blue);
+}
+
+.ribbon-tab-file {
+  color: var(--docs-on-accent);
+  background: var(--word-blue);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  margin-right: 6px;
+}
+
+.ribbon-tab-file svg {
+  display: block;
+}
+
+.ribbon-tab-file:hover,
+.ribbon-tab-file.open {
+  background: var(--word-blue-dark);
+}
+
+.file-tab-wrap {
+  position: relative;
+  /* The tabs row scrolls horizontally and therefore clips ordinary absolute
+     descendants. Anchor the menu to this trigger so its fixed-position panel
+     can escape that clip while still following the File button. */
+  anchor-name: --file-tab;
+  anchor-scope: --file-tab;
+}
+
+.file-menu {
+  position: fixed;
+  position-anchor: --file-tab;
+  top: calc(anchor(bottom) + 2px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  min-width: 210px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 5px;
+}
+
+.file-menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.file-menu button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.file-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.file-menu-key {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ribbon-tabs-spacer {
+  flex: 1;
+}
+
+.mcp-fullscreen-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.mcp-fullscreen-button:hover:not([aria-disabled='true']) {
+  background: var(--hover);
+}
+
+.mcp-fullscreen-button:focus-visible {
+  outline: 2px solid var(--word-blue);
+  outline-offset: 2px;
+}
+
+.mcp-fullscreen-button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mcp-fullscreen-button svg {
+  display: block;
+}
+
+.qa-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+
+/* ---- ribbon body ---- */
+
+.ribbon-body {
+  display: flex;
+  align-items: stretch;
+  /* band metrics shared with the slides ribbon */
+  padding: 6px 12px;
+  /* HARD-fixed height, not min-height: the ribbon height stays constant across
+     tabs, so switching tabs or auto-jumping to Table Layout when the cursor
+     enters a table never pushes the editing area below. A tab that outgrows this must
+     compact its own content instead. */
+  height: 80px;
+  /* Groups never shrink below content, so a narrow window overflows the row:
+     scroll it inside the ribbon instead of stretching the document (matching
+     the sheets/slides ribbons). Dropdown panels are NOT clipped by this —
+     they escape the scroll container via anchor positioning (see
+     .rb-split-wrap). */
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.ribbon-body::-webkit-scrollbar {
+  display: none;
+}
+
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 4px;
+}
+
+.ribbon-group-items {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+/* Word for Mac shows no group captions under the ribbon */
+.ribbon-group-label {
+  display: none;
+}
+
+.ribbon-sep {
+  width: 1px;
+  /* the overflowing ribbon row squeezes shrinkable items first — without
+     this the 1px separators collapse to 0 and vanish (slides ribbon parity) */
+  flex-shrink: 0;
+  background: var(--border);
+  /* 2px matches the groups' vertical padding, so the line spans exactly the
+     tallest group content (the clipboard stack / two-row font block) instead
+     of stopping short of it — same inset across all three apps */
+  margin: 2px 6px;
+}
+
+.ribbon-placeholder {
+  align-self: center;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  padding: 0 14px;
+}
+
+/* big paste button */
+.rb-big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  /* PowerPoint-density: minimal side padding (slides ribbon parity) */
+  padding: 4px 7px 6px;
+  font-size: 12px;
+  /* no tab wrapping: wrapping in narrow windows makes the ribbon taller, causing height jumps when switching tabs */
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.rb-big-icon {
+  min-height: 28px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+/* hover/open paint only the icon row — the label below
+ * stays outside the gray. The box spans the whole button width (align-self
+ * stretch + horizontal bleed), not just the icon content. Negative margins
+ * cancel the bleed so button layout/alignment is unchanged. */
+.rb-big .rb-big-icon {
+  align-self: stretch;
+  border-radius: 4px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+}
+
+/* the dropdown chevron sits beside the icon (top row), not the label */
+.rb-caret-svg {
+  flex-shrink: 0;
+}
+
+.rb-big-icon .rb-caret-svg {
+  display: block;
+  margin-left: 3px;
+  color: var(--text-dim);
+}
+
+.rb-big-icon-colored {
+  position: relative;
+}
+
+.rb-big-icon-colored .rb-color-bar {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: -3px;
+  width: auto;
+  border: 1px solid var(--docs-swatch-outline);
+}
+
+.rb-big:hover:not(:disabled) .rb-big-icon {
+  background: var(--hover);
+}
+
+.rb-big:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Active state paints only the gray icon plate — ink stays the standard #232425 */
+.rb-big.active .rb-big-icon {
+  background: var(--active-bg);
+}
+
+.rb-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rb-small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.rb-small svg {
+  flex-shrink: 0;
+  /* 14px glyphs, matching the slides/sheets clipboard stacks */
+  width: 14px;
+  height: 14px;
+  color: var(--text-primary);
+  /* CSS resizes these below their attr size — re-pin the painted stroke
+     (1.43 units × 14/16 ≈ 1.25px) */
+  stroke-width: 1.43;
+}
+
+.rb-small:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-small.active {
+  background: var(--active-bg);
+}
+
+.rb-small:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rb-font-group {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  justify-content: center;
+}
+
+.rb-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rb-select {
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 12px;
+  padding: 0 4px;
+  color: var(--text);
+}
+
+.rb-select:disabled {
+  opacity: 0.55;
+}
+
+.rb-font-family {
+  width: 128px;
+}
+
+.rb-font-size {
+  width: 44px;
+}
+
+/* hide the native number spinner: the grow/shrink font buttons next to the
+   input already cover stepping */
+.rb-font-size::-webkit-outer-spin-button,
+.rb-font-size::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* the combobox inputs and their carets render as one bordered control, Word-style */
+.rb-font-size,
+.rb-font-family {
+  border-right: none;
+  border-radius: 3px 0 0 3px;
+}
+
+/* double class beats the base .rb-caret rules defined further down */
+.rb-caret.rb-combo-caret {
+  width: 18px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-left: none;
+  border-radius: 0 3px 3px 0;
+  background: var(--surface);
+}
+
+.rb-caret.rb-combo-caret:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-icon {
+  min-width: 28px;
+  height: 30px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--text);
+  padding: 0 4px;
+  /* flex-center the content: buttons whose svg is followed by an inline caret
+     (line spacing / shading / borders) otherwise sit on baseline math and land
+     a couple px off the plain icon buttons (align left/center/right/justify) */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rb-icon:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-icon.active {
+  background: var(--active-bg);
+}
+
+.rb-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rb-mini-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 5px;
+}
+
+.rb-icon svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.rb-script {
+  font-size: 12px;
+}
+
+.rb-script sub,
+.rb-script sup {
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* vertical-align:sub/super has no effect on flex items (.rb-icon is inline-flex
+   with align-items:center), so nudge the "2" off-center manually */
+.rb-script sub {
+  transform: translateY(4px);
+}
+
+.rb-script sup {
+  transform: translateY(-4px);
+}
+
+/* split button: main action + caret dropdown */
+.rb-split-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Anchor for the dropdown panels (color-palette / layout-menu / …), which are
+   position: fixed so they escape the ribbon-body scroll clip while tracking
+   their trigger through ribbon scrolling. Every wrap shares the name, so the
+   scope is essential: without it a fixed-position panel (laid out after all
+   in-flow content) would resolve to the LAST wrap in the document instead of
+   its own parent. */
+.rb-split-wrap,
+.rb-color-wrap {
+  anchor-name: --rb-drop-wrap;
+  anchor-scope: --rb-drop-wrap;
+}
+
+.rb-caret {
+  width: 13px;
+  height: 26px;
+  border: none;
+  background: none;
+  border-radius: 0 3px 3px 0;
+  font-size: 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+}
+
+.rb-caret:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-caret:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rb-color-caret {
+  width: 24px;
+  height: 30px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.rb-caret-inline {
+  font-size: 8px;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+/* font color button with color bar */
+.rb-color-wrap {
+  position: relative;
+}
+
+.rb-color-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 30px;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.rb-color-a {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.rb-color-bar {
+  width: 16px;
+  height: 4px;
+  margin-top: 1px;
+  border-radius: 1px;
+}
+
+.color-palette {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(6, 22px);
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: var(--docs-shadow-menu);
+}
+
+.color-swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--docs-swatch-outline);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.color-swatch:hover {
+  outline: 2px solid var(--word-blue);
+}
+
+/* "No Shading" reset row under the swatch grid */
+.color-clear {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  padding: 5px 6px;
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.color-clear:hover {
+  background: var(--hover);
+}
+
+.color-palette-highlight {
+  grid-template-columns: none;
+}
+
+.color-palette-highlight-word {
+  display: block;
+  width: 233px;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.color-highlight-title {
+  margin: 0 0 10px;
+}
+
+.color-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 35px);
+  gap: 7px;
+}
+
+.color-highlight-swatch {
+  width: 35px;
+  height: 35px;
+  border-radius: 4px;
+}
+
+.color-highlight-swatch:hover,
+.color-highlight-swatch.selected {
+  outline: 2px solid var(--word-blue);
+  outline-offset: 1px;
+}
+
+.color-highlight-none {
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 0;
+  font-size: 14px;
+}
+
+.color-highlight-none.selected {
+  outline: 2px solid color-mix(in srgb, var(--word-blue) 65%, transparent);
+  outline-offset: -2px;
+}
+
+.color-palette-word {
+  display: block;
+  width: 389px;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.color-automatic {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.color-automatic:hover,
+.color-automatic.selected {
+  background: var(--hover);
+  outline: 2px solid color-mix(in srgb, var(--word-blue) 65%, transparent);
+  outline-offset: -2px;
+}
+
+.color-section-title {
+  margin: 18px 0 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.color-theme-base,
+.color-theme-shades,
+.color-standard-row {
+  display: grid;
+  grid-template-columns: repeat(10, 31px);
+  column-gap: 5px;
+}
+
+.color-theme-base {
+  row-gap: 0;
+  margin-bottom: 12px;
+}
+
+.color-theme-shades {
+  row-gap: 0;
+}
+
+.color-swatch-large {
+  width: 31px;
+  height: 31px;
+  border-radius: 0;
+}
+
+.color-swatch-large:hover,
+.color-swatch-large.selected {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--word-blue);
+  outline-offset: 1px;
+}
+
+.color-standard-title {
+  margin-top: 18px;
+}
+
+.color-more {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px -16px -12px;
+  padding: 11px 18px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.color-more:hover {
+  background: var(--hover);
+}
+
+.color-more-icon {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.color-more input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.color-none {
+  grid-column: 1 / -1;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 12px;
+  padding: 4px 0;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.color-none:hover {
+  background: var(--hover);
+}
+
+/* line spacing dropdown */
+.spacing-menu {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  min-width: 92px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 4px;
+}
+
+.spacing-menu button {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.spacing-menu button:hover {
+  background: var(--hover);
+}
+
+.spacing-menu button.active {
+  background: var(--active-bg);
+}
+
+/* Font size preset list: compact Word-style rows so the whole list fits
+   without scrolling (the viewport cap only kicks in on tiny windows), and the
+   current size gets a leading check instead of a highlight. Placed after the
+   .spacing-menu rules so these overrides win at equal specificity. */
+.rb-font-size-menu {
+  min-width: 76px;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+}
+
+.rb-font-size-menu button {
+  position: relative;
+  padding: 3px 16px 3px 28px;
+  font-size: 12.5px;
+}
+
+.rb-font-size-menu button.active {
+  background: none;
+  color: var(--text);
+}
+
+.rb-font-size-menu button.active:hover {
+  background: var(--hover);
+}
+
+.rb-font-size-menu button.active::before {
+  content: '✓';
+  position: absolute;
+  left: 10px;
+}
+
+/* Font family list: each entry renders in its own typeface (inline style);
+   long list scrolls like Word's */
+.rb-font-family-menu {
+  min-width: 200px;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+}
+
+.rb-font-family-menu button {
+  padding: 5px 16px 5px 28px;
+  font-size: 14px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.rb-font-family-menu button.active {
+  background: none;
+  color: var(--text);
+}
+
+.rb-font-family-menu button.active:hover {
+  background: var(--hover);
+}
+
+.rb-font-family-menu button.active::before {
+  content: '✓';
+  position: absolute;
+  left: 10px;
+  font-family: system-ui;
+}
+
+.rb-menu-group-label {
+  padding: 8px 16px 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  cursor: default;
+}
+
+/* ---- Insert: table size picker ---- */
+
+/* Insert → Cover Page gallery */
+.cover-gallery {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(4, 104px);
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.cover-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.cover-card:hover {
+  border-color: var(--word-blue);
+  background: var(--hover);
+}
+
+.cover-thumb-page {
+  width: 88px;
+  height: 116px;
+  overflow: hidden;
+  background: var(--docs-paper);
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  padding: 4px 5px;
+  font-size: 4px;
+  line-height: 1.3;
+  color: var(--docs-paper-ink-dim);
+  text-align: left;
+  pointer-events: none;
+}
+
+.cover-thumb-para {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cover-card-name {
+  font-size: 11px;
+  color: var(--text);
+}
+
+.table-picker {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 8px;
+}
+
+.table-picker-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 18px);
+  gap: 3px;
+}
+
+.table-cell {
+  width: 18px;
+  height: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--surface);
+  cursor: pointer;
+  padding: 0;
+}
+
+.table-cell.hot {
+  /* blue-tinted like an in-document selection, not the gray toolbar plate */
+  background: var(--accent-soft);
+  border-color: var(--word-blue);
+}
+
+/* ---- Insert: symbol palette ---- */
+
+.symbol-palette {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(10, 28px);
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 8px;
+}
+
+.symbol-cell {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.symbol-cell:hover {
+  background: var(--active-bg);
+}
+
+/* ---- Shape picker dropdown ---- */
+
+.shape-palette {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  width: 312px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 6px;
+}
+
+.shape-group-title {
+  padding: 6px 4px 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.shape-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+}
+
+.shape-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 0;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.shape-cell:hover {
+  background: var(--active-bg);
+}
+
+/* ---- WordArt picker panel ---- */
+
+/* Unlabeled letter grid matching the slides WordArt gallery (style name = tooltip) */
+.wordart-palette {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(4, 44px);
+  gap: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 8px;
+}
+
+.wordart-cell {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 26px;
+  font-family: Georgia, serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wordart-cell:hover {
+  border-color: var(--accent);
+}
+
+/* ---- Drop cap dropdown menu ---- */
+
+.dropcap-menu {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 8px;
+  min-width: 200px;
+}
+
+.dropcap-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text);
+  min-width: 56px;
+}
+
+.dropcap-option:hover {
+  background: var(--active-bg);
+  border-color: var(--border);
+}
+
+.dropcap-preview {
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1;
+  color: var(--text);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+/* ---- Equations: built-in equation library dropdown + LaTeX insert dialog ---- */
+
+.equation-gallery {
+  /* right-aligned to its trigger (the Equation button sits at the ribbon's
+     far right) — fixed + anchored like the other panels */
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  right: anchor(right);
+  position-visibility: anchors-visible;
+  z-index: 60;
+  width: 300px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 6px;
+}
+
+.equation-gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  padding: 8px 6px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.equation-gallery-item:hover {
+  background: var(--active-bg);
+}
+
+.equation-gallery-name {
+  font-size: 11px;
+  color: var(--text-dim);
+  align-self: flex-start;
+}
+
+.equation-gallery-preview {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 15px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.equation-gallery-custom {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border-strong);
+  background: none;
+  padding: 8px 6px;
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.equation-gallery-custom:hover {
+  background: var(--active-bg);
+}
+
+.equation-modal {
+  min-width: 460px;
+}
+
+.equation-preview {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  margin: 10px 0 2px;
+  padding: 10px;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 18px;
+  overflow-x: auto;
+}
+
+.equation-preview-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: system-ui, sans-serif;
+}
+
+.equation-preview-error {
+  font-size: 12px;
+  color: var(--danger);
+  font-family: system-ui, sans-serif;
+}
+
+.equation-inline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  user-select: none;
+}
+
+/* ---- Layout: preset menus + paragraph spinners ---- */
+
+.layout-menu {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 5px;
+}
+
+.layout-menu button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 7px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.layout-menu button span {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.layout-menu button:not(:disabled):hover {
+  background: var(--hover);
+}
+
+.layout-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.layout-menu button.active {
+  background: var(--active-bg);
+}
+
+/* w:trHeight hRule="exact": Word clips overflow instead of growing the row. td height is
+   min-height in CSS table layout, so cells wrap content in this fixed-height box instead;
+   clip (not hidden) so contenteditable's programmatic scrolls can't shift the content */
+.cell-clip {
+  overflow: clip;
+}
+
+/* table row/cell revisions: insert = green background, delete = red background (inline text has separate ins/del underline/strike styles) */
+tr.row-rev-ins > td,
+tr.row-rev-ins > th,
+td.cell-rev-ins,
+th.cell-rev-ins {
+  background: var(--docs-paper-ins-bg);
+}
+
+tr.row-rev-del > td,
+tr.row-rev-del > th,
+td.cell-rev-del,
+th.cell-rev-del {
+  background: var(--docs-paper-del-bg);
+}
+
+/* no-markup mode = as if all accepted: deleted rows hidden, insert background removed */
+.rev-display-none tr.row-rev-del,
+.rev-display-none td.cell-rev-del,
+.rev-display-none th.cell-rev-del {
+  display: none;
+}
+
+.rev-display-none tr.row-rev-ins > td,
+.rev-display-none tr.row-rev-ins > th,
+.rev-display-none td.cell-rev-ins,
+.rev-display-none th.cell-rev-ins {
+  background: none;
+}
+
+/* original mode = as if all rejected: inserted rows hidden, delete background removed */
+.rev-display-original tr.row-rev-ins,
+.rev-display-original td.cell-rev-ins,
+.rev-display-original th.cell-rev-ins {
+  display: none;
+}
+
+.rev-display-original tr.row-rev-del > td,
+.rev-display-original tr.row-rev-del > th,
+.rev-display-original td.cell-rev-del,
+.rev-display-original th.cell-rev-del {
+  background: none;
+}
+
+/* Arrange group position gallery: 3x3 page thumbnail grid, dots indicate image placement */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  gap: 4px;
+  padding: 6px 8px 4px;
+}
+
+.layout-menu button.pos-cell {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+}
+
+.layout-menu button.pos-cell.active {
+  border-color: var(--border-strong);
+  background: var(--active-bg);
+}
+
+.pos-cell .pos-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--text-dim);
+}
+
+.pos-cell.ph-left {
+  justify-content: flex-start;
+}
+.pos-cell.ph-center {
+  justify-content: center;
+}
+.pos-cell.ph-right {
+  justify-content: flex-end;
+}
+.pos-cell.pv-top {
+  align-items: flex-start;
+}
+.pos-cell.pv-center {
+  align-items: center;
+}
+.pos-cell.pv-bottom {
+  align-items: flex-end;
+}
+
+/* Switch Windows sits at the ribbon's right edge — anchor right so it isn't clipped */
+.layout-menu.align-right {
+  left: auto;
+  right: anchor(right);
+}
+
+.layout-para {
+  gap: 14px;
+}
+
+.layout-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  justify-content: center;
+}
+
+.layout-num {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.layout-num > span:first-child {
+  width: 44px;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.layout-num input {
+  width: 56px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.layout-num input:disabled {
+  opacity: 0.5;
+}
+
+.layout-unit {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* ---- Review: word count ---- */
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stats-table td {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+}
+
+/* ---- page color swatch selection ---- */
+
+.color-palette-page {
+  grid-template-columns: repeat(5, 22px);
+}
+
+.color-swatch.selected {
+  outline: 2px solid var(--word-blue);
+}
+
+/* style gallery */
+/* The Styles group absorbs the row's free width and shrinks with the window
+   (min-width keeps two cards + the expander visible); extra cards clip inside
+   .style-gallery instead of widening the scrolling ribbon row, and the
+   expander below makes the clipped ones reachable. */
+.ribbon-group-styles {
+  flex: 1;
+  min-width: 178px;
+}
+
+.style-gallery-wrap {
+  gap: 4px;
+  min-width: 0;
+}
+
+.style-gallery {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.style-gallery-more {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 62px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.style-gallery-more:hover {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+
+.style-gallery-menu {
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 60;
+  width: min(478px, calc(100vw - 16px));
+  max-height: 60vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 8px;
+}
+
+.style-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  width: 74px;
+  height: 62px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.style-gallery-menu .style-card {
+  width: auto;
+}
+
+.style-card:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+
+.style-card.active {
+  border-color: var(--border-strong);
+  background: var(--active-bg);
+}
+
+.style-card:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.style-card-label {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.style-card-preview {
+  font-size: 15px;
+}
+
+.style-card-preview.style-normal {
+  color: var(--text);
+}
+
+.style-card-preview.style-h1 {
+  color: var(--word-heading);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.style-card-preview.style-h2 {
+  color: var(--word-heading);
+  font-size: 15px;
+}
+
+.style-card-preview.style-h3 {
+  color: var(--docs-heading-3);
+  font-size: 13px;
+}
+
+/* ================= workspace / document canvas ================= */
+
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--canvas);
+}
+
+.editor-scroll {
+  flex: 1;
+  overflow-y: auto;
+  /* classic (non-overlay) scrollbars change clientWidth as they come and go,
+     which would make the zoom auto-refit oscillate — reserve the gutter */
+  scrollbar-gutter: stable;
+  padding: 26px 24px 140px;
+}
+
+.doc-zoom {
+  width: fit-content;
+  margin: 0 auto;
+}
+
+/* ---- Word basics: marks / columns / page border / header-footer / nav / ruler ---- */
+
+/* ¶ editing marks (front-end only) */
+.show-marks .doc-page p::after,
+.show-marks .doc-page h1::after,
+.show-marks .doc-page h2::after,
+.show-marks .doc-page h3::after,
+.show-marks .doc-page h4::after {
+  content: '¶';
+  color: var(--docs-paper-mark);
+  opacity: 0.55;
+  font-size: 0.85em;
+  margin-left: 2px;
+  user-select: none;
+}
+
+/* multi-column layout (w:cols) */
+.doc-page {
+  column-count: var(--page-cols, auto);
+  column-gap: 28px;
+  column-fill: auto;
+}
+
+/* page border (w:pgBorders): a box inset from the page edge */
+.page-bordered .doc-page {
+  outline: 1.5px solid var(--docs-paper-ink-dim);
+  outline-offset: -32px;
+}
+
+/* ---- tab stops (w:tabs) ---- */
+
+/* Paragraphs whose tabs were measured (TabStopExtension): tab chars get zero
+   intrinsic width; the jump to the stop is a letter-spacing decoration on the
+   tab char itself, so an ancestor <u> still underlines the gap. */
+.has-tab-stops {
+  tab-size: 0;
+}
+
+/* underlined tab run: browsers skip text-decoration over a tab advance, so
+   the blank (e.g. signature "By: ____") gets an explicit line */
+.doc-tab-underline {
+  border-bottom: 1px solid currentColor;
+}
+
+/* tab leader (w:leader) drawn across the tab gap */
+.doc-tab-leader-dot,
+.doc-tab-leader-middleDot {
+  border-bottom: 1px dotted currentColor;
+}
+.doc-tab-leader-hyphen {
+  border-bottom: 1px dashed currentColor;
+}
+.doc-tab-leader-underscore {
+  border-bottom: 1px solid currentColor;
+}
+.doc-tab-leader-heavy {
+  border-bottom: 2px solid currentColor;
+}
+
+/* Drop cap: first-letter floats to 3 lines height */
+.has-drop-cap::first-letter {
+  float: left;
+  font-size: 3em;
+  line-height: 0.85;
+  margin-right: 0.05em;
+  margin-top: 0.1em;
+  font-weight: normal;
+}
+
+/* Margin drop cap (in-margin): negative left margin to push it outside text area */
+[data-drop-cap*='"type":"margin"']::first-letter {
+  margin-left: -0.6em;
+}
+
+/* Move-from revision: strikethrough + light red background (content moved away) */
+.has-move-from {
+  background: var(--docs-paper-del-bg);
+  text-decoration: line-through;
+  text-decoration-color: var(--docs-paper-del-line);
+}
+
+/* Move-to revision: light green background (content moved in) */
+.has-move-to {
+  background: var(--docs-paper-ins-bg);
+}
+
+/* pPrChange (tracked paragraph format change): light amber left border + badge */
+.has-ppr-change {
+  border-left: 3px solid var(--docs-paper-ppr);
+  padding-left: 4px;
+  position: relative;
+}
+
+/* pPrChange badge: "format revision" label at paragraph end via ::after */
+.has-ppr-change::after {
+  content: attr(data-ppr-change-label);
+  margin-left: 6px;
+  font-size: 8px;
+  color: var(--docs-paper-ppr-ink);
+  background: var(--docs-paper-ppr-bg);
+  border: 1px solid var(--docs-paper-ppr-border);
+  border-radius: 2px;
+  padding: 0 3px;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.has-sdt {
+  position: relative;
+  border: 1px solid var(--docs-paper-sdt-border);
+  border-radius: 2px;
+  padding: 1px 2px;
+  margin: 0 -2px;
+}
+
+/* SDT alias label: tiny floating tag in the top-left corner via ::before */
+.has-sdt::before {
+  content: attr(data-sdt-alias);
+  position: absolute;
+  top: -10px;
+  left: 0;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--docs-paper-sdt-ink);
+  background: var(--docs-paper-sdt-bg);
+  border: 1px solid var(--docs-paper-sdt-border);
+  border-radius: 2px 2px 0 0;
+  padding: 0 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-wrap {
+  position: relative;
+  min-height: var(--page-h, 1056px);
+}
+
+.page-hf {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--page-w, 816px) - 120px);
+  text-align: center;
+  font-size: 9pt;
+  color: var(--docs-paper-ink-soft);
+  overflow: hidden;
+  z-index: 1;
+  cursor: default;
+}
+
+.page-hf-para {
+  white-space: pre-wrap;
+  min-height: 1.3em;
+}
+
+/* header/footer layout-table row: cells as width-proportioned columns (display-only) */
+.page-hf-row {
+  display: flex;
+  align-items: baseline;
+  text-align: left;
+}
+
+.page-hf-cell {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* logo and other images in the part (display-only, excluded from text editing) */
+.page-hf-images {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  user-select: none;
+  pointer-events: none;
+}
+
+.page-hf-images img {
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.page-hf-editing {
+  outline: 2px solid var(--word-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+  background: var(--docs-paper);
+  color: var(--docs-paper-ink);
+  overflow: visible;
+  cursor: text;
+}
+
+/* editing surface: a separate element receives input and clears on unmount (no leftover input text nodes) */
+.page-hf-edit-surface {
+  outline: none;
+  min-height: 1.3em;
+  white-space: pre-wrap;
+}
+
+.page-hf-header {
+  top: var(--header-dist, 48px);
+  border-bottom: 1px dashed var(--docs-paper-hf-line);
+  padding-bottom: 2px;
+}
+
+.page-hf-footer {
+  bottom: var(--footer-dist, 48px);
+  border-top: 1px dashed var(--docs-paper-hf-line);
+  padding-top: 2px;
+}
+
+/* first/odd/even header-footer switcher (only shown when Different First Page or Different Odd & Even is on) */
+.hf-variant-chips {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.hf-variant-chips button {
+  font-size: 10px;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.hf-variant-chips button.on {
+  background: var(--word-blue);
+  border-color: var(--word-blue);
+  color: var(--docs-on-accent);
+}
+
+/* "Different first page" entry next to the header itself: while the
+   feature is off the whole chip bar stays invisible until the header area is
+   hovered or being edited, so plain documents keep a clean page top. The
+   padding-bottom stretches the (invisible) bar down to the header so the cursor
+   can travel from the header up to the chip without a hover gap. */
+.hf-chips-idle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  padding-bottom: max(0px, calc(var(--header-dist, 48px) - 24px));
+}
+
+.page-wrap:has(.page-hf-header:hover) .hf-chips-idle,
+.page-wrap:has(.page-hf-header.page-hf-editing) .hf-chips-idle,
+.hf-variant-chips.hf-chips-idle:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* navigation pane */
+.nav-pane {
+  width: 232px;
+  flex: none;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nav-pane-title {
+  padding: 10px 14px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-pane-list {
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 4px 14px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-item:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+.nav-l2 {
+  padding-left: 28px;
+  font-size: 12px;
+}
+.nav-l3 {
+  padding-left: 42px;
+  font-size: 11.5px;
+}
+.nav-l4 {
+  padding-left: 56px;
+  font-size: 11.5px;
+}
+
+.nav-empty {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* tracked changes: insertions underlined, deletions struck through (Word revisions) */
+.doc-ins {
+  color: var(--docs-paper-rev-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--docs-paper-rev-ink);
+}
+
+.doc-del {
+  color: var(--docs-paper-rev-ink);
+  text-decoration: line-through;
+  text-decoration-color: var(--docs-paper-rev-ink);
+  opacity: 0.72;
+}
+
+/* deleted text inside an insertion (insert-then-delete) keeps both cues */
+.doc-ins .doc-del,
+.doc-del .doc-ins {
+  text-decoration: underline line-through;
+}
+
+/* revision display mode: No Markup = as if all accepted (insertions shown normally, deletions hidden) */
+.rev-display-none .doc-ins {
+  color: inherit;
+  text-decoration: none;
+}
+
+.rev-display-none .doc-del,
+.rev-display-none .has-move-from {
+  display: none;
+}
+
+.rev-display-none .has-move-to {
+  background: none;
+}
+
+.rev-display-none .has-rpr-change {
+  text-decoration: none;
+}
+
+.rev-display-none .has-ppr-change {
+  border-left: none;
+  padding-left: 0;
+}
+
+.rev-display-none .has-ppr-change::after {
+  content: none;
+}
+
+/* revision display mode: Original = as if all rejected (deletions shown normally, insertions hidden).
+   known approximation: old formats of rPrChange/pPrChange can't be restored in CSS; markers are merely hidden */
+.rev-display-original .doc-del {
+  color: inherit;
+  text-decoration: none;
+  opacity: 1;
+}
+
+.rev-display-original .doc-ins,
+.rev-display-original .has-move-to {
+  display: none;
+}
+
+.rev-display-original .has-move-from {
+  background: none;
+  text-decoration: none;
+}
+
+.rev-display-original .has-rpr-change {
+  text-decoration: none;
+}
+
+.rev-display-original .has-ppr-change {
+  border-left: none;
+  padding-left: 0;
+}
+
+.rev-display-original .has-ppr-change::after {
+  content: none;
+}
+
+/* inserted then deleted: they cancel out in No Markup view → hidden; also nonexistent in Original view */
+.rev-display-none .doc-ins .doc-del,
+.rev-display-original .doc-del .doc-ins {
+  display: none;
+}
+
+/* Compare result pane */
+.compare-meta {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-same {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 4px 0;
+}
+
+.compare-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  margin: 4px 8px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.compare-left {
+  color: var(--docs-del-ink);
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.compare-right {
+  color: var(--docs-ins-ink);
+}
+
+.compare-added {
+  background: var(--docs-ins-bg);
+}
+
+.compare-removed {
+  background: var(--docs-del-bg);
+}
+
+/* comment composer (new comment) */
+.comment-compose {
+  border-bottom: 1px solid var(--border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-compose textarea {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.comment-compose-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.comment-compose-actions button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.comment-compose-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--docs-on-accent);
+}
+
+.comment-card-del {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 3px;
+  border-radius: 4px;
+}
+
+.comment-card-del:hover {
+  background: var(--hover);
+  color: var(--danger);
+}
+
+/* comments: in-text highlight + right-side pane */
+.doc-comment {
+  background: var(--docs-paper-comment-bg);
+  border-bottom: 2px solid var(--docs-paper-comment-line);
+  cursor: pointer;
+}
+
+/* range picked for a comment that is still being composed */
+.comment-pending {
+  background: var(--docs-paper-comment-bg);
+  border-bottom: 2px dashed var(--docs-paper-comment-line);
+}
+
+/* Word: body shading of resolved threads is hidden (the jump flash animation can still briefly reveal the position) */
+.doc-comment:has(.doc-comment-resolved),
+.doc-comment-resolved,
+.doc-comment-resolved .doc-comment {
+  background: none;
+  border-bottom: none;
+  cursor: text;
+}
+
+.doc-comment-flash {
+  animation: comment-flash 350ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes comment-flash {
+  0%,
+  40% {
+    background: var(--docs-paper-comment-flash);
+  }
+  100% {
+    background: var(--docs-paper-comment-bg);
+  }
+}
+
+.comments-pane {
+  width: 264px;
+  flex: none;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.comments-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comments-pane-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.comments-pane-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+.comments-pane-close:hover {
+  background: var(--hover);
+}
+
+.comments-pane-list {
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.comment-card:hover {
+  border-color: var(--docs-comment-accent);
+}
+
+.comment-card.active {
+  border-color: var(--docs-comment-accent);
+  box-shadow: 0 0 0 1px var(--docs-comment-accent);
+}
+
+.comment-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.comment-avatar {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--docs-comment-accent);
+  color: var(--docs-on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-author {
+  font-weight: 600;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-date {
+  margin-left: auto;
+  flex: none;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.comment-anchor {
+  font-size: 11px;
+  color: var(--text-dim);
+  border-left: 2px solid var(--docs-comment-accent);
+  padding-left: 6px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.comments-empty {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* horizontal ruler */
+.ruler {
+  position: relative;
+  height: 20px;
+  margin: 0 auto 6px;
+  background:
+    repeating-linear-gradient(
+        to right,
+        var(--docs-ruler-tick) 0,
+        var(--docs-ruler-tick) 1px,
+        transparent 1px,
+        transparent 12px
+      )
+      bottom / 100% 5px no-repeat,
+    var(--docs-ruler-bg);
+  border: 1px solid var(--docs-ruler-border);
+  border-radius: 2px;
+  font-size: 9px;
+  color: var(--docs-ruler-ink);
+  user-select: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.ruler-tab-type {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 100%;
+  background: var(--docs-ruler-btn-bg);
+  border: none;
+  border-right: 1px solid var(--docs-ruler-btn-border);
+  font-size: 9px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--docs-ruler-btn-ink);
+}
+
+.ruler-tab-type:hover {
+  background: var(--docs-ruler-btn-hover);
+}
+
+/* tab stop markers on ruler */
+.ruler-tab {
+  position: absolute;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  font-size: 8px;
+  font-weight: bold;
+  color: var(--accent);
+  cursor: move;
+  transform: translateX(-50%);
+  text-align: center;
+  line-height: 10px;
+  z-index: 3;
+  user-select: none;
+}
+
+.ruler-tab:hover {
+  color: var(--accent-dark);
+  background: var(--docs-accent-ghost);
+}
+
+/* default tab stop guide (no interaction) */
+.ruler-tab-default {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 4px;
+  background: var(--docs-ruler-tab-guide);
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ruler-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--docs-ruler-zone);
+}
+
+.ruler-num {
+  position: absolute;
+  top: 3px;
+  transform: translateX(-50%);
+  line-height: 1;
+}
+
+/* header/footer dropdown editor */
+.hf-menu {
+  /* fixed + anchored like the other ribbon panels, so the ribbon-body
+     scroll clip can't cut it off */
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: anchor(bottom);
+  left: anchor(left);
+  position-try-fallbacks: flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 30;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 10px;
+  width: 260px;
+}
+
+.hf-menu-title {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.hf-menu input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12.5px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.hf-menu-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.hf-menu-actions button {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.hf-menu-actions .btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--docs-on-accent);
+}
+
+/* the page: size/margins/background follow the docx sectPr via CSS vars */
+.doc-page {
+  width: var(--page-w, 816px);
+  margin: 0 auto;
+  background: var(--page-bg, var(--docs-paper));
+  box-shadow: var(--docs-page-shadow);
+  padding: var(--page-pad, 96px 96px 120px);
+  min-height: var(--page-h, 1056px);
+  outline: none;
+  font-family: Calibri, 'DengXian', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 11pt;
+  line-height: 1.35;
+  color: var(--docs-paper-ink);
+  /* Word's autoSpaceDE/DN (on by default): 1/8em gap between CJK and Latin/digits */
+  text-autospace: normal;
+  /* the other half of Word's ~1/4em gap, delivered by .doc-autospace-pad spans */
+  --doc-autospace-pad: 0.125em;
+}
+
+/* zero-width pad at CJK/Latin boundaries. Plain inline (not inline-block): an
+   atomic inline would suppress Chromium's own text-autospace gap, while an
+   empty inline keeps it and the margin stacks on top. */
+.doc-autospace-pad {
+  margin-inline-start: var(--doc-autospace-pad, 0.125em);
+}
+
+/* "dark canvas" view toggle: one variable override, orthogonal to the global
+   theme — every canvas-band rule below reads var(--canvas) */
+.workspace-dark {
+  --canvas: #3d3d3d;
+}
+
+/* visual page-break indicator (w:pageBreakBefore) */
+.doc-page .page-break-before {
+  position: relative;
+  border-top: 1px dashed var(--border-strong);
+  padding-top: 14px;
+  margin-top: 14pt;
+}
+
+.doc-page .page-break-before::before {
+  content: attr(data-page-break-label);
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--page-bg, var(--docs-paper));
+  padding: 0 8px;
+}
+
+.doc-page p {
+  margin: 0 0 8pt;
+}
+
+/* M4 always-on pagination in the canvas: page gap = previous page's bottom margin (white) + inter-page band (gray) + next page's top margin (white) */
+.page-gap {
+  position: relative;
+  cursor: default;
+  user-select: none;
+}
+
+.page-gap::before {
+  content: '';
+  position: absolute;
+  top: var(--gap-mb, 96px);
+  bottom: var(--gap-mt, 96px);
+  left: 0;
+  right: 0;
+  background: var(--canvas);
+  box-shadow: var(--docs-gap-inset);
+}
+
+/* inline gap for mid-paragraph page breaks: inserted at the broken line inside the paragraph, takes its own line, excluded from text selection/cursor */
+.page-gap-inline {
+  display: inline-block;
+  vertical-align: top;
+  pointer-events: none;
+  text-indent: 0;
+}
+
+/* in-cell gap (single-column in-row table cut): opaque paper background so the cell's
+   shading/borders don't cross the band; z-index lifts it above collapsed-border painting */
+.page-gap-cell {
+  background: var(--page-bg, var(--docs-paper));
+  z-index: 1;
+}
+
+/* In-table gap at a row boundary. A real spanning cell isolates collapsed
+   borders/backgrounds from the page gutter; the inner fill paints paper /
+   canvas / paper bands without inheriting table-cell decoration. */
+.page-gap-table {
+  display: table-row;
+}
+
+.doc-table .page-gap-table > td {
+  position: relative;
+  height: auto;
+  padding: 0;
+  /* !important: the td edge-border rules (--doc-b-l/r on first/last-child) come
+     later in the sheet and would otherwise frame the page gutter */
+  border: 0 !important;
+  background: var(--page-bg, var(--docs-paper));
+}
+
+.page-gap-table::before {
+  display: none;
+}
+
+/* absolute: height 100% of an auto-height td resolves to 0, hiding the bands */
+.page-gap-table-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--page-bg, var(--docs-paper)) 0 var(--gap-mb, 96px),
+    var(--canvas) var(--gap-mb, 96px) calc(var(--gap-mb, 96px) + 28px),
+    var(--page-bg, var(--docs-paper)) calc(var(--gap-mb, 96px) + 28px) 100%
+  );
+}
+
+/* footnote area at the top of a page gap (previous page's bottom, Word behavior): the gap was already enlarged by the reserved height;
+   the estimated height differs from actual rendering by pixels, so overflow into the bottom-margin area is allowed (no clipping) */
+.page-gap-notes {
+  position: absolute;
+  top: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  pointer-events: auto;
+  font-size: 10pt;
+  line-height: 1.3;
+  color: var(--docs-paper-ink-dim);
+  text-indent: 0;
+  text-align: left;
+}
+
+.page-gap-notes::before {
+  content: '';
+  display: block;
+  width: 33%;
+  border-top: 1px solid var(--docs-paper-ink-faint);
+  margin-bottom: 4px;
+}
+
+.page-gap-note {
+  cursor: default;
+  overflow: hidden;
+}
+
+.pv-footnote {
+  overflow: hidden;
+}
+
+.page-gap-note sup {
+  margin-right: 4px;
+}
+
+/* pagination preview: page-bottom footnote area (the referencing page; separator + small text); tiny overflow spills into the bottom margin */
+.pv-footnotes {
+  position: absolute;
+  overflow: visible;
+  box-sizing: border-box;
+  font-size: 10pt;
+  line-height: 1.3;
+  color: var(--docs-paper-ink-dim);
+}
+
+.pv-footnotes::before {
+  content: '';
+  display: block;
+  width: 33%;
+  border-top: 1px solid var(--docs-paper-ink-faint);
+  margin-bottom: 4px;
+}
+
+.pv-footnote sup {
+  margin-right: 4px;
+}
+
+/* endnote area: right after the body's end, separator above the first entry, continuation pages have no separator */
+.pv-endnotes {
+  position: absolute;
+  overflow: visible;
+  box-sizing: border-box;
+  font-size: 10pt;
+  line-height: 1.3;
+  color: var(--docs-paper-ink-dim);
+}
+
+.pv-endnote-separator {
+  /* matches FOOTNOTE_SEPARATOR_H (16px): 11 + 1 border + 4 bottom spacing */
+  width: 33%;
+  border-top: 1px solid var(--docs-paper-ink-faint);
+  margin-bottom: 4px;
+  height: 11px;
+}
+
+/* header/footer strips inside canvas page gaps: display-only copies of each page's
+   variant (edit via the document top/bottom areas or the pagination preview) */
+.page-gap-hf {
+  pointer-events: none;
+}
+
+/* when a page gap is right next to a page-break indicator, hide the duplicate dashed marker (keep placeholder height) */
+.page-gap + .page-break-before {
+  border-top-color: transparent;
+}
+
+.page-gap + .page-break-before::before {
+  display: none;
+}
+
+/* pagination preview: read-only overlay, one fixed-size box per page, content clone clipped via negative margin */
+.pagination-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--docs-pv-canvas);
+}
+
+.pv-toolbar {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: no-drag;
+}
+
+.pv-title {
+  font-weight: 600;
+}
+
+.pv-count {
+  color: var(--text-dim);
+}
+
+.pv-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.pv-close {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 4px;
+  padding: 4px 14px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.pv-close:hover {
+  background: var(--word-blue);
+  border-color: var(--word-blue);
+  color: var(--docs-on-accent);
+}
+
+.pv-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 0 48px;
+}
+
+.pv-page {
+  position: relative;
+  /* own stacking context: behind-text layers (picture watermarks, z-index -1)
+     must stay above this page's background, not sink under it */
+  isolation: isolate;
+  margin: 0 auto 24px;
+  background: var(--docs-paper);
+  box-shadow: var(--docs-page-shadow);
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: Calibri, 'DengXian', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 11pt;
+  line-height: 1.35;
+  color: var(--docs-paper-ink);
+}
+
+.pv-clip {
+  overflow: hidden;
+}
+
+/* header picture watermark (absolute VML shape): drawn once per preview page,
+   behind the body text. Document content: renders identically in both themes. */
+.pv-watermark-img {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* clip at the paper edge, not the content box: over-wide tables bleed into the right
+   margin like Word (keep overflow hidden — print pagination needs the box monolithic).
+   Left side symmetrically: negative w:tblInd tables start inside the left margin, and
+   clipping at the content box culled their leading characters from the exported text.
+   The padding compensates the negative margin so the content position is unchanged —
+   only the clip edge moves out to the paper edge. */
+.pv-page > .pv-clip {
+  margin-right: calc(-1 * var(--pv-mr, 0px));
+  margin-left: calc(-1 * var(--pv-ml, 0px));
+  padding-left: var(--pv-ml, 0px);
+}
+
+/* column flow: regions stack vertically; narrow clipped columns sit side by side within a region */
+.pv-region {
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.pv-col {
+  flex: none;
+}
+
+/* the clone is a gapless continuous flow (slices use virtual coordinates); canvas page gaps don't enter the clone */
+.pv-clip .page-gap,
+.pv-clip .page-gap-cut {
+  display: none;
+}
+
+/* the clone keeps only content layout, stripping the page box's chrome (width = content area, matching the canvas) */
+.pv-clip .doc-page {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  pointer-events: none;
+}
+
+/* page-break indicators are only visually hidden, keeping placeholder height — clone line heights must match measurement */
+.pv-clip .doc-page .page-break-before {
+  border-top-color: transparent;
+}
+
+.pv-clip .doc-page .page-break-before::before {
+  visibility: hidden;
+}
+
+.pv-page .page-hf {
+  cursor: default;
+}
+
+.pv-pageno {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  font-size: 10px;
+  color: var(--docs-paper-ink-faint);
+  user-select: none;
+}
+
+.doc-page h1,
+.doc-page h2,
+.doc-page h3,
+.doc-page h4,
+.doc-page h5,
+.doc-page h6 {
+  font-weight: 400;
+  line-height: 1.2;
+  margin: 14pt 0 4pt;
+}
+
+.doc-page h1 {
+  font-size: 16pt;
+  color: inherit;
+}
+
+.doc-page h2 {
+  font-size: 13pt;
+  color: inherit;
+}
+
+.doc-page h3 {
+  font-size: 12pt;
+  color: inherit;
+}
+
+.doc-page h4,
+.doc-page h5,
+.doc-page h6 {
+  font-size: 11pt;
+  color: inherit;
+  font-style: italic;
+}
+
+.doc-link {
+  color: var(--docs-paper-link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* flat list items (1:1 with w:p anchors)
+   geometry comes from w:ind (--li-left text indent / --li-hang hanging marker-area width,
+   emitted by extensions.ts; --style-li-left is the style-level w:ind fallback from
+   doc-style-css.ts); defaults replicate the old fixed per-level indents. The marker
+   is an inline hanging box: it fills the hanging area, and when too wide it pushes the body
+   text aside instead of overlapping it (Word behavior).
+   Logical (inline-start) geometry so RTL list items (direction:rtl via w:bidi)
+   mirror automatically: indent and marker land on the right side. */
+.doc-li {
+  position: relative;
+  padding-inline-start: var(--li-left, var(--style-li-left, 0.55in));
+  margin: 0 0 4pt;
+}
+
+.doc-li.ilvl-1 {
+  padding-inline-start: var(--li-left, var(--style-li-left, 0.85in));
+}
+
+.doc-li.ilvl-2 {
+  padding-inline-start: var(--li-left, var(--style-li-left, 1.15in));
+}
+
+.doc-li.ilvl-3 {
+  padding-inline-start: var(--li-left, var(--style-li-left, 1.45in));
+}
+
+.doc-li.ilvl-4 {
+  padding-inline-start: var(--li-left, var(--style-li-left, 1.75in));
+}
+
+.doc-li::before {
+  display: inline-block;
+  min-width: var(--li-hang, 0.25in);
+  margin-inline-start: calc(-1 * var(--li-hang, 0.25in));
+  font-family: var(--li-marker-font, inherit);
+  font-size: calc(var(--li-marker-size, 1em) * var(--li-marker-scale, 1));
+  line-height: var(--li-marker-lh, inherit);
+}
+
+.doc-li-bullet::before {
+  content: '•';
+}
+
+.doc-li.ilvl-1.doc-li-bullet::before {
+  content: '◦';
+}
+
+.doc-li.ilvl-2.doc-li-bullet::before {
+  content: '▪';
+}
+
+.doc-page {
+  counter-reset: doc-ol;
+}
+
+.doc-li-ordered {
+  counter-increment: doc-ol;
+}
+
+.doc-li-ordered::before {
+  content: counter(doc-ol) '.';
+}
+
+/* restart numbering after any non-ordered block; counter-set (applied after
+   increment) mutates the page-scoped counter, while a sibling counter-reset
+   would nest a new instance and desync the numbers from the 2nd item on */
+.doc-page > :not(.doc-li-ordered) + .doc-li-ordered {
+  counter-set: doc-ol 1;
+}
+
+/* real multilevel numbering: items defined in numbering.xml get data-marker computed by ListNumberingExtension,
+   overriding the bullet/CSS-counter fallbacks above (selector includes .doc-page for higher specificity and comes later) */
+.doc-page .doc-li[data-marker] {
+  counter-increment: none;
+}
+
+.doc-page .doc-li[data-marker]::before {
+  content: attr(data-marker);
+}
+
+/* protected blocks (table / image / chart / math ...) */
+.doc-protected {
+  position: relative;
+  border: 1px dashed var(--border-strong);
+  border-radius: 3px;
+  padding: 10px 14px;
+  margin: 0 0 8pt;
+  background: var(--docs-paper-chip-bg);
+  cursor: grab;
+  user-select: none;
+}
+
+.doc-move-handle {
+  position: absolute;
+  z-index: 4;
+  top: -14px;
+  left: -14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--word-blue);
+  border-radius: 3px;
+  background: var(--docs-paper);
+  color: var(--word-blue);
+  font: 13px/1 sans-serif;
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.doc-protected:hover > .doc-move-handle,
+.doc-protected.ProseMirror-selectednode > .doc-move-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* corner resize handle of floating shape/textbox/WordArt/line boxes */
+.box-resize-handle {
+  position: absolute;
+  z-index: 4;
+  right: -6px;
+  bottom: -6px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--word-blue);
+  border-radius: 2px;
+  background: var(--docs-paper);
+  cursor: nwse-resize;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.doc-protected-textboxes:hover > .box-resize-handle,
+.doc-protected-textboxes.ProseMirror-selectednode > .box-resize-handle,
+.doc-protected-chart:hover > .box-resize-handle,
+.doc-protected-chart.ProseMirror-selectednode > .box-resize-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.doc-content-editing > .box-resize-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Native ProseMirror tables */
+.doc-page > .doc-table {
+  margin: 2px 0;
+}
+
+.doc-protected[data-doc-protected='table'] {
+  border-color: transparent;
+  background: transparent;
+  padding: 2px;
+}
+
+.doc-protected[data-doc-protected='table']:hover {
+  border-color: var(--border-strong);
+}
+
+.doc-table {
+  /* fallback when there are no absolute grid widths; tables with w:tblGrid are overridden by inline width.
+     font size/line spacing inherit the document defaults (.doc-page, i.e. the Normal style) */
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.doc-table td,
+.doc-table th {
+  position: relative;
+  box-sizing: border-box;
+  /* the w:docGrid line grid applies to the body flow only — Word/LO never snap
+     table-cell lines to it (grid docs' scoring tables would inflate ~50%) */
+  --doc-grid-pitch: 0.0001px;
+}
+
+/* empty paragraph in a cell: LO sizes it near the Latin single line, so it must
+   not out-grow the row's content cells via the inherited CJK factor */
+.doc-table td .doc-p-empty,
+.doc-table th .doc-p-empty {
+  --doc-line-factor: var(--doc-line-factor-latin, 1.2);
+}
+
+.doc-table td,
+.doc-table th {
+  /* undeclared borders render as none (Word's on-screen gridlines are non-printing
+     view furniture, not part of the document); w:tblBorders drives --doc-b-* */
+  border-top: var(--doc-b-h, none);
+  border-bottom: var(--doc-b-h, none);
+  border-left: var(--doc-b-v, none);
+  border-right: var(--doc-b-v, none);
+  /* Word default cell margins: 108 twips (7.2px) sides / 0 top-bottom; w:tblCellMar overrides via table-level variables */
+  padding: var(--doc-cell-pad, 0 7.2px);
+  vertical-align: top;
+  /* Word breaks a token wider than the cell character-by-character rather
+     than letting it overflow (unless w:noWrap, which we don't model yet) */
+  overflow-wrap: break-word;
+}
+
+/* repeated header rows after a table page break (w:tblHeader): pure decoration —
+   not selectable, not editable, invisible to hit-testing. display beats the
+   .page-gap-inline inline-block (that class only marks them as measurement gaps). */
+.doc-table tr.page-repeat-header {
+  display: table-row;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* outer edges: table-level outer borders beat the inside-line variables even when the
+   frame is explicitly none (border-collapse would otherwise let inside lines win) */
+.doc-table tr:first-child > td,
+.doc-table tr:first-child > th {
+  border-top: var(--doc-b-t, var(--doc-b-h, none));
+}
+.doc-table tr:last-child > td,
+.doc-table tr:last-child > th {
+  border-bottom: var(--doc-b-b, var(--doc-b-h, none));
+}
+.doc-table td:first-child,
+.doc-table th:first-child {
+  border-left: var(--doc-b-l, var(--doc-b-v, none));
+}
+.doc-table td:last-child,
+.doc-table th:last-child {
+  border-right: var(--doc-b-r, var(--doc-b-v, none));
+}
+
+/* header cells follow the document model (cell bold/align attrs), not the UA defaults */
+.doc-table th {
+  font-weight: inherit;
+  text-align: inherit;
+}
+
+.doc-table .selectedCell {
+  position: relative;
+}
+
+.doc-table .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: color-mix(in srgb, var(--word-blue) 18%, transparent);
+}
+
+.doc-page.resize-cursor {
+  cursor: col-resize;
+}
+
+.column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  pointer-events: none;
+  background: var(--word-blue);
+}
+
+.table-ribbon-body {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.table-tool-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 66px;
+  padding: 2px 6px;
+}
+
+.table-tool-row,
+.table-tool-grid {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+}
+
+.table-tool-grid {
+  display: grid;
+}
+
+.table-tool-grid-four {
+  grid-template-columns: repeat(2, minmax(66px, auto));
+}
+
+.table-tool-grid-two {
+  grid-template-columns: repeat(2, minmax(58px, auto));
+}
+
+.table-tool-group button {
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* icon + label buttons (insert/delete/merge/align/borders) */
+.table-tool-row > button,
+.table-tool-grid > button,
+.table-tool-delete > .table-tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.table-tool-row > button svg,
+.table-tool-grid > button svg,
+.table-tool-delete > .table-tool-button svg {
+  flex: none;
+  opacity: 0.9;
+}
+
+.table-tool-delete > .table-tool-button {
+  justify-content: center;
+}
+
+.table-tool-group button:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--hover);
+}
+
+.table-tool-group button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.table-tool-group button.danger {
+  color: var(--danger);
+}
+
+.table-tool-delete {
+  min-width: 72px;
+}
+
+.table-style-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 28px);
+  gap: 3px;
+  align-content: center;
+  flex: 1;
+}
+
+.table-tool-group .table-style-swatch {
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0;
+  border-color: var(--docs-swatch-border);
+}
+
+.table-tool-group .table-style-clear {
+  grid-column: span 2;
+  min-height: 22px;
+  padding: 1px 5px;
+}
+
+/* anchored textboxes (code boxes, callout cards): render the box itself,
+   text edits happen in place */
+.doc-protected-textboxes {
+  border-color: transparent;
+  background: transparent;
+  padding: 2px 0;
+  cursor: default;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.doc-protected-textboxes:hover {
+  border-color: var(--border);
+}
+
+/* floating drawings (wrapNone/front/behind anchors, or several drawings
+   anchored in one paragraph): the wrapper marks the anchor paragraph's flow
+   position but takes no flow height — each box positions absolutely at its
+   own offset, overlapping body text exactly like Word */
+.doc-protected.doc-protected-floating {
+  position: relative;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.doc-protected.doc-protected-textboxes.ProseMirror-selectednode {
+  border-color: var(--word-blue);
+  outline: none;
+  background: transparent;
+}
+
+.doc-textbox {
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 5px 10px;
+  margin: 2px 0;
+  max-width: 100%;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  /* fixed-height boxes (noAutofit) clip overflow instead of growing */
+  overflow: hidden;
+}
+
+.doc-protected-textboxes:not(.doc-content-editing) .doc-textbox,
+.doc-protected[data-doc-protected='table']:not(.doc-content-editing) td {
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.doc-content-editing > .doc-move-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* the nested tiptap editor inside each box */
+.doc-textbox .doc-textbox-editor {
+  outline: none;
+  white-space: pre-wrap;
+}
+
+.doc-textbox-editor p {
+  margin: 0;
+}
+
+/* Word gives empty w:p elements no line box; only their explicit w:spacing
+   contributes height. Keeping browser-default <br> line boxes made fixed
+   textboxes clip valid content far above their actual bottom edge. */
+.doc-textbox-editor p:has(> br.ProseMirror-trailingBreak:only-child),
+.doc-textbox-para-empty {
+  height: 0;
+  min-height: 0;
+  line-height: 0;
+}
+
+.doc-textbox:focus-within {
+  outline: 2px solid var(--word-blue);
+  outline-offset: 1px;
+}
+
+.doc-textbox-para {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* inline pictures in table cells (document content, theme-independent) */
+.doc-inline-img {
+  max-width: 100%;
+}
+
+/* body-level invisible markers (stray bookmarkEnd…): occupy no space at all */
+.doc-protected-invisible {
+  height: 0;
+  overflow: hidden;
+  border: none;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* empty section-break paragraphs: invisible unless hovered/selected */
+.doc-protected-sectbreak {
+  border-color: transparent;
+  background: transparent;
+  padding: 0 0 2px;
+}
+
+.doc-protected-sectbreak:hover {
+  border-color: var(--border-strong);
+}
+
+.doc-sectbreak-label {
+  display: block;
+  font-size: 10px;
+  color: transparent;
+  line-height: 1.2;
+  user-select: none;
+}
+
+.doc-protected-sectbreak:hover .doc-sectbreak-label,
+.doc-protected-sectbreak.ProseMirror-selectednode .doc-sectbreak-label {
+  color: var(--text-dim);
+}
+
+/* decorative rule drawings (heading underlines, dividers): a plain line */
+.doc-protected-rule {
+  border-color: transparent;
+  background: transparent;
+  padding: 4px 0;
+}
+
+.doc-protected-rule:hover {
+  border-color: var(--border-strong);
+}
+
+.doc-rule-line {
+  display: block;
+  height: 1px;
+  background: var(--docs-paper-ink-dim);
+}
+
+/* broken pictures: empty frame placeholder (frame/text colors are inline —
+   they substitute document content and must not follow the theme) */
+.doc-protected-broken-img {
+  border-color: transparent;
+  background: transparent;
+  padding: 0;
+}
+
+.doc-protected-broken-img:hover {
+  border-color: var(--border-strong);
+}
+
+.doc-broken-img-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 2px 8px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  user-select: none;
+}
+
+/* field paragraphs whose visible result is rendered directly (TOC lines, page
+   fields...): no chip frame, dashed outline only on hover */
+.doc-protected-field {
+  border-color: transparent;
+  background: transparent;
+  /* no vertical padding/margin: field paragraphs (TOC entries, filled text
+     fields) must occupy paragraph-height boxes or pagination drifts; document
+     CSS (docStyleCss blockSel + [data-style]) supplies the real spacing */
+  padding: 0 4px;
+  margin: 0;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.doc-protected-field:hover {
+  border-color: var(--border-strong);
+}
+
+.doc-toc-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  /* inherit the document's paragraph metrics: a hardcoded 11pt/1.7 line made
+     every TOC entry ~50% taller than Word/LO and drifted long TOCs a page+ */
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.doc-toc-line:hover .doc-toc-title {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* level indent applies to the first cell (the numbering marker when present, the title otherwise) */
+.doc-toc-l2 > span:first-child {
+  padding-left: 1.5em;
+}
+
+.doc-toc-l3 > span:first-child {
+  padding-left: 3em;
+}
+
+.doc-toc-l4 > span:first-child {
+  padding-left: 4.5em;
+}
+
+.doc-toc-num {
+  white-space: pre;
+  margin-right: 4px;
+}
+
+.doc-toc-dots {
+  flex: 1;
+  min-width: 24px;
+  overflow: hidden;
+  white-space: nowrap;
+  letter-spacing: 2px;
+  user-select: none;
+}
+
+.doc-field-pagebreak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  user-select: none;
+}
+
+.doc-field-pagebreak::before,
+.doc-field-pagebreak::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.doc-field-text {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.doc-content-editing .doc-toc-title,
+.doc-content-editing .doc-toc-page,
+.doc-content-editing .doc-field-text,
+.doc-content-editing .doc-formula-token {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  outline: 1px solid color-mix(in srgb, var(--word-blue) 45%, transparent);
+  border-radius: 2px;
+}
+
+.doc-protected-formula {
+  padding: 5px 8px;
+  background: transparent;
+}
+
+.doc-formula {
+  display: inline-flex;
+  align-items: baseline;
+  min-height: 24px;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 16px;
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.doc-content-editing .doc-formula {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.doc-formula-token:empty::before {
+  content: '\00a0';
+}
+
+/* 2D MathML rendering: shown by default, swapped for the editable token
+   strip while the block is in content-editing mode */
+.doc-formula-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.doc-formula-math {
+  display: inline-block;
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif;
+  font-size: 16px;
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.doc-formula-math math {
+  font-family: inherit;
+}
+
+.doc-formula.doc-formula-has-math {
+  display: none;
+}
+
+.doc-content-editing .doc-formula.doc-formula-has-math {
+  display: inline-flex;
+}
+
+.doc-content-editing .doc-formula-math {
+  display: none;
+}
+
+/* display equations (oMathPara-style) are centered; inline fallbacks keep flow */
+.doc-protected-formula-display {
+  text-align: center;
+}
+
+/* embedded charts: SVG preview + editable data sheet */
+.doc-protected-chart {
+  background: var(--docs-paper);
+}
+
+.doc-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-chart-title {
+  font-size: 13pt;
+  font-weight: 600;
+  text-align: center;
+  color: var(--docs-paper-ink-dim);
+}
+
+.doc-chart-svg {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.doc-chart-grid {
+  stroke: var(--docs-paper-chart-grid);
+  stroke-width: 1;
+}
+
+.doc-chart-axis-label {
+  font:
+    10px 'Segoe UI',
+    var(--ui-cjk),
+    sans-serif;
+  fill: var(--docs-paper-ink-faint);
+}
+
+/* data grid is an editing affordance: visible while the chart block is
+   selected or in text-edit mode; the printed/preview chart shows only the plot
+   (Word/LO behavior) */
+.doc-protected .doc-chart-data {
+  display: none;
+}
+
+.doc-protected.ProseMirror-selectednode .doc-chart-data,
+.doc-protected.doc-content-editing .doc-chart-data {
+  display: table;
+}
+
+.doc-chart-data {
+  border-collapse: collapse;
+  align-self: center;
+  font-size: 10pt;
+  line-height: 1.4;
+}
+
+.doc-chart-data th,
+.doc-chart-data td {
+  border: 1px solid var(--docs-paper-chart-border);
+  padding: 2px 10px;
+  min-width: 52px;
+  text-align: right;
+  font-weight: 400;
+}
+
+.doc-chart-data th.doc-chart-corner {
+  border: none;
+}
+
+.doc-chart-data th.doc-chart-cat {
+  font-weight: 600;
+  text-align: center;
+  background: color-mix(in srgb, var(--docs-paper-accent) 6%, transparent);
+}
+
+.doc-chart-data th.doc-chart-name {
+  font-weight: 600;
+  text-align: left;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.doc-chart-data td.doc-chart-gap {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    var(--docs-paper-stripe) 4px,
+    var(--docs-paper-stripe) 8px
+  );
+}
+
+.doc-content-editing .doc-chart-title,
+.doc-content-editing .doc-chart-cell {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  outline: 1px solid color-mix(in srgb, var(--word-blue) 45%, transparent);
+  border-radius: 2px;
+}
+
+.doc-protected.ProseMirror-selectednode {
+  border: 1px solid var(--word-blue);
+  outline: 1px solid var(--word-blue);
+  /* blue-tinted like an in-document selection, not the gray toolbar plate */
+  background: var(--docs-paper-select-bg);
+}
+
+.doc-protected-label {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 8px;
+  margin-right: 10px;
+  background: var(--surface);
+  font-family: 'Segoe UI', var(--ui-cjk), sans-serif;
+}
+
+.doc-protected-preview {
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  /* SmartArt degrade lists one node label per line */
+  white-space: pre-line;
+}
+
+/* SmartArt degrade: precomputed diagram shapes at absolute positions.
+   Shape/text colors are document data — inline per shape, never themed. */
+.doc-diagram {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+.doc-diagram-shape {
+  position: absolute;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.15;
+}
+
+.doc-diagram-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 4px;
+}
+
+/* drawing canvas (lockedCanvas): text keeps its raw font size and overflows
+   the scaled child geometry downward instead of clipping (LO behavior) */
+.doc-diagram-canvas,
+.doc-diagram-canvas .doc-diagram-shape {
+  overflow: visible;
+}
+
+.doc-diagram-canvas .doc-diagram-shape {
+  align-items: flex-start;
+}
+
+.doc-diagram-canvas .doc-diagram-text {
+  word-break: break-all;
+  line-height: 1.2;
+}
+
+/* OLE embed degrade: the packaged preview picture + a friendly type caption */
+.doc-protected-ole .doc-ole-wrap {
+  display: block;
+}
+
+.doc-protected-ole .doc-ole-img {
+  display: block;
+  max-width: 100%;
+  margin-bottom: 4px;
+}
+
+.doc-protected-img {
+  max-width: 100%;
+  display: block;
+}
+
+/* SmartArt / drawing-canvas blocks: the shapes are the content — no chip box */
+.doc-protected-diagram {
+  border-color: transparent;
+  background: none;
+}
+
+.doc-protected-diagram:hover {
+  border-color: var(--border);
+}
+
+/* srcRect crop windows carry the declared extent inline; the float wrap's
+   60% clamp must not squeeze them (Word keeps the placed size and lets the
+   picture reach into the margin instead) */
+.doc-protected .doc-img-crop {
+  max-width: none;
+}
+
+/* image blocks: no chip chrome, selection border with resize handle */
+.doc-protected[data-doc-protected='image'] {
+  border-color: transparent;
+  background: none;
+  padding: 2px 0;
+}
+
+.doc-protected[data-doc-protected='image']:hover {
+  border-color: var(--border);
+}
+
+.doc-protected[data-doc-protected='image'].ProseMirror-selectednode {
+  border-color: transparent;
+  outline: none;
+  background: none;
+}
+
+.doc-img-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+/* find option toggles (match case / whole word) */
+.find-opt {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+
+.find-opt.on {
+  background: var(--word-blue);
+  border-color: var(--word-blue);
+  color: var(--docs-on-accent);
+}
+
+/* data grid of the Insert Chart dialog */
+.modal-chart {
+  min-width: 460px;
+}
+
+.chart-data-grid {
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.chart-data-grid th,
+.chart-data-grid td {
+  border: 1px solid var(--border);
+  padding: 0;
+}
+
+.chart-data-grid input {
+  border: none;
+  background: transparent;
+  width: 90px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.chart-data-grid thead input {
+  font-weight: 600;
+}
+
+/* cross-reference (REF field): gray field shading */
+.doc-ref-field {
+  background: var(--docs-paper-field-bg);
+  border-radius: 2px;
+}
+
+.workspace-dark .doc-ref-field {
+  background: var(--docs-paper-field-bg-inverse);
+}
+
+/* Bookmark / Cross-reference dialogs */
+.modal-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.modal-row input {
+  flex: 1;
+}
+
+.modal-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+/* Custom page margins dialog: two labeled inputs per row */
+.margin-row label {
+  flex: 1;
+  margin-bottom: 4px;
+}
+
+.bookmark-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.bookmark-empty {
+  padding: 14px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.bookmark-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bookmark-row:last-child {
+  border-bottom: none;
+}
+
+.bookmark-name {
+  background: none;
+  border: none;
+  color: var(--word-blue);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.bookmark-preview {
+  flex: 1;
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmark-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+/* text wrap: square uses a real CSS float so following paragraphs wrap automatically; tight/through display approximately as square */
+.doc-protected.img-wrap-square-left,
+.doc-protected.img-wrap-tight-left,
+.doc-protected.img-wrap-through-left {
+  float: left;
+  width: fit-content;
+  max-width: 60%;
+  margin: 2px 14px 6px 0;
+}
+
+.doc-protected.img-wrap-square-right,
+.doc-protected.img-wrap-tight-right,
+.doc-protected.img-wrap-through-right {
+  float: right;
+  width: fit-content;
+  max-width: 60%;
+  margin: 2px 0 6px 14px;
+}
+
+.doc-protected.img-wrap-topBottom {
+  text-align: center;
+}
+
+/* behind text / in front of text: the flowing canvas has no absolutely positioned layer; reduced opacity as an approximation */
+.doc-protected.img-wrap-behind {
+  opacity: 0.45;
+}
+
+.doc-protected[data-doc-protected='image'].ProseMirror-selectednode .doc-img-wrap {
+  outline: 2px solid var(--word-blue);
+}
+
+.img-resize-handle {
+  display: none;
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 11px;
+  height: 11px;
+  background: var(--docs-paper);
+  border: 2px solid var(--word-blue);
+  border-radius: 50%;
+  cursor: nwse-resize;
+  z-index: 2;
+}
+
+.doc-protected[data-doc-protected='image'].ProseMirror-selectednode .img-resize-handle {
+  display: block;
+}
+
+/* Crop owns the active image controls while its modal is open. */
+body.docs-crop-active
+  .doc-protected[data-doc-protected='image'].ProseMirror-selectednode
+  .doc-img-wrap {
+  outline: none;
+}
+
+body.docs-crop-active
+  .doc-protected[data-doc-protected='image'].ProseMirror-selectednode
+  .img-resize-handle,
+body.docs-crop-active
+  .doc-protected[data-doc-protected='image'].ProseMirror-selectednode
+  > .doc-move-handle {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Highlight blocks changed through the external command bridge. */
+.doc-page .external-changed {
+  background: var(--external-change-highlight);
+  box-shadow: -3px 0 0 var(--external-change-highlight-border);
+}
+
+/* ================= start screen ================= */
+
+.start-screen {
+  width: 100%;
+  min-height: 100%;
+  padding: 9vh 24px 40px;
+  text-align: center;
+  background: var(--surface);
+  font-family: 'Segoe UI', var(--ui-cjk), sans-serif;
+}
+
+.editor-scroll:has(> .start-screen) {
+  padding: 0;
+  background: var(--surface);
+}
+
+/* Starting up (while the pending-open check runs): lightweight placeholder, don't flash the start screen */
+.start-booting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.btn-primary {
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--word-blue);
+  color: var(--docs-on-accent);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--word-blue-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-ghost {
+  border: none;
+  background: none;
+  color: var(--word-blue);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.btn-ghost:hover {
+  background: var(--hover);
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 2px 10px;
+  height: 26px;
+}
+
+.recent {
+  margin-top: 44px;
+  text-align: left;
+}
+
+.recent-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  margin-bottom: 3px;
+  border: none;
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.recent-item:hover {
+  background: var(--active-bg);
+}
+
+.recent-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================= modal ================= */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--docs-overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  width: 440px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: var(--docs-shadow-modal);
+}
+
+.modal h2 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+
+.modal label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.modal input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.modal input:focus {
+  border-color: var(--word-blue);
+}
+
+.modal select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 13px;
+  outline: none;
+  background: var(--surface);
+}
+
+/* Modal footer buttons. */
+.modal-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modal-actions button:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.modal-actions button:active:not(:disabled) {
+  filter: brightness(0.88);
+  transform: scale(0.98);
+}
+
+.modal-actions button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--docs-focus-ring);
+}
+
+.modal-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modal-actions button.primary,
+.modal-actions .btn-primary {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.modal-actions button.primary:hover:not(:disabled),
+.modal-actions .btn-primary:hover:not(:disabled) {
+  border-color: var(--color-btn-primary-hover);
+  background: var(--color-btn-primary-hover);
+  color: var(--color-btn-primary-text);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.modal select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 13px;
+  outline: none;
+  background: var(--surface);
+}
+
+.modal select:focus {
+  border-color: var(--word-blue);
+}
+
+.provider-tab-active {
+  border-color: var(--word-blue);
+  background: color-mix(in srgb, var(--word-blue) 10%, var(--surface));
+  color: var(--word-blue);
+  font-weight: 600;
+}
+
+.provider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--docs-ok-dot);
+}
+
+/* ProseMirror basics */
+
+.ProseMirror {
+  white-space: pre-wrap;
+}
+
+/* The pagination-preview clone must lay out exactly like the editor canvas it
+   was measured on. ProseMirror's whitespace/ligature rules are part of that
+   layout: without them whitespace-only lines collapse in the clone, every
+   following page window drifts upward, and page-boundary content prints twice
+   (once clipped at a page bottom, once at the next page top). */
+.pv-content {
+  word-wrap: break-word;
+  white-space: break-spaces;
+  -webkit-font-variant-ligatures: none;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+/* ---- find & replace ---- */
+
+.find-panel {
+  position: absolute;
+  top: 8px;
+  right: 20px;
+  z-index: 60;
+  /* the panel overlaps the ribbon-tabs row, which is a window drag region;
+   * drag regions hit-test by rectangle regardless of z-order and would
+   * swallow every click (notably the × close button) */
+  -webkit-app-region: no-drag;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--docs-shadow-menu);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.workspace {
+  position: relative;
+}
+
+.find-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.find-input {
+  width: 200px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.find-input:focus {
+  border-color: var(--word-blue);
+}
+
+.find-count {
+  min-width: 44px;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.find-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.find-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.find-btn:disabled {
+  color: var(--border-strong);
+  cursor: default;
+}
+
+.find-close {
+  font-size: 12px;
+}
+
+.find-action {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.find-action:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.find-action:disabled {
+  color: var(--border-strong);
+  cursor: default;
+}
+
+.search-hit {
+  background: var(--docs-paper-hit-bg);
+  border-radius: 2px;
+}
+
+.search-hit-active {
+  background: var(--docs-paper-hit-active-bg);
+  color: var(--docs-paper-hit-active-ink);
+}
+
+/* ---- autosave toggle (pill in the title bar) ---- */
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 4px;
+  margin-right: 4px;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--docs-knob-dot);
+  transition: left 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--word-blue);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  left: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ---- editable table cells ---- */
+
+.doc-table td[contenteditable='true'] {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.doc-table td[contenteditable='true']:focus {
+  outline: 2px solid var(--word-blue);
+  outline-offset: -2px;
+}
+
+/* ================= status bar ================= */
+
+.status-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  height: 24px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--docs-statusbar-bg);
+  border-top: 1px solid var(--docs-statusbar-border);
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-item {
+  margin-right: 14px;
+  flex-shrink: 0;
+}
+
+.status-wordcount {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.status-wordcount:hover {
+  text-decoration: underline;
+}
+
+.status-msg {
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: var(--docs-statusbar-hover);
+}
+
+.zoom-slider {
+  width: 110px;
+  accent-color: var(--docs-zoom-slider);
+  height: 3px;
+}
+
+.zoom-value {
+  min-width: 38px;
+  text-align: right;
+}
+
+/* ---- print / export PDF: only the document itself ---- */
+
+@media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: none !important;
+  }
+
+  .ribbon,
+  .status-bar,
+  .nav-pane,
+  .ruler,
+  .find-panel {
+    display: none !important;
+  }
+
+  /* editor-only affordance chips: Word/LibreOffice print the object (or nothing),
+     never a type label — the label text must not leak into exported PDFs */
+  .doc-protected-label {
+    display: none !important;
+  }
+
+  /* more editor-only markers whose text leaks into the exported text layer:
+     transparent ink still emits glyphs into the PDF, so they must not paint at
+     all. visibility (not display) keeps their layout box — pagination sliced
+     the canvas with these boxes in the flow. */
+  .doc-sectbreak-label {
+    visibility: hidden !important;
+  }
+
+  .doc-note-ref::before,
+  .doc-note-ref::after {
+    visibility: hidden !important;
+  }
+
+  /* content-control chrome: Word prints the content only, no box or alias tag */
+  .has-sdt {
+    border-color: transparent !important;
+  }
+
+  .has-sdt::before {
+    display: none !important;
+  }
+
+  .app,
+  .workspace,
+  .editor-scroll {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    background: none !important;
+  }
+
+  .doc-zoom {
+    zoom: 1 !important;
+    width: auto !important;
+  }
+
+  .page-wrap {
+    margin: 0 !important;
+  }
+
+  .doc-page {
+    width: auto !important;
+    min-height: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  /* Direct PDF uses the same section page box as the editor. Preview export
+     already supplies one fixed-size .pv-page per sheet and keeps its clone fluid. */
+  .app:not(:has(.pagination-preview)) .doc-page {
+    min-height: var(--page-h, 1056px) !important;
+  }
+
+  .page-break-before {
+    break-before: page;
+  }
+
+  .doc-field-pagebreak {
+    break-after: page;
+    visibility: hidden;
+    height: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .img-resize-handle {
+    display: none !important;
+  }
+
+  /* opacity:0 chrome still emits glyphs into the PDF text layer */
+  .doc-move-handle {
+    display: none !important;
+  }
+
+  /* selection highlight is UI state: the auto-selected first node must not
+     print a blue plate/border */
+  .doc-protected.ProseMirror-selectednode {
+    border-color: transparent !important;
+    outline: none !important;
+    background: none !important;
+  }
+
+  /* continuous-flow printing still delegates to Chromium auto-pagination; canvas page gaps don't take part */
+  .page-gap {
+    display: none !important;
+  }
+
+  /* mixed-paper grouped export: pages outside the current group don't print */
+  .pv-page.pv-print-skip {
+    display: none !important;
+  }
+
+  /* with the pagination preview open, print its output: each .pv-page is exactly one sheet */
+  .app:has(.pagination-preview) > *:not(.pagination-preview) {
+    display: none !important;
+  }
+
+  /* print fragmentation supports flex containers poorly; preview shells all degrade to plain blocks */
+  .pagination-preview {
+    position: static;
+    background: none;
+    display: block;
+  }
+
+  .pv-scroll {
+    display: block;
+  }
+
+  .pv-toolbar {
+    display: none !important;
+  }
+
+  .pv-scroll {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .pv-page {
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+    /* 2px shorter than the paper, so print rounding overflow doesn't produce blank pages */
+    height: calc(var(--pv-page-h, 1056px) - 2px) !important;
+  }
+
+  .pv-page:last-child {
+    break-after: auto;
+  }
+
+  .pv-pageno {
+    display: none;
+  }
+
+  /* forced breaks are disabled inside the clone, and page-break fields keep placeholders matching canvas measurement */
+  .pv-clip .page-break-before {
+    break-before: auto;
+  }
+
+  .pv-clip .doc-field-pagebreak {
+    break-after: auto;
+    height: auto;
+  }
+
+  .editor-area {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .split-pane,
+  .read-exit {
+    display: none !important;
+  }
+}
+
+/* ================= View tab: view modes / gridlines / split / windows ================= */
+
+/* editor column: document scroller on top, optional split pane below */
+.editor-area {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Read mode: chrome hidden, document only, Esc to exit ---- */
+
+.read-mode .ribbon,
+.read-mode .nav-pane,
+.read-mode .find-panel,
+.read-mode .comments-pane,
+.read-mode .split-pane {
+  display: none !important;
+}
+
+.read-mode .editor-scroll {
+  background: var(--docs-pv-canvas);
+  padding-top: 44px;
+}
+
+.read-exit {
+  position: fixed;
+  top: 52px;
+  right: 24px;
+  z-index: 60;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: var(--docs-shadow-chip);
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.read-exit:hover {
+  background: var(--hover);
+}
+
+/* ---- Web Layout: document fills the window width, no page chrome ---- */
+
+.view-web {
+  width: 100%;
+}
+
+.view-web .doc-page {
+  width: auto;
+  min-height: 0;
+  box-shadow: none;
+  padding: 24px 40px 80px;
+}
+
+.view-web .page-hf {
+  display: none;
+}
+
+/* ---- Outline view: headings only, still editable ---- */
+
+.view-outline .doc-page > :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
+  display: none;
+}
+
+.view-outline .doc-page {
+  min-height: 400px;
+  column-count: auto;
+}
+
+.view-outline .doc-page h1,
+.view-outline .doc-page h2,
+.view-outline .doc-page h3,
+.view-outline .doc-page h4,
+.view-outline .doc-page h5,
+.view-outline .doc-page h6 {
+  position: relative;
+  padding-left: 22px;
+}
+
+.view-outline .doc-page h1 {
+  margin-left: 0;
+}
+.view-outline .doc-page h2 {
+  margin-left: 26px;
+}
+.view-outline .doc-page h3 {
+  margin-left: 52px;
+}
+.view-outline .doc-page h4 {
+  margin-left: 78px;
+}
+.view-outline .doc-page h5 {
+  margin-left: 104px;
+}
+.view-outline .doc-page h6 {
+  margin-left: 130px;
+}
+
+/* Word outline view marks each heading with a ⊕ handle */
+.view-outline .doc-page h1::before,
+.view-outline .doc-page h2::before,
+.view-outline .doc-page h3::before,
+.view-outline .doc-page h4::before,
+.view-outline .doc-page h5::before,
+.view-outline .doc-page h6::before {
+  content: '⊕';
+  position: absolute;
+  left: 0;
+  color: var(--docs-paper-ink-faint);
+  font-size: 0.8em;
+  top: 0.25em;
+}
+
+/* ---- Gridlines: alignment grid inside the text area (content-box = inside margins) ---- */
+
+.show-grid .doc-page {
+  background-image:
+    linear-gradient(to right, var(--docs-paper-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--docs-paper-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-origin: content-box;
+  background-clip: content-box;
+}
+
+/* ---- Split: read-only second pane with independent scrolling ---- */
+
+.split-pane {
+  height: 42%;
+  min-height: 160px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 3px solid var(--border-strong);
+  background: var(--canvas);
+}
+
+.split-pane-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 12px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.split-pane-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  padding: 0 4px;
+}
+
+.split-pane-close:hover {
+  color: var(--word-blue);
+}
+
+.split-pane-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 24px 60px;
+}
+
+/* preview copy: not interactive (clicks/links disabled) */
+.split-doc {
+  pointer-events: none;
+}
+
+/* ---- Design → Watermark: diagonal ghost text across the page ---- */
+
+.page-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-35deg);
+  font-size: 84px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--docs-paper-watermark);
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ---- Design → Themes/Colors: accent color preview dots in dropdowns ---- */
+
+.theme-accent-row {
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.theme-accent-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--docs-swatch-outline);
+}
+
+/* ---- References → Footnotes/Endnotes: reference marker + page-bottom notes area ---- */
+
+.doc-note-ref {
+  color: var(--docs-paper-accent);
+  cursor: default;
+}
+
+/* editor-only affordance brackets around the note number; hidden when printing */
+.doc-note-ref::before {
+  content: '[';
+}
+
+.doc-note-ref::after {
+  content: ']';
+}
+
+.doc-note-ref.ProseMirror-selectednode {
+  outline: 2px solid var(--word-blue);
+  border-radius: 2px;
+}
+
+/* ---- Phonetic guide (w:ruby): native ruby, kept from stretching the line ---- */
+
+ruby.doc-ruby {
+  ruby-position: over;
+}
+
+ruby.doc-ruby rt {
+  font-size: 0.5em;
+  line-height: 1;
+}
+
+ruby.doc-ruby.ProseMirror-selectednode {
+  outline: 2px solid var(--word-blue);
+  border-radius: 2px;
+}
+
+/* ---- Inline equations: atomic MathML node flowing with the text ---- */
+
+.doc-inline-math {
+  display: inline-block;
+  vertical-align: baseline;
+  padding: 0 1px;
+  border-radius: 2px;
+  cursor: default;
+}
+
+.doc-inline-math:hover {
+  background: color-mix(in srgb, var(--word-blue) 10%, transparent);
+}
+
+.doc-inline-math.ProseMirror-selectednode {
+  outline: 2px solid var(--word-blue);
+  background: color-mix(in srgb, var(--word-blue) 14%, transparent);
+}
+
+.doc-inline-math math {
+  font-size: 1em;
+}
+
+.doc-formula-edit {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 1px 6px;
+  font-size: 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.doc-protected-formula {
+  position: relative;
+}
+
+.doc-protected-formula:hover .doc-formula-edit {
+  opacity: 1;
+}
+
+.doc-formula-edit:hover {
+  background: var(--active-bg);
+  color: var(--text);
+}
+
+.page-notes {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--page-w, 816px);
+  margin: -100px auto 0;
+  padding: 8px 96px 28px;
+  background: var(--page-bg, var(--docs-paper));
+  font-size: 9pt;
+  line-height: 1.5;
+  color: var(--docs-paper-ink-dim);
+}
+
+.page-notes::before {
+  content: '';
+  display: block;
+  width: 33%;
+  border-top: 1px solid var(--docs-paper-ink-faint);
+  margin-bottom: 6px;
+}
+
+.page-notes-label {
+  margin-top: 8px;
+  font-weight: 600;
+  color: var(--docs-paper-ink-mid);
+}
+
+/* endnotes follow the footnote block as their own area: cancel the pull-up overlap and stack below */
+.page-notes + .page-endnotes {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.page-endnotes .page-notes-label {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.page-note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.page-note sup {
+  flex: none;
+  color: var(--docs-paper-accent);
+}
+
+.page-note-text {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.page-note-btn {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0 3px;
+  font-size: 11px;
+  color: var(--docs-paper-ink-faint);
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.page-note:hover .page-note-btn {
+  visibility: visible;
+}
+
+.page-note-btn:hover {
+  color: var(--word-blue);
+}
+
+/* ---- References → Index: XE marks (invisible in Word, a small chip on screen) ---- */
+
+.doc-xe-mark {
+  display: inline-block;
+  font-size: 9px;
+  line-height: 1.3;
+  color: var(--docs-paper-xe-ink);
+  background: var(--docs-paper-xe-bg);
+  border: 1px dashed var(--docs-paper-xe-border);
+  border-radius: 2px;
+  padding: 0 3px;
+  margin: 0 1px;
+  vertical-align: baseline;
+  cursor: default;
+}
+
+.doc-xe-mark::before {
+  content: 'XE:' attr(data-xe-term);
+}
+
+.doc-xe-mark.ProseMirror-selectednode {
+  outline: 2px solid var(--word-blue);
+}
+
+/* ---- Context menu: editor right-click menu ---- */
+
+.ctx-menu {
+  position: fixed;
+  z-index: 200;
+  padding: 5px 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--docs-shadow-ctx);
+  font-size: 13px;
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ctx-item:hover:not(:disabled) {
+  background: var(--word-blue);
+  color: var(--docs-on-accent);
+}
+
+.ctx-item:hover:not(:disabled) .ctx-key {
+  color: var(--docs-on-accent-dim);
+}
+
+.ctx-item:disabled {
+  color: var(--text-dim);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ctx-label {
+  flex: 1;
+  margin-right: 28px;
+}
+
+.ctx-key {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ctx-arrow {
+  margin-left: 6px;
+  color: var(--text-dim);
+}
+
+.ctx-sep {
+  height: 1px;
+  margin: 4px 10px;
+  background: var(--border);
+}
+
+.ctx-item-wrap {
+  position: relative;
+}
+
+.ctx-submenu {
+  position: absolute;
+  top: -5px;
+  left: calc(100% - 4px);
+  min-width: 150px;
+  padding: 5px 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--docs-shadow-ctx);
+}
+
+/* ---- Font / Paragraph dialogs ---- */
+
+.font-dialog-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.font-dialog-row > label {
+  flex: 1;
+  min-width: 0;
+}
+
+.font-check {
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex: none !important;
+  padding-bottom: 8px;
+}
+
+.font-check input[type='checkbox'] {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+.font-color-input {
+  padding: 2px !important;
+  cursor: pointer;
+}
+
+.font-preview {
+  margin: 4px 0 14px;
+  padding: 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.para-num {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.para-num input {
+  margin-top: 0 !important;
+}
+
+.para-unit {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.prompt-textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+}
+
+.prompt-textarea:focus {
+  border-color: var(--word-blue);
+}
+
+/* ---- Draw (ink annotations) ---- */
+
+.ink-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ink-overlay.ink-active {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.ink-tool-pen,
+.ink-tool-highlighter {
+  cursor: crosshair;
+}
+
+.ink-tool-eraser {
+  cursor: cell;
+}
+
+.ink-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.ink-settings {
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.ink-swatches {
+  display: flex;
+  gap: 3px;
+}
+
+.ink-swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--docs-swatch-outline-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ink-swatch.active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ink-widths {
+  display: flex;
+  gap: 3px;
+}
+
+.ink-width {
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ink-width:hover {
+  background: var(--hover);
+}
+
+.ink-width.active {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+.ink-width-dot {
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Page Number Format dialog */
+.pgnum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.pgnum-row select,
+.pgnum-row input {
+  width: 180px;
+  padding: 4px 6px;
+}
+
+.pgnum-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 6px 0 0;
+}
+
+/* table border / size tools */
+.table-border-opts {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.table-border-opts input[type='color'] {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.table-border-opts select {
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.table-size-inputs {
+  display: flex;
+  flex-direction: column;
+  /* height/width rows + the reset button must fit in the 84px ribbon-body; too much line spacing stretches it and causes jumps */
+  gap: 2px;
+}
+
+.table-size-inputs label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.table-size-inputs input {
+  width: 56px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.table-tool-button.active {
+  background: var(--accent-soft);
+}
+
+/* run-level format revision (w:rPrChange): amber underline hint */
+.has-rpr-change {
+  text-decoration: underline wavy var(--docs-paper-rpr);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+
+/* inline table-break cut point: zero-height dashed page-break marker (spans the page, takes no layout height) */
+.page-gap-cut {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  position: relative;
+  pointer-events: none;
+}
+
+/* safety net: a cut marker misplaced as a direct table/row child would otherwise be
+   wrapped in an anonymous table row, adding one line-height of phantom table height
+   that skews pagination measurement (#86 line shear / #93 page-count inflation) */
+table > .page-gap-cut,
+tbody > .page-gap-cut,
+tr > .page-gap-cut {
+  display: none;
+}
+
+.page-gap-cut::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100vw;
+  width: 200vw;
+  border-top: 2px dashed var(--docs-gap-cut);
+}
+
+/* nested table inside a cell (read-only child table) */
+.doc-nested-table {
+  margin: 2px 0;
+}
+
+.doc-nested-table .doc-table {
+  max-width: 100%;
+}
+
+/* list library galleries (bullets/numbering/multilevel) */
+.list-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 6px;
+  min-width: 180px;
+}
+
+.list-gallery-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  padding: 6px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.list-gallery-card:hover {
+  border-color: var(--accent);
+}
+
+.list-gallery-multi {
+  grid-template-columns: repeat(3, 1fr);
+  min-width: 320px;
+}
+
+.list-gallery-card-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.list-gallery-define {
+  grid-column: 1 / -1;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.list-gallery-define:hover {
+  color: var(--accent);
+}
+
+/* Define New Multilevel List dialog */
+.list-define-modal {
+  width: 560px;
+  max-width: 90vw;
+}
+
+.list-define-head,
+.list-define-row {
+  display: grid;
+  grid-template-columns: 36px 110px 1fr 84px 110px;
+  gap: 6px;
+  align-items: center;
+}
+
+.list-define-head {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 4px 0;
+}
+
+.list-define-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.list-define-row input,
+.list-define-row select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 4px;
+}
+
+.list-define-preview {
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* table style gallery cards */
+.table-style-gallery {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 420px;
+}
+
+.table-style-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-dim);
+  max-width: 86px;
+}
+
+.table-style-card span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 74px;
+}
+
+.table-style-card:hover {
+  border-color: var(--word-blue);
+}
+
+.table-style-card-grid {
+  width: 40px;
+  height: 22px;
+  border: 1px solid var(--docs-tstyle-border);
+  border-top: 5px solid var(--docs-tstyle-header);
+  background: repeating-linear-gradient(var(--surface) 0 4px, var(--docs-tstyle-row) 4px 8px);
+  border-radius: 2px;
+}
+
+.table-style-card-grid.plain {
+  border-top: 1px solid var(--docs-tstyle-border);
+  background: var(--surface);
+}
+
+/* comment threads: replies and resolution */
+.comment-thread {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+
+.comment-thread.resolved {
+  opacity: 0.55;
+}
+
+.comments-resolved-group {
+  margin-top: 4px;
+}
+
+.comments-resolved-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: left;
+}
+
+.comments-resolved-toggle:hover {
+  background: var(--hover);
+}
+
+.comments-resolved-caret {
+  display: inline-block;
+  transition: transform 0.15s;
+}
+
+.comments-resolved-caret.open {
+  transform: rotate(90deg);
+}
+
+.comment-resolved-badge {
+  font-size: 10px;
+  color: var(--docs-ok-ink);
+  border: 1px solid var(--docs-ok-border);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.comment-reply {
+  margin: 4px 8px 4px 26px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--border);
+  background: var(--surface);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.comment-thread-actions {
+  display: flex;
+  gap: 8px;
+  margin: 2px 8px 0 26px;
+}
+
+.comment-thread-actions > button {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text-dim);
+}
+
+.comment-reply-compose {
+  flex: 1;
+}
+
+.comment-reply-compose textarea {
+  width: 100%;
+  min-height: 48px;
+  font-size: 12px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* ================= transient toast (save feedback) ================= */
+
+.app-toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--docs-toast-bg);
+  color: var(--docs-toast-ink);
+  font-size: 13px;
+  box-shadow: var(--docs-shadow-toast);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.app-toast.error {
+  background: var(--docs-toast-error-bg);
+}
+
+.app-toast-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.app-toast.success .app-toast-icon {
+  color: var(--docs-toast-ok);
+}
+
+/* Body row containing the editor column. */
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Shape draw mode (Word parity): crosshair over the whole document while armed */
+.ProseMirror.doc-shape-drawing,
+.ProseMirror.doc-shape-drawing * {
+  cursor: crosshair !important;
+}
+
+/* Shape gallery dropdown (slides parity: grouped, outline-icon grid) */
+.rb-drop-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 4px 2px 3px;
+}
+
+.rb-shape-gallery {
+  width: 264px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.rb-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 28px);
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.rb-shape-cell {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.rb-shape-cell:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+/* Gallery variant keeps .shape-palette's anchored-card chrome but stacks grouped grids */
+.shape-palette.rb-shape-gallery {
+  display: block;
+}

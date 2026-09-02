@@ -1,0 +1,449 @@
+import { describe, expect, it } from 'vitest'
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName } from 'pdf-lib'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import {
+  applySaveRequest,
+  extractPagesBytes,
+  insertPdfBytes,
+  readStaticFormFills,
+} from '../src/domain/save-pdf'
+import { VISUAL_SIGNATURE_CONTENT_PREFIX } from '../src/shared/ipc'
+import type { SavePdfRequest } from '../src/shared/ipc'
+
+/** 1x1 red pixel PNG */
+const TINY_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+async function makePdf(sizes: [number, number][]): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  for (const size of sizes) doc.addPage(size)
+  return doc.save({ useObjectStreams: false })
+}
+
+/** applySaveRequest with the skipped-text-edit channel unwrapped (none expected here) */
+async function apply(bytes: Uint8Array, req: SavePdfRequest): Promise<Uint8Array> {
+  const result = await applySaveRequest(bytes, req)
+  expect(result.skippedTextEdits).toEqual([])
+  return result.bytes
+}
+
+const request = (over: Partial<SavePdfRequest> = {}): SavePdfRequest => ({
+  path: '/tmp/test.pdf',
+  markups: [],
+  drawings: [],
+  formValues: [],
+  stamps: [],
+  ...over,
+})
+
+function pageAnnots(doc: PDFDocument, pageIndex: number): PDFDict[] {
+  const annots = doc.getPage(pageIndex).node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+  if (!annots) return []
+  return Array.from({ length: annots.size() }, (_, i) => annots.lookup(i, PDFDict))
+}
+
+const subtypeOf = (annot: PDFDict) => annot.lookup(PDFName.of('Subtype'), PDFName).decodeText()
+
+describe('extractPagesBytes', () => {
+  it('extracts the requested pages in the given order', async () => {
+    const bytes = await makePdf([
+      [100, 100],
+      [200, 200],
+      [300, 300],
+    ])
+    const out = await PDFDocument.load(await extractPagesBytes(bytes, [2, 0]))
+    expect(out.getPageCount()).toBe(2)
+    expect(out.getPage(0).getWidth()).toBe(300)
+    expect(out.getPage(1).getWidth()).toBe(100)
+  })
+
+  it('silently drops out-of-range page indices', async () => {
+    const bytes = await makePdf([[100, 100]])
+    const out = await PDFDocument.load(await extractPagesBytes(bytes, [-1, 0, 5]))
+    expect(out.getPageCount()).toBe(1)
+  })
+})
+
+describe('insertPdfBytes', () => {
+  it('inserts all pages at the front when afterPageIndex is -1', async () => {
+    const dst = await makePdf([[100, 100]])
+    const src = await makePdf([
+      [200, 200],
+      [300, 300],
+    ])
+    const { merged, count } = await insertPdfBytes(dst, src, -1)
+    expect(count).toBe(2)
+    const out = await PDFDocument.load(merged)
+    expect(out.getPageCount()).toBe(3)
+    expect(out.getPage(0).getWidth()).toBe(200)
+    expect(out.getPage(2).getWidth()).toBe(100)
+  })
+
+  it('clamps an out-of-range afterPageIndex to the document end', async () => {
+    const dst = await makePdf([[100, 100]])
+    const src = await makePdf([[200, 200]])
+    const { merged } = await insertPdfBytes(dst, src, 99)
+    const out = await PDFDocument.load(merged)
+    expect(out.getPage(1).getWidth()).toBe(200)
+  })
+})
+
+describe('static form fill metadata', () => {
+  it('persists records and remaps their pages through delete and reorder', async () => {
+    const bytes = await makePdf([
+      [100, 100],
+      [200, 200],
+      [300, 300],
+    ])
+    const saved = await apply(
+      bytes,
+      request({
+        staticFormFills: [
+          { id: 'a', kind: 'text', pageIndex: 0, rect: [1, 2, 30, 12], text: 'Alice' },
+          { id: 'b', kind: 'check', pageIndex: 2, rect: [5, 6, 15, 16] },
+          { id: 'deleted', kind: 'cross', pageIndex: 1, rect: [5, 6, 15, 16] },
+        ],
+        deletedPages: [1],
+        pageOrder: [2, 0],
+      }),
+    )
+
+    expect(await readStaticFormFills(saved)).toEqual([
+      { id: 'a', kind: 'text', pageIndex: 1, rect: [1, 2, 30, 12], text: 'Alice' },
+      { id: 'b', kind: 'check', pageIndex: 0, rect: [5, 6, 15, 16] },
+    ])
+  })
+
+  it('removes the catalog entry when the last fill is deleted', async () => {
+    const withFill = await apply(
+      await makePdf([[100, 100]]),
+      request({
+        staticFormFills: [{ id: 'a', kind: 'cross', pageIndex: 0, rect: [1, 2, 3, 4] }],
+      }),
+    )
+    const cleared = await apply(withFill, request({ staticFormFills: [] }))
+
+    expect(await readStaticFormFills(cleared)).toEqual([])
+  })
+})
+
+describe('applySaveRequest', () => {
+  it('applies page rotation deltas on top of the existing rotation', async () => {
+    const bytes = await makePdf([[100, 100]])
+    const saved = await apply(bytes, request({ rotations: [{ pageIndex: 0, delta: 90 }] }))
+    const out = await PDFDocument.load(saved)
+    expect(out.getPage(0).getRotation().angle).toBe(90)
+  })
+
+  it('writes markup annotations with an appearance stream', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        markups: [
+          {
+            pageIndex: 0,
+            type: 'highlight',
+            color: [1, 0.87, 0.35],
+            quads: [[10, 100, 60, 100, 10, 88, 60, 88]],
+          },
+          {
+            pageIndex: 0,
+            type: 'underline',
+            color: [0.17, 0.4, 1],
+            quads: [[10, 80, 60, 80, 10, 68, 60, 68]],
+          },
+        ],
+      }),
+    )
+    const out = await PDFDocument.load(saved)
+    const annots = pageAnnots(out, 0)
+    expect(annots.map(subtypeOf)).toEqual(['Highlight', 'Underline'])
+    // Every markup gets a hand-written /AP /N appearance
+    for (const a of annots) {
+      expect(a.lookup(PDFName.of('AP'), PDFDict).has(PDFName.of('N'))).toBe(true)
+    }
+  })
+
+  it('writes note and shape drawing annotations', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        drawings: [
+          { kind: 'note', pageIndex: 0, color: [1, 0, 0], at: [50, 700], contents: 'hello note' },
+          {
+            kind: 'ink',
+            pageIndex: 0,
+            color: [0, 0, 1],
+            width: 2,
+            paths: [[10, 10, 20, 20, 30, 15]],
+          },
+          { kind: 'rect', pageIndex: 0, color: [0, 1, 0], width: 1, rect: [40, 40, 90, 80] },
+          {
+            kind: 'arrow',
+            pageIndex: 0,
+            color: [0, 0, 0],
+            width: 2,
+            from: [100, 100],
+            to: [200, 150],
+          },
+        ],
+      }),
+    )
+    const out = await PDFDocument.load(saved)
+    expect(pageAnnots(out, 0).map(subtypeOf)).toEqual(['Text', 'Ink', 'Square', 'Line'])
+  })
+
+  it('ignores markups and drawings addressing missing pages', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        markups: [
+          { pageIndex: 9, type: 'highlight', color: [1, 1, 0], quads: [[0, 1, 1, 1, 0, 0, 1, 0]] },
+        ],
+        drawings: [{ kind: 'note', pageIndex: 9, color: [1, 0, 0], at: [0, 0], contents: 'x' }],
+      }),
+    )
+    expect(pageAnnots(await PDFDocument.load(saved), 0)).toHaveLength(0)
+  })
+
+  it('writes an image drawing as a Stamp annotation with an image appearance', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        drawings: [{ kind: 'image', pageIndex: 0, image: TINY_PNG, rect: [100, 500, 300, 600] }],
+      }),
+    )
+    const out = await PDFDocument.load(saved)
+    const annots = pageAnnots(out, 0)
+    expect(annots.map(subtypeOf)).toEqual(['Stamp'])
+    const rect = annots[0]!.lookup(PDFName.of('Rect'), PDFArray)
+    expect(String(rect)).toBe('[ 100 500 300 600 ]')
+    expect(annots[0]!.lookup(PDFName.of('AP'), PDFDict).has(PDFName.of('N'))).toBe(true)
+  })
+
+  it('persists the AcroForm field association on visual signature annotations', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        drawings: [
+          {
+            kind: 'image',
+            pageIndex: 0,
+            image: TINY_PNG,
+            rect: [100, 500, 300, 600],
+            formFieldName: 'signature.image',
+          },
+          {
+            kind: 'ink',
+            pageIndex: 0,
+            color: [0, 0, 0],
+            width: 2,
+            paths: [[10, 10, 20, 20]],
+            formFieldName: 'signature.ink',
+          },
+        ],
+      }),
+    )
+    const annots = pageAnnots(await PDFDocument.load(saved), 0)
+
+    for (const [index, fieldName] of ['signature.image', 'signature.ink'].entries()) {
+      expect(
+        annots[index]!.lookup(PDFName.of('GenOfficeFormField'), PDFHexString).decodeText(),
+      ).toBe(fieldName)
+      expect(annots[index]!.lookup(PDFName.of('Contents'), PDFHexString).decodeText()).toBe(
+        `${VISUAL_SIGNATURE_CONTENT_PREFIX}${fieldName}`,
+      )
+    }
+
+    const loadingTask = getDocument({ data: saved.slice() })
+    try {
+      const pdfJsDoc = await loadingTask.promise
+      const pdfJsAnnotations = await (await pdfJsDoc.getPage(1)).getAnnotations()
+      expect(pdfJsAnnotations.map((annotation) => annotation.contentsObj?.str)).toEqual([
+        `${VISUAL_SIGNATURE_CONTENT_PREFIX}signature.image`,
+        `${VISUAL_SIGNATURE_CONTENT_PREFIX}signature.ink`,
+      ])
+    } finally {
+      await loadingTask.destroy()
+    }
+  })
+
+  it('counter-rotates the image appearance on rotated pages', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        rotations: [{ pageIndex: 0, delta: 90 }],
+        drawings: [{ kind: 'image', pageIndex: 0, image: TINY_PNG, rect: [100, 500, 300, 600] }],
+      }),
+    )
+    const out = await PDFDocument.load(saved)
+    expect(pageAnnots(out, 0).map(subtypeOf)).toEqual(['Stamp'])
+  })
+
+  it('embeds PNG stamps without failing', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const saved = await apply(
+      bytes,
+      request({
+        stamps: [{ pageIndex: 0, image: TINY_PNG, rect: [0, 0, 612, 792], opacity: 0.2 }],
+      }),
+    )
+    expect((await PDFDocument.load(saved)).getPageCount()).toBe(1)
+  })
+
+  it('replaces and clears only generated watermark/header-footer stamp annotations', async () => {
+    const bytes = await makePdf([[612, 792]])
+    const stamped = await apply(
+      bytes,
+      request({
+        replaceGeneratedStamps: true,
+        stamps: [{ pageIndex: 0, image: TINY_PNG, rect: [0, 0, 612, 792], opacity: 0.2 }],
+      }),
+    )
+    expect(pageAnnots(await PDFDocument.load(stamped), 0).map(subtypeOf)).toEqual(['Stamp'])
+
+    const cleared = await apply(
+      stamped,
+      request({ replaceGeneratedStamps: true, stamps: [] }),
+    )
+    expect(pageAnnots(await PDFDocument.load(cleared), 0)).toEqual([])
+  })
+
+  it('applies metadata and splits keywords on mixed separators', async () => {
+    const bytes = await makePdf([[100, 100]])
+    const saved = await apply(
+      bytes,
+      request({ metadata: { title: 'My Title', author: 'Me', keywords: 'a, b；c，d' } }),
+    )
+    const out = await PDFDocument.load(saved)
+    expect(out.getTitle()).toBe('My Title')
+    expect(out.getAuthor()).toBe('Me')
+    expect(out.getKeywords()).toContain('a')
+    expect(out.getKeywords()).toContain('d')
+  })
+
+  it('deletes pages by original index but never removes the last page', async () => {
+    const bytes = await makePdf([
+      [100, 100],
+      [200, 200],
+      [300, 300],
+    ])
+    const saved = await apply(bytes, request({ deletedPages: [0, 2] }))
+    const out = await PDFDocument.load(saved)
+    expect(out.getPageCount()).toBe(1)
+    expect(out.getPage(0).getWidth()).toBe(200)
+
+    const savedAll = await apply(bytes, request({ deletedPages: [0, 1, 2] }))
+    expect((await PDFDocument.load(savedAll)).getPageCount()).toBe(1)
+  })
+
+  it('reorders pages by original index', async () => {
+    const bytes = await makePdf([
+      [100, 100],
+      [200, 200],
+      [300, 300],
+    ])
+    const saved = await apply(bytes, request({ pageOrder: [2, 0, 1] }))
+    const out = await PDFDocument.load(saved)
+    expect(out.getPages().map((p) => p.getWidth())).toEqual([300, 100, 200])
+  })
+
+  it('applies the reorder when combined with deletions', async () => {
+    // Regression: pdf-lib's removePage does not invalidate its page cache,
+    // so a getPages() call after the deletion loop returns the stale
+    // pre-deletion list. applySaveRequest must derive the remaining pages
+    // from the pre-deletion snapshot instead of re-reading them.
+    const bytes = await makePdf([
+      [100, 100],
+      [200, 200],
+      [300, 300],
+    ])
+    const saved = await apply(bytes, request({ deletedPages: [1], pageOrder: [2, 0] }))
+    const out = await PDFDocument.load(saved)
+    expect(out.getPageCount()).toBe(2)
+    expect(out.getPages().map((p) => p.getWidth())).toEqual([300, 100])
+  })
+
+  it('skips the reorder when deleting every page leaves the guarded last page', async () => {
+    // Deleting all pages keeps one via the last-page guard; the order list
+    // then matches nothing alive, so the reorder must be skipped safely.
+    const bytes = await makePdf([
+      [100, 100],
+      [200, 200],
+    ])
+    const saved = await apply(bytes, request({ deletedPages: [0, 1], pageOrder: [1, 0] }))
+    const out = await PDFDocument.load(saved)
+    expect(out.getPageCount()).toBe(1)
+  })
+
+  it('fills text fields and checkboxes', async () => {
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([300, 300])
+    const form = doc.getForm()
+    form.createTextField('user.name').addToPage(page, { x: 20, y: 200, width: 200, height: 20 })
+    form.createCheckBox('user.agree').addToPage(page, { x: 20, y: 150, width: 16, height: 16 })
+    const bytes = await doc.save({ useObjectStreams: false })
+
+    const saved = await apply(
+      bytes,
+      request({
+        formValues: [
+          { name: 'user.name', kind: 'text', value: 'Alice' },
+          { name: 'user.agree', kind: 'checkbox', checked: true },
+        ],
+      }),
+    )
+    const out = await PDFDocument.load(saved)
+    expect(out.getForm().getTextField('user.name').getText()).toBe('Alice')
+    expect(out.getForm().getCheckBox('user.agree').isChecked()).toBe(true)
+  })
+
+  it('fills radio groups and dropdowns', async () => {
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([300, 300])
+    const form = doc.getForm()
+    const radio = form.createRadioGroup('user.color')
+    radio.addOptionToPage('red', page, { x: 20, y: 200, width: 16, height: 16 })
+    radio.addOptionToPage('blue', page, { x: 50, y: 200, width: 16, height: 16 })
+    const country = form.createDropdown('user.country')
+    country.addOptions(['CN', 'US'])
+    country.addToPage(page, { x: 20, y: 150, width: 100, height: 20 })
+    const bytes = await doc.save({ useObjectStreams: false })
+
+    const saved = await apply(
+      bytes,
+      request({
+        formValues: [
+          { name: 'user.color', kind: 'radio', value: 'blue' },
+          { name: 'user.country', kind: 'choice', value: 'CN' },
+        ],
+      }),
+    )
+    const out = await PDFDocument.load(saved)
+
+    expect(out.getForm().getRadioGroup('user.color').getSelected()).toBe('blue')
+    expect(out.getForm().getDropdown('user.country').getSelected()).toEqual(['CN'])
+  })
+
+  it('falls back to NeedAppearances when form values cannot be WinAnsi-encoded', async () => {
+    const doc = await PDFDocument.create()
+    const page = doc.addPage([300, 300])
+    doc.getForm().createTextField('cjk').addToPage(page, { x: 20, y: 200, width: 200, height: 20 })
+    const bytes = await doc.save({ useObjectStreams: false })
+
+    const saved = await apply(
+      bytes,
+      request({ formValues: [{ name: 'cjk', kind: 'text', value: '中文测试' }] }),
+    )
+    const out = await PDFDocument.load(saved)
+    expect(out.getForm().getTextField('cjk').getText()).toBe('中文测试')
+    const needAppearances = out.getForm().acroForm.dict.get(PDFName.of('NeedAppearances'))
+    expect(String(needAppearances)).toBe('true')
+  })
+})

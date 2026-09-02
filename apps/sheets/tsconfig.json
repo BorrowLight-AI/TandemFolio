@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@genoffice/docx-engine/math": ["./src/types/docx-engine-math.d.ts"]
+    },
+    "types": ["node", "vite/client"]
+  },
+  "include": [
+    "vite.renderer.config.ts",
+    "src/renderer/main.tsx",
+    "src/renderer/env.d.ts",
+    "tests/lite-*.test.ts"
+  ]
+}

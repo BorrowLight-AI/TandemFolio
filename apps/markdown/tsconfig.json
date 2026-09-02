@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@tandemfolio/host-bridge": ["../../packages/host-bridge/src/index.ts"]
+    }
+  },
+  "include": ["src/renderer", "tests", "vite.renderer.config.ts", "vitest.config.ts"]
+}

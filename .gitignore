@@ -1,0 +1,49 @@
+node_modules/
+out/
+dist/
+!plugins/tandemfolio/dist/
+!plugins/tandemfolio/dist/server.js
+/release/*.candidate.json
+*.log
+.DS_Store
+.refs/
+.env
+.env.*
+electron-builder.env
+~$*
+
+# Local ad-hoc e2e driver scripts (not pushed); the folder and README are tracked, the scripts are not
+/scripts/drivers/driver.*.mjs
+/probe*.mjs
+/apps/shell/build/THIRD-PARTY-NOTICES.txt
+/example/
+/.task/
+/docs-archive/
+.idea/
+.claude/
+.scratch/
+
+# Local build artifacts dropped in the repo root
+/*.dmg
+/*.exe
+/*.zip
+/windows/
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+
+# Test and analysis reports
+/coverage/
+
+# Local compiler/linter caches
+*.tsbuildinfo
+.eslintcache
+
+.cursor/rules/git-remote.mdc
+__pycache__/
+/notes/
+/MEMORY.md
+
+__screenshots__/

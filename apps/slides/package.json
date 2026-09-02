@@ -1,0 +1,38 @@
+{
+  "name": "@genoffice/slides",
+  "productName": "TandemFolio Slides",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "Browser-native source-preserving PPTX editor for TandemFolio.",
+  "scripts": {
+    "dev": "vite --config vite.renderer.config.ts",
+    "build": "vite build --config vite.renderer.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@tandemfolio/host-bridge": "*",
+    "@tandemfolio/operation-contract": "*",
+    "@genoffice/i18n": "*",
+    "@genoffice/pptx-engine": "*",
+    "@genoffice/pptx-render": "*",
+    "@genoffice/ui": "*",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.0.4",
+    "react": "^19.2.4",
+    "konva": "^9.3.20",
+    "react-dom": "^19.2.4",
+    "react-konva": "^19.0.10",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "pdf-lib": "^1.17.1"
+  }
+}

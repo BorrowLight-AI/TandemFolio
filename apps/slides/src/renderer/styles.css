@@ -1,0 +1,4823 @@
+/* Per-app accent (powerpoint-orange family) + slides-only tokens.
+ * Chrome tokens (surface/text/border/…) come from
+ * @genoffice/ui/tokens.css; nothing here may shadow those names. */
+:root {
+  --accent: #c43e1c;
+  --accent-dark: #a33517;
+  --accent-soft: #fbeae5;
+
+  /* slides-local chrome shades */
+  --slides-statusbar-bg: #f3f4f6;
+  --slides-rail-bg: #ececec;
+  --slides-statusbar-border: #e1e4e8;
+  --slides-statusbar-hover: rgb(0 0 0 / 8%);
+  --slides-ctl-border: #8a8886;
+  --slides-text-disabled: #b0b0b0;
+  --slides-hover-wash: rgb(16 110 190 / 10%);
+  --slides-hover-wash-soft: rgb(16 110 190 / 8%);
+  --slides-stagebar-ink: #374151;
+  --slides-comment-bg: #fffdfa;
+  --slides-chip-bg: #f6f8fc;
+  --slides-att-bg: #fafafa;
+  --slides-att-border: #ececee;
+  --slides-select-border: #0070c0;
+  --slides-select-hover-bg: #f0f7ff;
+  --slides-select-active-bg: #e5f1fb;
+  --slides-cell-focus-bg: #eef5fd;
+  --slides-ok: #2e9e44;
+  --slides-error: #ef4444;
+  --slides-error-bg: #fdecec;
+  --slides-danger-bg: #fbe9e7;
+  --slides-focus-ring: rgb(35 36 37 / 20%);
+  --slides-focus-ring-soft: rgb(35 36 37 / 18%);
+  --slides-focus-ring-strong: rgb(35 36 37 / 35%);
+  --slides-focus-ring-blue: rgb(74 141 246 / 30%);
+  --slides-shimmer-base: #666666;
+  --slides-shimmer-hi: #d9d9d9;
+  --slides-scroll-thumb: rgb(0 0 0 / 25%);
+  --slides-swatch-ring: rgb(0 0 0 / 15%);
+  --slides-swatch-ring-strong: rgb(0 0 0 / 25%);
+  /* PowerPoint animation categories: entrance / emphasis / exit / motion path */
+  --slides-anim-entr: #107c41;
+  --slides-anim-emph: #c28e00;
+  --slides-anim-exit: #c43e1c;
+  --slides-anim-path: #2b7cd3;
+
+  /* content-side constants: thumbnails/sorter/master previews and layout
+   * placeholders are paper; grid/guide/crop/laser overlays draw on the slide
+   * itself — none of these follow the theme */
+  --slides-paper: #fff;
+  --slides-on-accent: #fff;
+  --slides-on-accent-border: rgb(255 255 255 / 60%);
+  --slides-on-accent-bg: rgb(255 255 255 / 12%);
+  --slides-on-accent-hover: rgb(255 255 255 / 25%);
+  --slides-knob-dot: #fff;
+  --slides-badge-ink: #fff;
+  --slides-badge-bg: rgb(0 0 0 / 45%);
+  --slides-grid-line: rgb(60 60 60 / 16%);
+  --slides-guide: rgb(196 62 28 / 75%);
+  --slides-theme-card-gloss: inset 0 0 0 1px rgb(255 255 255 / 8%);
+  --slides-ph-border: rgb(0 0 0 / 30%);
+  --slides-ph-bg: rgb(0 0 0 / 4%);
+  --slides-ph-ink: rgb(0 0 0 / 40%);
+  --slides-swatch-none-ink: #888;
+  --slides-laser-core: rgb(255 82 82 / 95%);
+  --slides-laser-mid: rgb(255 82 82 / 55%);
+  --slides-laser-edge: rgb(255 82 82 / 0%);
+  --slides-laser-glow: 0 0 10px 3px rgb(255 82 82 / 50%);
+  --slides-crop-mask: rgb(0 0 0 / 45%);
+  --slides-crop-ink: #fff;
+  --slides-crop-ring: rgb(0 0 0 / 50%);
+  --slides-crop-thirds: rgb(255 255 255 / 35%);
+  --slides-crop-hint-bg: rgb(0 0 0 / 70%);
+
+  /* black playback chrome (slideshow / presenter / reading view) holds in
+   * both themes; numeric suffix = white alpha % */
+  --slides-show-black: #000;
+  --slides-show-ink: #fff;
+  --slides-show-ink-88: rgb(255 255 255 / 88%);
+  --slides-show-ink-85: rgb(255 255 255 / 85%);
+  --slides-show-ink-75: rgb(255 255 255 / 75%);
+  --slides-show-ink-60: rgb(255 255 255 / 60%);
+  --slides-show-ink-55: rgb(255 255 255 / 55%);
+  --slides-show-ink-45: rgb(255 255 255 / 45%);
+  --slides-show-ink-40: rgb(255 255 255 / 40%);
+  --slides-show-fill-8: rgb(255 255 255 / 8%);
+  --slides-show-fill-12: rgb(255 255 255 / 12%);
+  --slides-show-fill-14: rgb(255 255 255 / 14%);
+  --slides-show-fill-18: rgb(255 255 255 / 18%);
+  --slides-show-fill-20: rgb(255 255 255 / 20%);
+  --slides-show-fill-22: rgb(255 255 255 / 22%);
+  --slides-show-line-10: rgb(255 255 255 / 10%);
+  --slides-show-line-15: rgb(255 255 255 / 15%);
+  --slides-show-line-18: rgb(255 255 255 / 18%);
+  --slides-show-line-25: rgb(255 255 255 / 25%);
+  --slides-show-counter-bg: rgb(0 0 0 / 35%);
+  --slides-show-pill-bg: rgb(0 0 0 / 55%);
+  --slides-reading-bg: #2b2b2b;
+  --slides-reading-ink: #eee;
+  --slides-reading-ink-dim: #ddd;
+  --slides-pv-ink: #e8e8e8;
+  --slides-pv-accent: #d75342;
+  --slides-pv-exit-hover: rgb(211 47 47 / 60%);
+
+  /* dark chips and black translucent masks/shadows hold in both themes */
+  --slides-chip-remove-bg: #000;
+  --slides-chip-remove-hover: #4b4e51;
+  --slides-chip-remove-ink: #fff;
+  --slides-toast-bg: rgb(35 35 37 / 92%);
+  --slides-toast-error-bg: rgb(196 49 75 / 95%);
+  --slides-toast-ink: #fff;
+  --slides-toast-ok: #34c759;
+  --slides-mask-bg: rgb(0 0 0 / 50%);
+  --slides-shadow-menu: 0 8px 24px rgb(0 0 0 / 18%);
+  --slides-shadow-drop: 0 6px 20px rgb(0 0 0 / 14%), 0 1px 3px rgb(0 0 0 / 8%);
+  --slides-shadow-popup: 0 6px 20px rgb(0 0 0 / 15%);
+  --slides-shadow-float: 0 1px 4px rgb(0 0 0 / 18%);
+  --slides-shadow-modal: 0 3px 30px rgb(0 0 0 / 8%);
+  --slides-shadow-toolbar: 0 2px 8px rgb(0 0 0 / 6%);
+  --slides-shadow-card: 0 1px 2px rgb(0 0 0 / 4%), 0 2px 6px rgb(0 0 0 / 3%);
+  --slides-shadow-tip: 0 4px 6px rgb(0 0 0 / 10%);
+  --slides-shadow-toast: 0 4px 16px rgb(0 0 0 / 18%);
+  --slides-shadow-stage: 0 2px 14px rgb(0 0 0 / 18%);
+  --slides-shadow-reading: 0 10px 36px rgb(0 0 0 / 50%);
+}
+
+[data-theme='dark'] {
+  --accent: #e8663f;
+  --accent-dark: #d4552f;
+  --accent-soft: #43261d;
+  --slides-statusbar-bg: #252525;
+  --slides-rail-bg: #252525;
+  --slides-statusbar-border: #3a3a3a;
+  --slides-statusbar-hover: rgb(255 255 255 / 10%);
+  --slides-ctl-border: #777;
+  --slides-text-disabled: #666;
+  --slides-hover-wash: rgb(90 160 232 / 15%);
+  --slides-hover-wash-soft: rgb(90 160 232 / 12%);
+  --slides-stagebar-ink: #d0d0d0;
+  --slides-comment-bg: #2b2a26;
+  --slides-chip-bg: #2a2f36;
+  --slides-att-bg: #2a2a2a;
+  --slides-att-border: #3a3a3a;
+  --slides-select-border: #4a9eff;
+  --slides-select-hover-bg: #22303f;
+  --slides-select-active-bg: #2a3a4d;
+  --slides-cell-focus-bg: #223247;
+  --slides-ok: #58b380;
+  --slides-error: #e57373;
+  --slides-error-bg: rgb(229 115 115 / 12%);
+  --slides-danger-bg: #3a2020;
+  --slides-focus-ring: rgb(228 228 228 / 25%);
+  --slides-focus-ring-soft: rgb(228 228 228 / 22%);
+  --slides-focus-ring-strong: rgb(228 228 228 / 40%);
+  --slides-focus-ring-blue: rgb(74 158 255 / 40%);
+  --slides-shimmer-base: #8a8a8a;
+  --slides-shimmer-hi: #d0d0d0;
+  --slides-scroll-thumb: rgb(255 255 255 / 28%);
+  --slides-swatch-ring: rgb(255 255 255 / 25%);
+  --slides-swatch-ring-strong: rgb(255 255 255 / 35%);
+  --slides-anim-entr: #58b380;
+  --slides-anim-emph: #d9a834;
+  --slides-anim-exit: #e8663f;
+  --slides-anim-path: #5aa0e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --accent: #e8663f;
+    --accent-dark: #d4552f;
+    --accent-soft: #43261d;
+    --slides-statusbar-bg: #252525;
+    --slides-rail-bg: #252525;
+    --slides-statusbar-border: #3a3a3a;
+    --slides-statusbar-hover: rgb(255 255 255 / 10%);
+    --slides-ctl-border: #777;
+    --slides-text-disabled: #666;
+    --slides-hover-wash: rgb(90 160 232 / 15%);
+    --slides-hover-wash-soft: rgb(90 160 232 / 12%);
+    --slides-stagebar-ink: #d0d0d0;
+    --slides-comment-bg: #2b2a26;
+    --slides-chip-bg: #2a2f36;
+    --slides-att-bg: #2a2a2a;
+    --slides-att-border: #3a3a3a;
+    --slides-select-border: #4a9eff;
+    --slides-select-hover-bg: #22303f;
+    --slides-select-active-bg: #2a3a4d;
+    --slides-cell-focus-bg: #223247;
+    --slides-ok: #58b380;
+    --slides-error: #e57373;
+    --slides-error-bg: rgb(229 115 115 / 12%);
+    --slides-danger-bg: #3a2020;
+    --slides-focus-ring: rgb(228 228 228 / 25%);
+    --slides-focus-ring-soft: rgb(228 228 228 / 22%);
+    --slides-focus-ring-strong: rgb(228 228 228 / 40%);
+    --slides-focus-ring-blue: rgb(74 158 255 / 40%);
+    --slides-shimmer-base: #8a8a8a;
+    --slides-shimmer-hi: #d0d0d0;
+    --slides-scroll-thumb: rgb(255 255 255 / 28%);
+    --slides-swatch-ring: rgb(255 255 255 / 25%);
+    --slides-swatch-ring-strong: rgb(255 255 255 / 35%);
+    --slides-anim-entr: #58b380;
+    --slides-anim-emph: #d9a834;
+    --slides-anim-exit: #e8663f;
+    --slides-anim-path: #5aa0e8;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* UI CJK fonts per language (documentElement.lang is set at bootstrap and on switch);
+ * the zh expansion must keep the historical stack byte-identical */
+:root {
+  --ui-cjk: 'PingFang SC', 'Microsoft YaHei';
+}
+
+:root:lang(ja) {
+  --ui-cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo';
+}
+
+:root:lang(ko) {
+  --ui-cjk: 'Apple SD Gothic Neo', 'Malgun Gothic';
+}
+
+:root:lang(zh-TW) {
+  --ui-cjk: 'PingFang TC', 'Microsoft JhengHei';
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
+  color: var(--text);
+  background: var(--chrome-bg);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  /* The document itself never scrolls: a too-wide ribbon (or any other
+     overflowing chrome) must scroll inside its own container, not drag the
+     whole page sideways. */
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* ribbon-body keeps overflow visible for dropdowns; stop that overflow here
+     so a wide tab (e.g. Animations) can't become a document-level scroll */
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ================= title bar ================= */
+
+.autosave-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-left: 4px;
+  margin-right: 4px;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
+.autosave-toggle input {
+  display: none;
+}
+
+.autosave-knob {
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--border-strong);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.autosave-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--slides-knob-dot);
+  transition: left 0.15s;
+}
+
+.autosave-toggle.on .autosave-knob {
+  background: var(--accent);
+}
+
+.autosave-toggle.on .autosave-knob::after {
+  left: 14px;
+}
+
+.autosave-text {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.qa-btn {
+  width: 30px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.qa-btn svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.qa-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.qa-btn:disabled {
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
+.host-fullscreen {
+  flex: 0 0 auto;
+}
+
+/* ================= ribbon ================= */
+
+.ribbon {
+  flex-shrink: 0;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border-strong);
+  user-select: none;
+  /* shared toolbar ink (glyphs, letterforms, labels) — same as the sheets ribbon */
+  color: var(--text-primary);
+}
+
+.ribbon-tabs {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px 0 0;
+  gap: 2px;
+  /* Title bar row removed; the tab row doubles as the frameless-window drag region */
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.ribbon-tabs button,
+.ribbon-tabs .file-tab-wrap,
+.ribbon-tabs .autosave-toggle,
+.ribbon-tabs .qa-btn {
+  -webkit-app-region: no-drag;
+}
+
+.ribbon-file {
+  max-width: 40%;
+  font-size: 12px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.ribbon-tab {
+  position: relative;
+  border: none;
+  background: none;
+  padding: 7px 9px 6px;
+  font-size: 13px;
+  /* every tab label is semibold, not just the active one */
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  /* transparent border keeps the row height; the visible underline is the
+   * ::after below, sized to the label text rather than the padded button */
+  border-bottom: 2.5px solid transparent;
+  border-radius: 4px 4px 0 0;
+}
+
+.ribbon-tab:hover {
+  color: var(--accent);
+}
+
+.ribbon-tab.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* active underline: exactly the text width (insets = horizontal padding),
+ * ends slightly rounded — not a full capsule */
+.ribbon-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  bottom: -2.5px;
+  height: 2.5px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.ribbon-tab-file {
+  color: var(--slides-on-accent);
+  background: var(--accent);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  margin-right: 6px;
+}
+
+.ribbon-tab-file svg {
+  display: block;
+}
+
+.ribbon-tab-file:hover,
+.ribbon-tab-file.open {
+  background: var(--accent-dark);
+}
+
+.file-tab-wrap {
+  position: relative;
+}
+
+.file-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 60;
+  min-width: 210px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--slides-shadow-menu);
+  padding: 5px;
+}
+
+.file-menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.file-menu button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.file-menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.file-menu-key {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ribbon-tabs-spacer {
+  flex: 1;
+}
+
+.qa-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+
+/* ---- ribbon body ---- */
+
+.ribbon-body {
+  display: flex;
+  /* groups stretch to the full ribbon height, buttons fill it:
+   * the icon area grows (hover paints edge to edge), labels sit at the bottom */
+  align-items: stretch;
+  padding: 6px 12px 6px;
+  /* HARD-fixed height, not min-height: constant ribbon height across tabs,
+     so switching/auto-jumping to contextual tabs never pushes the canvas
+     below (root cause of the selected-element jitter). min-height still let any
+     taller tab stretch the row — a tab that outgrows this must compact its own
+     content instead. Sized to the tallest tab content: the font group's two 30px
+     rows + gaps/padding = 80px. */
+  height: 80px;
+  /* Groups never shrink (flex-shrink: 0 below), so a narrow window overflows
+     the row: scroll it inside the ribbon instead of stretching the document
+     (matching the sheets ribbon). Dropdown panels are NOT clipped by this —
+     .rb-drop escapes the scroll container via anchor positioning. */
+  /* `scroll`, not `auto`: styled scrollbars are classic (non-overlay), so
+     `scroll` keeps the 5px lane reserved even without overflow — the content
+     area never changes and crossing the overflow threshold cannot cause a
+     vertical layout jump. */
+  overflow-x: scroll;
+  overflow-y: hidden;
+  /* Slim visible scrollbar so mouse users can reach overflowed groups
+     (upstream issue #55). Its 5px lane is carved out of the bottom
+     padding, keeping the 80px band and the content area unchanged; Chromium
+     paints a thumb only while the row actually overflows. */
+  padding-bottom: 1px;
+}
+
+.ribbon-body::-webkit-scrollbar {
+  height: 5px;
+}
+
+.ribbon-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ribbon-body::-webkit-scrollbar-thumb {
+  border-radius: 2.5px;
+  background: var(--slides-scroll-thumb);
+}
+
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.ribbon-group-items {
+  display: flex;
+  /* center like docs/sheets — stretch made tall buttons grow to the group
+     height, sitting their glyphs ~1px lower than the other apps' */
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.ribbon-group-label {
+  display: none;
+}
+
+.ribbon-sep {
+  width: 1px;
+  flex-shrink: 0;
+  /* separators keep spanning the full ribbon height while groups center */
+  align-self: stretch;
+  background: var(--border);
+  /* 2px matches the groups' vertical padding, so the line spans exactly the
+     tallest group content (the two 30px font rows) instead of stopping short
+     of it — same inset across all three apps */
+  margin: 2px 6px;
+}
+
+.ribbon-placeholder {
+  align-self: center;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  padding: 0 14px;
+}
+
+.rb-big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  /* PowerPoint-density: minimal side padding; the icon row flexes to fill */
+  padding: 4px 7px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: inherit;
+  /* Don't compress button width when space is tight, avoiding CJK labels wrapping character by character (table → vertical) */
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.rb-big-icon {
+  min-height: 28px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+/* Picture-tool raster icons share the same box as the SVG ribbon glyphs. */
+.picture-tool-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-brand-secondary);
+}
+
+.picture-tool-icon svg {
+  /* 24px renders the 24-unit viewBox 1:1, so the 1.5 stroke paints 1.5px,
+     keeping the 1:16 stroke standard */
+  width: 24px;
+  height: 24px;
+}
+
+/* the dropdown chevron sits beside the icon (top row), not the label */
+.rb-caret {
+  flex-shrink: 0;
+  display: block;
+}
+
+.rb-big-icon .rb-caret {
+  margin-left: 3px;
+  color: var(--text-dim);
+}
+
+.rb-big:hover:not(:disabled) .rb-big-icon {
+  background: var(--hover);
+}
+
+.rb-big:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rb-big.active {
+  color: var(--text);
+}
+
+.rb-big.active .rb-big-icon {
+  background: var(--active-bg);
+}
+
+/* PowerPoint-style: hover/open paint only the icon row — the label below
+ * stays outside the gray. The box spans the whole button width (align-self
+ * stretch + horizontal bleed), not just the icon content. Negative margins
+ * cancel the bleed so button layout/alignment is unchanged. */
+.rb-big .rb-big-icon {
+  align-self: stretch;
+  border-radius: 4px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+}
+
+.rb-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* compact stacked mini buttons (cut/copy/format painter ONLY): 3 × 18px lines up with a big button (57px).
+   Scoped to .rb-clip-col — .rb-col is also the font group's row container and must keep normal sizing. */
+.rb-clip-col {
+  gap: 0;
+}
+.rb-clip-col .rb-icon {
+  height: 20px;
+  min-width: 24px;
+  padding: 0 4px;
+}
+
+.rb-small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.rb-small svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--text-primary);
+  /* CSS resizes these below their attr size — re-pin the painted stroke
+     (2.15 units × 14/24 ≈ 1.25px) */
+  stroke-width: 2.15;
+}
+
+.rb-small:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-small.active {
+  background: var(--active-bg);
+}
+
+.rb-small.active svg {
+  color: var(--accent);
+}
+
+.rb-small:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Checkbox rows (View tab's Show group) */
+.rb-check-col {
+  align-items: stretch;
+}
+
+.rb-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  padding: 3px 8px 3px 6px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.rb-check:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-check:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rb-check-box {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--slides-ctl-border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--slides-on-accent);
+}
+
+.rb-check.on .rb-check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.rb-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rb-icon {
+  min-width: 28px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  font-size: 15px;
+  cursor: pointer;
+  color: inherit;
+  padding: 0 4px;
+}
+
+.rb-icon:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-icon.active {
+  background: var(--active-bg);
+  color: var(--accent);
+}
+
+.rb-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rb-icon svg {
+  display: block;
+}
+
+/* pushes an item to the row's right edge (MS: Clear Formatting aligns with row 2's end) */
+.rb-push-right {
+  margin-left: auto;
+}
+
+/* dropdown chevron inside compact toggle buttons hugs the glyph */
+.rb-icon .rb-caret {
+  margin-left: 1px;
+  flex-shrink: 0;
+}
+
+.rb-mini-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 5px;
+}
+
+/* ================= workspace ================= */
+
+.workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+.slide-list {
+  width: 120px; /* fallback; App drives the actual width via inline style (drag-resizable) */
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 10px;
+}
+
+/* drag handle between the thumbnail list and the canvas — resize the sidebar
+ * horizontally (overlaps the list's right border; cursor-only affordance) */
+.thumb-resizer {
+  width: 6px;
+  margin-left: -3px;
+  flex-shrink: 0;
+  cursor: col-resize; /* horizontal double-arrow on the splitter */
+  z-index: 20;
+  background: transparent;
+}
+
+/* macOS vibrancy (body.vib set at bootstrap): only the body stays
+ * transparent for the window material; the workspace, mode containers and
+ * the thumbnail pane paint solid so content never shows the desktop
+ * through. */
+body.vib {
+  background: transparent;
+}
+
+body.vib .workspace {
+  background: var(--canvas);
+}
+
+body.vib .stage-col,
+body.vib .sorter-view {
+  background: var(--canvas);
+}
+
+body.vib .slide-list {
+  background: var(--slides-rail-bg);
+}
+
+.thumb {
+  background: var(--slides-paper);
+  border: 2px solid var(--border-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  cursor: pointer;
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+
+/* Thumbnail drag-to-reorder: source page translucent, insertion line shown on the drop target's top/bottom edge (box-shadow not clipped by overflow) */
+.thumb.dragging {
+  opacity: 0.4;
+}
+
+.thumb.drop-before {
+  box-shadow: 0 -7px 0 -2.5px var(--accent);
+}
+
+.thumb.drop-after {
+  box-shadow: 0 7px 0 -2.5px var(--accent);
+}
+
+.thumb.active {
+  border-color: var(--accent);
+}
+
+.thumb-num {
+  position: absolute;
+  left: 4px;
+  bottom: 3px;
+  font-size: 11px;
+  color: var(--slides-badge-ink);
+  line-height: 1;
+  background: var(--slides-badge-bg);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* Paste-options floater button on the just-pasted slide's thumbnail (PowerPoint-style) */
+.paste-floater-btn {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 0;
+  box-shadow: var(--slides-shadow-float);
+}
+
+.paste-floater-btn:hover {
+  background: var(--hover);
+}
+
+.paste-floater-caret {
+  font-size: 8px;
+  line-height: 1;
+}
+
+/* ── Sidebar section grouping ─────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px -4px 8px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.3;
+}
+
+.section-header:hover {
+  background: var(--hover);
+}
+
+.section-header-none {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.section-header-none:hover {
+  background: none;
+}
+
+.section-arrow {
+  flex-shrink: 0;
+  font-size: 10px;
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section-arrow.open {
+  transform: rotate(90deg);
+}
+
+.section-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.section-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.section-rename-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 2px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  outline: none;
+}
+
+.stage-wrap {
+  flex: 1;
+  overflow: auto;
+  /* 48px top keeps the slide card clear of the ribbon at short viewport heights. */
+  padding: 48px 32px 32px;
+  display: flex;
+  /* flex-start + auto margins on the zoom-box: centered (both axes) while it
+   * fits, but all edges stay scroll-reachable once zoomed content overflows
+   * (justify-content/align-items: center makes the leading overflow unreachable) */
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+/* SlideCanvas carries a transparent 160px Konva bleed for off-page objects.
+ * Ignore that implementation-only overflow while the nominal slide fits; at
+ * larger zoom levels the base overflow:auto rule restores canvas panning. */
+.stage-wrap.stage-fits-viewport {
+  overflow: hidden;
+}
+
+.stage-zoom-box {
+  flex-shrink: 0;
+  margin: auto;
+  position: relative;
+}
+
+.stage-scale {
+  display: inline-block;
+}
+
+/* ================= start screen ================= */
+
+.start-screen {
+  flex: 1;
+  overflow-y: auto;
+  padding: 9vh 24px 40px;
+  text-align: center;
+  background: var(--color-bg-page);
+  font-family: var(--gs-font-sans);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--slides-on-accent);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-primary.btn-lg,
+.btn-secondary.btn-lg {
+  height: 42px;
+  padding: 0 30px;
+  font-size: 14px;
+}
+
+.btn-secondary {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-ghost {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.btn-ghost:hover {
+  background: var(--hover);
+}
+
+.recent {
+  width: 520px;
+  max-width: 90vw;
+  margin: 44px auto 0;
+  text-align: left;
+}
+
+.recent-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  margin-bottom: 3px;
+  border: none;
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.recent-item:hover {
+  background: var(--active-bg);
+}
+
+.recent-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================= status bar ================= */
+
+.status-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  height: 24px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--slides-statusbar-bg);
+  border-top: 1px solid var(--slides-statusbar-border);
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-item {
+  margin-right: 14px;
+  flex-shrink: 0;
+}
+
+.status-msg {
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.zoom-btn:hover {
+  background: var(--slides-statusbar-hover);
+}
+
+.zoom-slider {
+  width: 110px;
+  accent-color: var(--slides-ctl-border);
+  height: 3px;
+}
+
+.zoom-value {
+  min-width: 38px;
+  text-align: right;
+}
+
+/* Status-bar quick toggle button for notes */
+.status-notes-btn {
+  border: 1px solid var(--border);
+  background: none;
+  color: inherit;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 8px;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.status-notes-btn:hover {
+  background: var(--hover);
+}
+
+.status-notes-btn.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Shared header chrome for the retained format, comments, and animation panes. */
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pane-header-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pane-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+}
+
+.pane-header-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.pane-header-btn.pane-undo-btn {
+  width: auto;
+  gap: 4px;
+  padding: 0 7px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.pane-header-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ================= shared dialogs ================= */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--slides-mask-bg);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  width: 440px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: var(--slides-shadow-modal);
+}
+
+.modal h2 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+
+.modal label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.modal input,
+.modal select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 10px;
+  font-size: 13px;
+  outline: none;
+  background: var(--surface);
+}
+
+.modal input:focus,
+.modal select:focus {
+  border-color: var(--accent);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* Shared dialog footer buttons. */
+.modal-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modal-actions button:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.modal-actions button:active:not(:disabled) {
+  filter: brightness(0.88);
+  transform: scale(0.98);
+}
+
+.modal-actions button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--slides-focus-ring);
+}
+
+.modal-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modal-actions button.primary,
+.modal-actions .btn-primary {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.modal-actions button.primary:hover:not(:disabled),
+.modal-actions .btn-primary:hover:not(:disabled) {
+  border-color: var(--color-btn-primary-hover);
+  background: var(--color-btn-primary-hover);
+  color: var(--color-btn-primary-text);
+}
+
+.modal-actions .dlg-danger {
+  background: none;
+  color: var(--color-error);
+}
+
+.modal-actions .dlg-danger:hover:not(:disabled) {
+  filter: none;
+  background: var(--slides-error-bg);
+  color: var(--color-error);
+}
+
+/* ================= format pane ================= */
+
+.format-pane {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  font-family: 'Segoe UI', var(--ui-cjk), sans-serif;
+}
+
+.fp-empty {
+  padding: 24px 16px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.fp-body {
+  padding: 10px 14px;
+  overflow-y: auto;
+}
+
+.fp-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.fp-section {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 14px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.fp-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.fp-field span {
+  width: 30px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.fp-field input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+}
+
+.fp-field input:focus {
+  border-color: var(--accent);
+}
+
+.fp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-link-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.fp-chart-series {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.fp-chart-point {
+  margin-top: 4px;
+}
+
+.fp-chart-point-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.fp-color {
+  width: 44px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.fp-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.fp-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.fp-btn.active {
+  border-color: var(--accent);
+  background: var(--active-bg);
+  color: var(--accent);
+}
+
+.fp-btn.fp-danger:hover {
+  border-color: var(--slides-error);
+  color: var(--slides-error);
+}
+
+/* Color strip on ribbon large buttons (colored buttons such as background fill) */
+.rb-big {
+  position: relative;
+}
+
+.rb-big-icon-colored {
+  position: relative;
+  flex-direction: column;
+}
+
+.rb-big-icon-colored .rb-color-bar {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: -3px;
+  height: 4px;
+  border-radius: 1px;
+  border: 1px solid var(--slides-swatch-ring);
+}
+
+/* ================= ribbon dropdowns (font color palette / table picker) + transition effects ================= */
+
+.rb-drop-wrap {
+  position: relative;
+  /* let the wrapped button stretch to the full group height */
+  display: flex;
+  align-items: stretch;
+  /* Anchor for the .rb-drop panel. Every wrap shares the name, so the scope
+     is essential: without it a fixed-position panel (laid out after all
+     in-flow content) would resolve to the LAST wrap in the document instead
+     of its own parent. */
+  anchor-name: --rb-drop-wrap;
+  anchor-scope: --rb-drop-wrap;
+}
+
+/* Ribbon dropdown menu (translation language etc.) */
+.rb-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 4px;
+}
+
+.rb-menu button {
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.rb-menu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+/* paragraph space before/after entries in the line-spacing menu (#149) */
+.rb-menu-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rb-menu-input input {
+  width: 52px;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.rb-menu button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.rb-menu button:disabled {
+  color: var(--slides-text-disabled);
+  cursor: default;
+}
+
+.rb-menu-div {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
+.rb-drop {
+  /* Fixed + anchored to the parent .rb-drop-wrap (same geometry as the old
+     absolute top:100%/left:0), so the panel escapes the ribbon-body scroll
+     clip while still tracking its trigger through ribbon scrolling. */
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  top: calc(anchor(bottom) + 6px);
+  left: anchor(left);
+  /* near the right window edge, right-align to the trigger instead of
+     spilling past the (now clipped) viewport */
+  position-try-fallbacks: flip-inline;
+  /* trigger scrolled out of the ribbon → hide the panel with it */
+  position-visibility: anchors-visible;
+  z-index: 60;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--slides-shadow-drop);
+  padding: 8px;
+}
+
+/* Bubble tail pointing at the trigger button (skipped on
+ * scrollable menus, where overflow would clip the pseudo-element).
+ * Anchored to the trigger wrap, NOT the panel edge: near the right window
+ * edge flip-inline right-aligns the panel, and a panel-relative `left: 18px`
+ * tail would point at whatever sits left of the trigger. */
+.rb-drop:not(.rb-menu-scroll)::before {
+  content: '';
+  position: fixed;
+  position-anchor: --rb-drop-wrap;
+  position-visibility: anchors-visible;
+  /* panel top (anchor bottom + 6px) minus half the 10px diamond */
+  top: calc(anchor(bottom) + 0.5px);
+  left: calc(anchor(center) - 5px);
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border-left: 1px solid var(--border-strong);
+  border-top: 1px solid var(--border-strong);
+  border-top-left-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.rb-font-color {
+  position: relative;
+  display: inline-block;
+  font-weight: 600;
+  line-height: 1;
+  padding-bottom: 3px;
+}
+
+/* Font name / font size dropdowns (Home tab font group; applies to the selection while editing, otherwise display-only) */
+.rb-font-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.rb-font-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rb-font-btn.active,
+.rb-font-btn:not(:disabled):hover {
+  background: var(--hover);
+}
+
+.rb-font-name {
+  width: 178px;
+}
+
+.rb-font-size {
+  width: 68px;
+}
+
+/* Font size combobox (editable input + caret): any pt value can be typed, Enter applies */
+.rb-size-combo {
+  padding: 0;
+}
+
+.rb-size-combo.rb-combo-disabled {
+  opacity: 0.5;
+}
+
+.rb-size-combo.rb-combo-disabled,
+.rb-size-combo.rb-combo-disabled .rb-size-input,
+.rb-size-combo.rb-combo-disabled .rb-size-caret {
+  cursor: default;
+}
+
+.rb-size-input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0 0 0 8px;
+  outline: none;
+}
+
+.rb-size-caret {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0 6px 0 2px;
+  cursor: pointer;
+}
+
+.rb-font-name-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.rb-font-caret {
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+/* dropdown carets inside toggle buttons (AV / Aa / highlighter / font color) sit 2px off the glyph */
+.rb-icon .rb-font-caret {
+  margin-left: 2px;
+}
+
+/* the font-family / font-size dropdowns keep a small gap from their neighbours (MS-style),
+   while plain toggle buttons stay flush against each other */
+.rb-font-btn {
+  margin-right: 3px;
+}
+
+/* Office-style accent colors on glyph modifiers (blue carets/arrows/scripts, purple eraser) —
+   colored in the DEFAULT state, matching Microsoft's ribbon */
+:root {
+  --ribbon-accent: #2b7cd3;
+  --ribbon-accent-2: #a33fb5;
+  --ribbon-accent-warm: #ed8733;
+}
+
+[data-theme='dark'] {
+  --ribbon-accent: #5aa0e8;
+  --ribbon-accent-2: #c76ad4;
+  --ribbon-accent-warm: #f0a05c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --ribbon-accent: #5aa0e8;
+    --ribbon-accent-2: #c76ad4;
+    --ribbon-accent-warm: #f0a05c;
+  }
+}
+.rb-icon .rb-accent {
+  color: var(--ribbon-accent);
+}
+.rb-icon sup,
+.rb-icon sub {
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* collapsed Paragraph group (MS-style): big button opens a two-row tool panel */
+.rb-para-drop {
+  padding: 12px 14px;
+}
+.rb-para-drop .rb-col {
+  gap: 8px;
+}
+.rb-para-drop .rb-row {
+  gap: 4px;
+}
+/* PowerPoint-size targets inside the paragraph bubble: 20px glyphs in 36x32 hit areas */
+.rb-para-drop .rb-icon {
+  min-width: 36px;
+  height: 32px;
+}
+.rb-para-drop .rb-mini-sep {
+  height: 22px;
+  margin: 0 6px;
+}
+
+.rb-font-menu {
+  min-width: 180px;
+}
+
+.rb-size-menu {
+  min-width: 64px;
+}
+
+.rb-font-menu button.on,
+.rb-size-menu button.on {
+  background: var(--hover);
+  font-weight: 600;
+}
+
+.rb-menu-group-label {
+  padding: 8px 12px 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  cursor: default;
+}
+
+.rb-color-underbar {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.rb-color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 18px);
+  gap: 5px;
+}
+
+.rb-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.rb-swatch:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* "More colors…" row at the bottom of the font color palette (native any-color picker) */
+.rb-color-more {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rb-color-more input[type='color'] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.rb-table-picker-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.rb-table-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 16px);
+  gap: 3px;
+}
+
+.rb-table-custom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.rb-table-custom input {
+  width: 46px;
+  padding: 2px 4px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: inherit;
+}
+
+.rb-table-custom span {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.rb-table-custom-ok {
+  margin-left: auto;
+  padding: 2px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.rb-table-custom-ok:hover {
+  background: var(--active-bg);
+  border-color: var(--accent);
+}
+
+.rb-table-cell {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--surface);
+  cursor: pointer;
+  padding: 0;
+}
+
+.rb-table-cell.on {
+  background: var(--active-bg);
+  border-color: var(--accent);
+}
+
+.rb-para-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 6px 0 2px;
+  white-space: nowrap;
+}
+
+/* Bullet character picker: PowerPoint-style preset tiles — each tile previews
+ * three "bullet + text bar" lines; the first tile is the None reset */
+.rb-bullet-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 44px);
+  gap: 4px;
+}
+
+.rb-bullet-tile {
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.rb-bullet-tile:hover:not(:disabled) {
+  background: var(--active-bg);
+  border-color: var(--accent);
+}
+
+.rb-bullet-tile:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The tile matching the selection's current bullet (WPS-style filled highlight) */
+.rb-bullet-tile.on {
+  background: var(--active-bg);
+  border-color: var(--accent);
+}
+
+.rb-bullet-tile-none {
+  font-size: 11px;
+  color: var(--text-dim);
+  align-items: center;
+}
+
+.rb-bullet-tile-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rb-bullet-tile-glyph {
+  font-size: 10px;
+  line-height: 1;
+  width: 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.rb-bullet-tile-bar {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+
+.rb-bullet-hang {
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.rb-bullet-hang:hover:not(:disabled) {
+  background: var(--active-bg);
+  border-color: var(--accent);
+}
+
+.rb-bullet-hang:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rb-bullet-hang-input {
+  width: 52px;
+  cursor: text;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.rb-bullet-hang-input:hover:not(:disabled) {
+  background: var(--surface);
+}
+
+/* Bullet color row: swatches + "More colors" on its own line */
+.rb-bullet-colors {
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 226px;
+}
+.rb-bullet-colors .rb-swatch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.rb-bullet-color-more {
+  flex-basis: 100%;
+}
+
+.rb-trans-glyph {
+  font-size: 18px;
+  line-height: 22px;
+}
+
+/* ── Animations tab ──────────────────────────────────────────────────────── */
+
+.rb-anim-glyph {
+  font-size: 18px;
+  line-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* PowerPoint colors: entrance=green / emphasis=yellow / exit=red / motion path=blue */
+.rb-anim-entr {
+  color: var(--slides-anim-entr);
+}
+
+.rb-anim-emph {
+  color: var(--slides-anim-emph);
+}
+
+.rb-anim-exit {
+  color: var(--slides-anim-exit);
+}
+
+.rb-anim-path {
+  color: var(--slides-anim-path);
+}
+
+.rb-anim-menu {
+  max-height: 320px;
+  overflow-y: auto;
+  min-width: 150px;
+}
+
+.rb-anim-menu .rb-anim-glyph {
+  display: inline-flex;
+  width: 20px;
+  font-size: 13px;
+  vertical-align: -3px;
+}
+
+.rb-anim-timing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text);
+  padding: 2px 4px;
+}
+
+.rb-anim-timing label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.rb-anim-timing select,
+.rb-anim-timing input {
+  font-size: 12px;
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.rb-anim-timing input {
+  width: 58px;
+}
+
+/* ── Animation pane (reuses the comments-pane skeleton) ───────────────── */
+
+.anim-pane .comments-list {
+  padding: 8px;
+}
+
+.anim-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+
+.anim-row:hover {
+  background: var(--hover);
+}
+
+.anim-row.selected {
+  background: var(--accent-soft);
+}
+
+.anim-row.anim-entrance {
+  border-left-color: var(--slides-anim-entr);
+}
+
+.anim-row.anim-emphasis {
+  border-left-color: var(--slides-anim-emph);
+}
+
+.anim-row.anim-exit {
+  border-left-color: var(--slides-anim-exit);
+}
+
+.anim-row.anim-path {
+  border-left-color: var(--slides-anim-path);
+}
+
+.anim-row-no {
+  width: 16px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.anim-row-trigger {
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.anim-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.anim-row-effect {
+  font-size: 12.5px;
+}
+
+.anim-row-target {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anim-row-actions {
+  display: none;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.anim-row:hover .anim-row-actions,
+.anim-row.selected .anim-row-actions {
+  display: inline-flex;
+}
+
+.anim-row-actions button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: var(--text-dim);
+}
+
+.anim-row-actions button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.anim-row-actions button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Canvas animation preview overlay (covers .stage-rel) ──────────────── */
+
+.anim-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  cursor: pointer;
+  line-height: 0;
+  background: var(--slides-paper);
+}
+
+/* ================= Context menu ================= */
+
+.ctx-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 168px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--slides-shadow-menu);
+  padding: 4px;
+}
+
+.ctx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.ctx-item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.ctx-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ctx-item.danger:hover:not(:disabled) {
+  background: var(--slides-danger-bg);
+  color: var(--slides-error);
+}
+
+.ctx-hint {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ctx-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}
+
+.ctx-swatches {
+  padding: 6px 10px;
+}
+
+.ctx-swatches-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.ctx-swatches-row {
+  display: flex;
+  gap: 4px;
+}
+
+.ctx-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-dim);
+}
+
+.ctx-swatch:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ctx-swatch-none {
+  background: var(--surface);
+}
+
+/* ---- Draw (freehand ink) ---- */
+
+.ink-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.ink-overlay.ink-active {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.ink-tool-pen,
+.ink-tool-highlighter {
+  cursor: crosshair;
+}
+
+.ink-tool-eraser {
+  /* Custom eraser-shaped cursor (the cell crosshair leaves users unsure which tool is active);
+     white fill with dark stroke stays visible on light and dark backgrounds, hotspot at center (= erase test point) */
+  cursor:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><g fill="none" stroke="%23333" stroke-width="1.375" stroke-linejoin="round" stroke-linecap="round"><path fill="white" d="M13 3.9 18.1 9a1.8 1.8 0 0 1 0 2.5l-5.4 5.4H8.9L3.9 11.8a1.8 1.8 0 0 1 0-2.5l6.6-6.6a1.8 1.8 0 0 1 2.5 0Z"/><path d="M7.2 8.5 13.5 14.8"/><path d="M9 18.4h9.5"/></g></svg>')
+      11 11,
+    cell;
+}
+
+.ink-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.ink-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+/* ===== Draw tab: pen tray ===== */
+
+.pen-tray {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  align-self: stretch;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* pens hang from the tray top; the held pen slides down */
+.pen-btn {
+  border: none;
+  background: none;
+  padding: 0 3px;
+  cursor: pointer;
+  transform: translateY(-12px);
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pen-btn svg {
+  display: block;
+}
+
+.pen-btn:hover:not(:disabled) {
+  transform: translateY(-6px);
+}
+
+.pen-btn.down {
+  transform: translateY(0);
+}
+
+.pen-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* color/width flyout for the held pen */
+.pen-flyout-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.pen-flyout {
+  position: fixed;
+  z-index: 81;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--slides-shadow-popup);
+}
+
+.ink-swatches {
+  display: flex;
+  gap: 3px;
+}
+
+.ink-swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--slides-swatch-ring-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ink-swatch.active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ink-widths {
+  display: flex;
+  gap: 3px;
+}
+
+.ink-width {
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ink-width:hover {
+  background: var(--hover);
+}
+
+.ink-width.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ink-width-dot {
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ── View tab: view modes / ruler / grid / guides / notes / comments ─── */
+
+/* Canvas column: stage + bottom notes pane */
+.stage-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.stage-col .stage-wrap {
+  flex: 1;
+}
+
+/* Notes pane (bottom, PowerPoint style) */
+.notes-pane {
+  flex-shrink: 0;
+  height: 118px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px 10px;
+}
+
+.notes-resize-handle {
+  height: 6px;
+  flex-shrink: 0;
+  cursor: ns-resize;
+  background: transparent;
+  border-top: 1px solid var(--border);
+  margin: 0 -14px 4px;
+  transition: background 0.1s;
+}
+
+.notes-resize-handle:hover {
+  background: var(--slides-hover-wash);
+}
+
+.notes-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  user-select: none;
+}
+
+.notes-pane textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  font:
+    13px/1.5 'Segoe UI',
+    var(--ui-cjk),
+    sans-serif;
+  color: var(--text);
+  background: transparent;
+}
+
+/* Ruler: inside .stage-scale, scales with zoom and stays aligned with the slide */
+.ruler-row {
+  display: flex;
+}
+
+.ruler-body {
+  display: flex;
+}
+
+.ruler-corner {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-right: none;
+  border-bottom: none;
+}
+
+.ruler {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+  user-select: none;
+}
+
+.ruler-h {
+  height: 20px;
+  border-bottom: none;
+  /* A small tick every 1/2 inch */
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border-strong) 0 1px,
+    transparent 1px 48px
+  );
+  background-position: 0 bottom;
+  background-size: 100% 6px;
+  background-repeat: repeat-x;
+}
+
+.ruler-v {
+  width: 20px;
+  flex-shrink: 0;
+  border-right: none;
+  border-top: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--border-strong) 0 1px,
+    transparent 1px 48px
+  );
+  background-position: right 0;
+  background-size: 6px 100%;
+  background-repeat: repeat-y;
+}
+
+.ruler-tick {
+  position: absolute;
+  font-size: 9px;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.ruler-h .ruler-tick {
+  top: 3px;
+  transform: translateX(2px);
+}
+
+.ruler-v .ruler-tick {
+  left: 3px;
+  transform: translateY(2px);
+}
+
+/* Grid line / guide overlay (doesn't intercept the mouse) */
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background-image:
+    repeating-linear-gradient(to right, var(--slides-grid-line) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(to bottom, var(--slides-grid-line) 0 1px, transparent 1px 48px);
+}
+
+.guide-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.guide-v {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--slides-guide);
+}
+
+.guide-h {
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--slides-guide);
+}
+
+/* Draggable guides: widened hit area (border is still a 1px visual line); double-click or drag off canvas to delete */
+.guide-draggable {
+  pointer-events: auto;
+}
+.guide-draggable.guide-v {
+  width: 9px;
+  margin-left: -4px;
+  cursor: col-resize;
+}
+.guide-draggable.guide-h {
+  height: 9px;
+  margin-top: -4px;
+  cursor: row-resize;
+}
+
+/* Outline view (replaces the left thumbnail bar) */
+.outline-pane {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.outline-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.outline-item:hover {
+  background: var(--hover);
+}
+
+.outline-item.active {
+  background: var(--active-bg);
+  border-color: var(--accent);
+}
+
+.outline-num {
+  font-size: 11px;
+  color: var(--text-dim);
+  min-width: 16px;
+  padding-top: 2px;
+}
+
+.outline-body {
+  min-width: 0;
+}
+
+.outline-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+
+.outline-line {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.outline-more {
+  color: var(--border-strong);
+}
+
+/* Slide sorter (grid overview) */
+.sorter-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-content: flex-start;
+  background: var(--canvas);
+}
+
+.sorter-item {
+  position: relative;
+  background: var(--slides-paper);
+  border: 2px solid var(--border-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  line-height: 0;
+  height: fit-content;
+}
+
+.sorter-item.dragging {
+  opacity: 0.4;
+}
+
+.sorter-item.drop-before {
+  box-shadow: -12px 0 0 -3px var(--accent);
+}
+
+.sorter-item.drop-after {
+  box-shadow: 12px 0 0 -3px var(--accent);
+}
+
+.sorter-item:hover {
+  border-color: var(--text-dim);
+}
+
+.sorter-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.sorter-num {
+  position: absolute;
+  left: 5px;
+  bottom: 4px;
+  font-size: 11px;
+  color: var(--slides-badge-ink);
+  line-height: 1;
+  background: var(--slides-badge-bg);
+  border-radius: 3px;
+  padding: 2px 5px;
+}
+
+/* Reading view (full-area page-by-page browsing) */
+.reading-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--slides-reading-bg);
+  padding: 20px;
+  min-width: 0;
+}
+
+.reading-slide {
+  line-height: 0;
+  box-shadow: var(--slides-shadow-reading);
+  cursor: pointer;
+}
+
+.reading-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reading-bar button {
+  background: var(--slides-show-fill-12);
+  color: var(--slides-reading-ink);
+  border: 1px solid var(--slides-show-line-25);
+  border-radius: 5px;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.reading-bar button:hover:not(:disabled) {
+  background: var(--slides-show-fill-22);
+}
+
+.reading-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.reading-page {
+  color: var(--slides-reading-ink-dim);
+  font-size: 12.5px;
+  min-width: 56px;
+  text-align: center;
+}
+
+.reading-exit {
+  margin-left: 16px;
+}
+
+/* ── Review tab: comments pane ──────────────────────────────────────── */
+.comments-pane {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  font-family: 'Segoe UI', var(--ui-cjk), sans-serif;
+}
+
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.comments-empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 18px;
+}
+
+.comments-empty p {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.comments-empty-sub {
+  font-size: 11.5px !important;
+  color: var(--border-strong);
+}
+
+.comment-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--slides-comment-bg);
+}
+
+.comment-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--slides-on-accent);
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.comment-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-author {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment-time {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.comment-del {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.comment-del:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+.comment-text {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.comment-new {
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-new textarea {
+  resize: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font:
+    13px/1.5 'Segoe UI',
+    var(--ui-cjk),
+    sans-serif;
+  outline: none;
+}
+
+.comment-new textarea:focus {
+  border-color: var(--accent);
+}
+
+.comment-new .btn-primary {
+  align-self: flex-end;
+}
+
+/* ---- Design tab: theme gallery ---- */
+
+.theme-gallery {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  max-width: 560px;
+  overflow-x: auto;
+  padding: 2px;
+}
+
+.theme-card {
+  flex: 0 0 auto;
+  width: 74px;
+  height: 62px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 5px 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  box-shadow: var(--slides-theme-card-gloss);
+  transition:
+    border-color 0.1s,
+    box-shadow 0.1s;
+}
+
+.theme-card:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: var(--slides-shadow-float);
+}
+
+.theme-card:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.theme-card-aa {
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.theme-card-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.theme-card-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid var(--slides-swatch-ring);
+}
+
+.theme-card-name {
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.75;
+  color: inherit;
+  mix-blend-mode: normal;
+}
+
+/* ── Slide show (full-screen black playback) ──────────────────────── */
+
+.slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--slides-show-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  user-select: none;
+}
+
+.slideshow .ss-frame {
+  line-height: 0;
+}
+
+/* Page transition animations: CSS approximations of the Transitions-tab PowerPoint effects (applied to the entering page) */
+.slideshow .ss-anim-fade {
+  animation: ss-fade 0.5s ease both;
+}
+
+.slideshow .ss-anim-push {
+  animation: ss-push 0.5s ease-out both;
+}
+
+.slideshow .ss-anim-wipe {
+  animation: ss-wipe 0.6s ease-out both;
+}
+
+.slideshow .ss-anim-split {
+  animation: ss-split 0.55s ease-out both;
+}
+
+.slideshow .ss-anim-circle {
+  animation: ss-circle 0.6s ease-out both;
+}
+
+@keyframes ss-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ss-push {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes ss-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes ss-split {
+  from {
+    clip-path: inset(50% 0 50% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes ss-circle {
+  from {
+    clip-path: circle(0% at 50% 50%);
+  }
+  to {
+    clip-path: circle(75% at 50% 50%);
+  }
+}
+
+.slideshow .ss-counter {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  font-size: 12px;
+  color: var(--slides-show-ink-40);
+  background: var(--slides-show-counter-bg);
+  border-radius: 4px;
+  padding: 3px 8px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.slideshow .ss-end {
+  color: var(--slides-show-ink-75);
+  font-size: 15px;
+  letter-spacing: 0.05em;
+}
+
+/* Audience show window (presenter view external screen): frame positioning box + presenter blackout */
+.slideshow .ss-stagebox {
+  position: relative;
+  line-height: 0;
+}
+
+.slideshow .ss-black {
+  position: fixed;
+  inset: 0;
+  background: var(--slides-show-black);
+  z-index: 10;
+}
+
+/* Show ink overlay (presenter pen/laser pointer, mirrored for the audience) */
+.ink-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ink-laser {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--slides-laser-core) 0%,
+    var(--slides-laser-mid) 55%,
+    var(--slides-laser-edge) 75%
+  );
+  box-shadow: var(--slides-laser-glow);
+  pointer-events: none;
+}
+
+/* ── Rehearsal timer bar (top of the show: current page dwell + total time) ── */
+
+.slideshow .ss-rehearse {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  background: var(--slides-show-pill-bg);
+  border: 1px solid var(--slides-show-line-15);
+  border-radius: 6px;
+  padding: 6px 14px;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.slideshow .ss-rehearse-cur {
+  color: var(--slides-show-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.slideshow .ss-rehearse-total {
+  color: var(--slides-show-ink-60);
+  font-size: 12px;
+}
+
+/* ── Custom show management dialog ──────────────────────────────── */
+
+.modal.csd {
+  width: 580px;
+}
+
+.csd-body {
+  display: flex;
+  gap: 14px;
+  min-height: 260px;
+}
+
+.csd-shows {
+  width: 170px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.csd-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.csd-list {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.csd-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.csd-item:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.csd-item.active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.csd-item-count {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.csd-list-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.csd-list-actions button {
+  flex: 1;
+}
+
+.csd-columns {
+  display: flex;
+  gap: 10px;
+}
+
+.csd-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.csd-col-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.csd-pages {
+  height: 180px;
+}
+
+/* Override .modal input's full-row style: keep checkboxes inline */
+.csd-page {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  margin: 0 !important;
+  padding: 3px 4px;
+  font-size: 12.5px;
+  color: inherit !important;
+}
+
+.csd-page input[type='checkbox'] {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+.csd-order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 4px;
+  font-size: 12.5px;
+}
+
+.csd-order-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.csd-order-btns button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.csd-order-btns button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.csd-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 10px 8px;
+}
+
+/* Rehearsal-timing save confirmation body text */
+.rehearse-summary {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── Hidden slides (marked in thumbnails/slide sorter) ────────────── */
+
+.thumb.thumb-hidden canvas,
+.sorter-item.thumb-hidden canvas {
+  opacity: 0.4;
+}
+
+.thumb.thumb-hidden .thumb-num,
+.sorter-item.thumb-hidden .sorter-num {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+/* ── Presenter view (PowerPoint style: top bar / large frame + tools / right column / bottom thumbnail strip) ── */
+
+.presenter {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--slides-show-black);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.presenter .pv-top {
+  height: 44px;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--slides-show-line-10);
+}
+
+.presenter .pv-top-btn {
+  background: none;
+  color: var(--slides-show-ink-85);
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.presenter .pv-top-btn:hover:not(:disabled) {
+  background: var(--slides-show-fill-12);
+}
+
+.presenter .pv-top-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.presenter .pv-top-exit:hover {
+  background: var(--slides-pv-exit-hover);
+}
+
+.presenter .pv-top-spacer {
+  flex: 1;
+}
+
+.presenter .pv-top-hint {
+  font-size: 12px;
+  color: var(--slides-show-ink-40);
+}
+
+.presenter .pv-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.presenter .pv-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.presenter .pv-timer-row {
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+}
+
+.presenter .pv-timer {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--slides-show-ink);
+}
+
+.presenter .pv-clock {
+  font-size: 22px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--slides-show-ink-85);
+}
+
+.presenter .pv-mini-btn {
+  background: none;
+  color: var(--slides-show-ink-75);
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  min-width: 28px;
+  padding: 5px 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.presenter .pv-mini-btn:hover {
+  background: var(--slides-show-fill-14);
+}
+
+.presenter .pv-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  cursor: default;
+}
+
+.presenter .pv-stagebox {
+  position: relative;
+  line-height: 0;
+}
+
+.presenter .pv-stagebox.pv-tool-pen {
+  cursor: crosshair;
+}
+
+.presenter .pv-stagebox.pv-tool-laser {
+  cursor: none;
+}
+
+.presenter .pv-black {
+  position: absolute;
+  inset: 0;
+  background: var(--slides-show-black);
+}
+
+.presenter .pv-end {
+  color: var(--slides-show-ink-75);
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  line-height: 1.5;
+}
+
+.presenter .pv-bottomrow {
+  height: 56px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.presenter .pv-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.presenter .pv-tool-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--slides-show-fill-8);
+  border: 1px solid var(--slides-show-line-18);
+  color: var(--slides-show-ink-85);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.presenter .pv-tool-btn:hover:not(:disabled) {
+  background: var(--slides-show-fill-18);
+}
+
+.presenter .pv-tool-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.presenter .pv-tool-btn.pv-tool-on {
+  background: var(--slides-pv-accent);
+  border-color: var(--slides-pv-accent);
+  color: var(--slides-show-ink);
+}
+
+.presenter .pv-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.presenter .pv-round {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--slides-show-fill-8);
+  border: 1px solid var(--slides-show-line-25);
+  color: var(--slides-show-ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 3px;
+}
+
+.presenter .pv-round:hover:not(:disabled) {
+  background: var(--slides-show-fill-20);
+}
+
+.presenter .pv-round:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.presenter .pv-nav-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 130px;
+}
+
+.presenter .pv-nav-label {
+  font-size: 13px;
+  color: var(--slides-show-ink-85);
+  font-variant-numeric: tabular-nums;
+}
+
+.presenter .pv-progress {
+  width: 130px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--slides-show-fill-18);
+  overflow: hidden;
+}
+
+.presenter .pv-progress > div {
+  height: 100%;
+  background: var(--slides-pv-accent);
+  border-radius: 2px;
+}
+
+.presenter .pv-side {
+  width: 340px;
+  flex: none;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-left: 1px solid var(--slides-show-line-10);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--slides-pv-ink);
+}
+
+.presenter .pv-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slides-show-ink-55);
+  margin: 6px 0 6px;
+}
+
+.presenter .pv-next {
+  line-height: 0;
+  border: 1px solid var(--slides-show-line-18);
+  border-radius: 3px;
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+.presenter .pv-next-none {
+  line-height: 1.4;
+  font-size: 12px;
+  color: var(--slides-show-ink-45);
+  padding: 18px 12px;
+}
+
+.presenter .pv-notes {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 2px;
+  line-height: 1.6;
+  color: var(--slides-show-ink-88);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.presenter .pv-notes-size {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--slides-show-line-10);
+  margin-top: 8px;
+}
+
+.presenter .pv-film {
+  height: 118px;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-top: 1px solid var(--slides-show-line-10);
+}
+
+.presenter .pv-film-item {
+  flex: none;
+  line-height: 0;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.presenter .pv-film-item:hover {
+  opacity: 1;
+}
+
+.presenter .pv-film-item.pv-film-cur {
+  border-color: var(--slides-pv-accent);
+  opacity: 1;
+}
+
+/* ── Insert tab: shape gallery / icon gallery / WordArt / SmartArt / chart dropdown ── */
+
+.rb-drop-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 4px 2px 3px;
+}
+
+.rb-shape-gallery {
+  width: 264px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.rb-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 28px);
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.rb-shape-cell {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rb-shape-cell:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+.rb-icon-gallery {
+  width: 236px;
+}
+
+.rb-icon-colors {
+  display: flex;
+  gap: 5px;
+  /* 3px headroom: the panel's bubble-tail diamond (.rb-drop::before) dips
+     ~7px into the panel and would otherwise cover the first swatch's
+     selection outline (2px + 1px offset above the 8px panel padding) */
+  padding-top: 3px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rb-swatch.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.rb-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 34px);
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.rb-icon-cell {
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rb-icon-cell:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+
+.rb-wordart-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 44px);
+  gap: 5px;
+}
+
+.rb-wordart-cell {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 26px;
+  font-family: Georgia, serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rb-wordart-cell:hover {
+  border-color: var(--accent);
+}
+
+.rb-menu-wide {
+  min-width: 180px;
+}
+
+.rb-menu-wide button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rb-menu-glyph {
+  display: inline-flex;
+  width: 30px;
+  justify-content: center;
+  align-items: center;
+  /* inline-flex sits on the text baseline, riding the icon high — middle-align it to the label,
+     then nudge 1px up for optical centering against the label's cap height */
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+  font-size: 14px;
+  /* neutral glyphs — no accent tint in menus */
+  color: var(--text);
+}
+
+/* SmartArt / chart menu entries carry an SVG thumbnail instead of a text glyph */
+.rb-menu-thumb {
+  width: 44px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.rb-menu-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* ── Insert dialogs: hyperlink / header & footer / equation ────────────── */
+
+.modal.modal-wide {
+  width: 460px;
+  max-width: 90vw;
+}
+
+.dlg-radio-row {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+/* Override .modal label / .modal input full-row styles: checkbox/radio rows lay out inline */
+.modal label.dlg-radio,
+.modal label.dlg-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  margin: 0;
+}
+
+.modal label.dlg-check {
+  margin: 10px 0;
+}
+
+.modal .dlg-radio input[type='radio'],
+.modal .dlg-check input[type='checkbox'] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.dlg-indent {
+  margin: 6px 0 10px 21px;
+}
+
+.modal .dlg-indent input[type='text'] {
+  margin-top: 6px;
+}
+
+.dlg-danger {
+  color: var(--slides-error);
+}
+
+.eq-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.eq-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.eq-item:hover {
+  border-color: var(--accent);
+}
+
+.eq-preview {
+  font-family: 'Cambria Math', 'STIX Two Math', Georgia, serif;
+  font-style: italic;
+  font-size: 16px;
+  display: block;
+}
+
+.eq-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Starting up (while pending file parsing): lightweight placeholder, don't flash the start screen */
+.start-booting {
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* ── Contextual tabs (picture/table/chart design) ───────────────────
+ * Same look as the regular tabs (.ribbon-tab covers hover/active/underline);
+ * no separate styling. */
+
+/* Table style cards */
+.rb-table-style-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 60px;
+  padding: 4px 3px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text);
+  transition: border-color 0.12s;
+}
+.rb-table-style-card:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+.rb-table-style-card:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rb-table-style-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 26px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rb-table-style-label {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 56px;
+}
+
+/* Shading palette */
+.rb-table-shading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 2px;
+  max-width: 130px;
+}
+.rb-color-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+.rb-color-swatch:hover:not(:disabled) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.rb-color-swatch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rb-color-none {
+  background: var(--slides-paper) !important;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slides-swatch-none-ink);
+}
+
+/* Border controls */
+.rb-table-border-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+.rb-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.rb-color-input {
+  width: 28px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px;
+  cursor: pointer;
+}
+.rb-select-sm {
+  font-size: 11px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Chart color scheme cards */
+.rb-chart-scheme-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 68px;
+  padding: 5px 3px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text);
+  transition: border-color 0.12s;
+}
+.rb-chart-scheme-card:hover:not(:disabled) {
+  border-color: var(--slides-select-border);
+  background: var(--slides-select-hover-bg);
+}
+.rb-chart-scheme-card:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rb-chart-scheme-swatches {
+  display: flex;
+  gap: 2px;
+}
+.rb-chart-scheme-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--slides-swatch-ring);
+}
+.rb-chart-scheme-label {
+  font-size: 10px;
+}
+
+.rb-input-sm {
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  width: 120px;
+}
+/* Add-chart-element dropdown (title/axis titles/legend/toggles) */
+.rb-chart-elem-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  min-width: 250px;
+}
+.rb-chart-elem-drop .rb-drop-title {
+  margin: 2px 0 0;
+}
+/* Change-colors dropdown (color card grid) */
+.rb-chart-colors-drop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px;
+  width: 316px;
+}
+.rb-menu button.active {
+  background: var(--slides-select-active-bg);
+  font-weight: 600;
+}
+
+/* Change chart type dialog */
+.chart-type-modal {
+  width: min(460px, 92vw);
+}
+.chart-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.chart-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+.chart-type-card:hover {
+  border-color: var(--slides-select-border);
+  background: var(--slides-select-hover-bg);
+}
+.chart-type-card.active {
+  border-color: var(--slides-select-border);
+  background: var(--slides-select-active-bg);
+}
+.chart-type-label {
+  font-size: 12px;
+}
+
+/* Chart data edit dialog */
+.chart-data-modal {
+  width: min(760px, 92vw);
+}
+.chart-data-scroll {
+  max-height: 60vh;
+  overflow: auto;
+}
+.chart-data-grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+.chart-data-grid th,
+.chart-data-grid td {
+  border: 1px solid var(--border);
+  padding: 0;
+}
+.chart-data-grid input {
+  width: 110px;
+  height: 28px;
+  margin: 0;
+  border: none;
+  padding: 0 8px;
+  font-size: 12px;
+  background: transparent;
+  outline: none;
+}
+.chart-data-grid thead input {
+  font-weight: 600;
+}
+.chart-data-grid tbody th input {
+  font-weight: 600;
+}
+.chart-data-grid input:focus {
+  background: var(--slides-cell-focus-bg);
+}
+.chart-data-corner,
+.chart-data-addcol {
+  border: none !important;
+  background: transparent;
+}
+.chart-data-ser-head {
+  display: flex;
+  align-items: center;
+}
+.chart-data-del {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 6px;
+}
+.chart-data-del:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.chart-data-del:hover:not(:disabled) {
+  color: var(--slides-error);
+}
+.chart-data-add {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin: 2px 4px;
+  white-space: nowrap;
+}
+.chart-data-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Chart style gallery */
+.rb-chart-style-row {
+  display: flex;
+  gap: 4px;
+  max-width: 440px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.rb-chart-style-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 3px 4px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text);
+  flex: 0 0 auto;
+  transition: border-color 0.12s;
+}
+.rb-chart-style-card:hover:not(:disabled) {
+  border-color: var(--slides-select-border);
+  background: var(--slides-select-hover-bg);
+}
+.rb-chart-style-card.active {
+  border-color: var(--slides-select-border);
+  background: var(--slides-select-active-bg);
+}
+.rb-chart-style-card:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---- Picture crop overlay ---- */
+
+.crop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  user-select: none;
+}
+
+.crop-mask {
+  position: absolute;
+  background: var(--slides-crop-mask);
+  pointer-events: none;
+}
+
+.crop-frame {
+  position: absolute;
+  border: 2px solid var(--slides-crop-ink);
+  box-shadow: 0 0 0 1px var(--slides-crop-ring);
+  pointer-events: none;
+  /* Rule-of-thirds guides */
+  background:
+    linear-gradient(
+      to right,
+      transparent calc(33.33% - 0.5px),
+      var(--slides-crop-thirds) calc(33.33%),
+      transparent calc(33.33% + 0.5px),
+      transparent calc(66.66% - 0.5px),
+      var(--slides-crop-thirds) calc(66.66%),
+      transparent calc(66.66% + 0.5px)
+    ),
+    linear-gradient(
+      to bottom,
+      transparent calc(33.33% - 0.5px),
+      var(--slides-crop-thirds) calc(33.33%),
+      transparent calc(33.33% + 0.5px),
+      transparent calc(66.66% - 0.5px),
+      var(--slides-crop-thirds) calc(66.66%),
+      transparent calc(66.66% + 0.5px)
+    );
+}
+
+.crop-handle {
+  position: absolute;
+  background: var(--slides-crop-ink);
+  border: 1.5px solid var(--slides-crop-ring);
+  border-radius: 1px;
+  z-index: 21;
+}
+
+.crop-hint {
+  position: absolute;
+  background: var(--slides-crop-hint-bg);
+  color: var(--slides-crop-ink);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Format painter mode: canvas cursor becomes a brush ───────────────── */
+.format-brush-mode .konvajs-content canvas,
+.format-brush-mode .konvajs-content {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 16 16'%3E%3Crect x='1' y='1.5' width='7' height='4' rx='0.8' fill='%23000'/%3E%3Crect x='3.5' y='5.5' width='2' height='1.5' fill='%23000'/%3E%3Cpath d='M2.5 7h5v5.5q-1.25.8-2.5.8-1.25 0-2.5-.8z' fill='%23000' opacity='.7'/%3E%3C/svg%3E")
+      4 14,
+    crosshair !important;
+}
+
+/* ── Split button (new slide + layout dropdown) ─────────────────────── */
+/* one-piece dropdown-capable big button (New Slide): looks identical to the
+ * Layout button — icon + inline caret — where the caret glyph is a small
+ * secondary hit area opening the layout gallery */
+.rb-caret-hit {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 2px;
+  margin-left: 1px;
+  border-radius: 3px;
+}
+
+/* The caret is only a hit area — hover/open always highlight the whole
+ * icon block as one unit (PowerPoint reads the button as one piece) */
+.rb-big:has(.rb-caret-hit.active) .rb-big-icon {
+  background: var(--active-bg);
+}
+
+/* collapsed-group flyout: the group's original controls in a floating row
+ * (PowerPoint's responsive ribbon) */
+.rb-collapse-panel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+/* ── Layout picker panel ──────────────────────────────────────────────── */
+.rb-layout-panel {
+  width: 320px;
+  max-height: 360px;
+}
+
+.rb-layout-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 300px;
+  padding: 2px;
+}
+
+.rb-layout-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+  width: 136px;
+}
+
+.rb-layout-item:hover {
+  border-color: var(--accent);
+  background: var(--slides-hover-wash-soft);
+}
+
+.rb-layout-preview {
+  position: relative;
+  width: 120px;
+  height: 68px;
+  background: var(--slides-paper);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.rb-layout-ph {
+  position: absolute;
+  border: 1px dashed var(--slides-ph-border);
+  border-radius: 2px;
+  background: var(--slides-ph-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--slides-ph-ink);
+  overflow: hidden;
+}
+
+.rb-layout-name {
+  font-size: 11px;
+  color: var(--text);
+  max-width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.rb-layout-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 8px;
+}
+
+/* ── Find/replace floating panel ─────────────────────────────────── */
+.find-panel {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  z-index: 40;
+  /* the panel overlaps the ribbon-tabs row, which is a window drag region;
+   * drag regions hit-test by rectangle regardless of z-order and would
+   * swallow every click (notably the × close button) */
+  -webkit-app-region: no-drag;
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: var(--slides-shadow-menu);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.find-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.find-panel-close {
+  border: none;
+  background: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-dim);
+  padding: 0 4px;
+}
+.find-panel-close:hover {
+  color: var(--text);
+}
+.find-panel-row {
+  margin-bottom: 6px;
+}
+.find-panel-row input[type='text'],
+.find-panel-row input:not([type]) {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 13px;
+}
+.find-panel-opts {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text);
+}
+.find-panel-opts label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.find-panel-status {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.find-panel-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+.find-panel-actions button {
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+.find-panel-actions button:hover:not(:disabled) {
+  background: var(--pressed);
+}
+.find-panel-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Slide master editing view (full-screen overlay) ── */
+.master-view {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+.master-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: var(--slides-on-accent);
+  flex-shrink: 0;
+  /* The overlay covers the .ribbon-tabs window drag region; drag regions
+   * hit-test by rectangle regardless of z-order and would swallow every
+   * real click on this bar (notably the Close Master View button) */
+  -webkit-app-region: no-drag;
+}
+.master-bar-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.master-close-btn {
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--slides-on-accent-border);
+  border-radius: 4px;
+  background: var(--slides-on-accent-bg);
+  color: var(--slides-on-accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.master-close-btn:hover {
+  background: var(--slides-on-accent-hover);
+}
+.master-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.master-list {
+  width: 170px;
+}
+.master-thumb {
+  margin-bottom: 22px;
+  overflow: visible; /* Label hangs below the thumbnail's bottom edge */
+}
+.master-thumb-layout {
+  margin-left: 18px;
+}
+.master-thumb-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -16px;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.master-stage {
+  flex: 1;
+  overflow: auto;
+  padding: 28px;
+  display: flex;
+  justify-content: safe center;
+}
+.master-stage .stage-rel {
+  flex-shrink: 0;
+  background: var(--slides-paper);
+  box-shadow: var(--slides-shadow-stage);
+}
+
+/* CSS approximations of the newly added transition effects */
+.slideshow .ss-anim-cover {
+  animation: ss-cover 0.5s ease both;
+}
+.slideshow .ss-anim-pull {
+  animation: ss-pull 0.5s ease both;
+}
+.slideshow .ss-anim-dissolve {
+  animation: ss-fade 0.6s steps(12) both;
+}
+.slideshow .ss-anim-zoom {
+  animation: ss-zoomin 0.5s ease both;
+}
+@keyframes ss-cover {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes ss-pull {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes ss-zoomin {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Print layout selection */
+.print-layouts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+.print-layouts button {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.print-layouts button:hover {
+  background: var(--hover);
+}
+
+.ruler-clickable {
+  cursor: crosshair;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slideshow [class*='ss-anim-'] {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ================= transient toast (save feedback) ================= */
+
+.app-toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--slides-toast-bg);
+  color: var(--slides-toast-ink);
+  font-size: 13px;
+  box-shadow: var(--slides-shadow-toast);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.app-toast.error {
+  background: var(--slides-toast-error-bg);
+}
+
+.app-toast-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.app-toast.success .app-toast-icon {
+  color: var(--slides-toast-ok);
+}
+
+/* Main content row. */
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
