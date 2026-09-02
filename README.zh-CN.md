@@ -10,11 +10,11 @@ TandemFolio 为 Codex 等 MCP Apps 宿主提供持续存在的可视化编辑能
 
 ## 演示
 
-这段 49 秒的视频展示了 Codex 打开 TandemFolio 的 PPTX 编辑器，并在同一任务中生成一套包含 10 页、可继续编辑的演示文稿。
+这段预览展示了 Codex 打开 TandemFolio 的 PPTX 编辑器，并在同一任务中生成一套包含 10 页、可继续编辑的演示文稿。点击预览可观看完整的 49 秒录像。
 
-<video src="docs/assets/tandemfolio-demo.mp4" controls width="100%" title="TandemFolio PPTX 编辑演示"></video>
+[![TandemFolio PPTX 编辑演示](docs/assets/tandemfolio-demo.gif)](docs/assets/tandemfolio-demo.mp4)
 
-[观看或下载 MP4 演示](docs/assets/tandemfolio-demo.mp4)
+[观看或下载完整 MP4 演示](docs/assets/tandemfolio-demo.mp4)
 
 ## 它解决什么问题
 

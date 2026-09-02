@@ -24,3 +24,4 @@ plugins/tandemfolio/dist/* -diff
 
 # Documentation media should never be treated as text or merged line-by-line.
 *.mp4 binary
+*.gif binary

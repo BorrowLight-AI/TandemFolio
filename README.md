@@ -10,11 +10,11 @@ It is designed for people who want agent assistance without handing a document t
 
 ## Demo
 
-This 49-second recording shows Codex opening TandemFolio's PPTX editor and building a 10-slide, fully editable presentation in the same task.
+This preview shows Codex opening TandemFolio's PPTX editor and building a 10-slide, fully editable presentation in the same task. Click it to watch the complete 49-second recording.
 
-<video src="docs/assets/tandemfolio-demo.mp4" controls width="100%" title="TandemFolio PPTX editing demo"></video>
+[![TandemFolio PPTX editing demo](docs/assets/tandemfolio-demo.gif)](docs/assets/tandemfolio-demo.mp4)
 
-[Watch or download the MP4 demo](docs/assets/tandemfolio-demo.mp4)
+[Watch or download the full MP4 demo](docs/assets/tandemfolio-demo.mp4)
 
 ## What it solves
 
