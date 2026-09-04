@@ -102,6 +102,9 @@ test('an offscreen DOCX releases its document DOM and resumes the same session',
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
 
   const editor = page.frameLocator('#editor-frame')
+  await expect(editor.locator('html')).toHaveAttribute('data-live-editor-connection', 'connected', {
+    timeout: 30_000,
+  })
   await page.evaluate(() => {
     window.__codexVisualHost.enqueueCommand({
       commandId: 'docx-lifecycle-content',
@@ -110,6 +113,15 @@ test('an offscreen DOCX releases its document DOM and resumes the same session',
       arguments: { text: 'Retained DOCX content' },
     })
   })
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__codexVisualHost.acknowledgements.find(
+          (entry) => entry.commandId === 'docx-lifecycle-content',
+        ),
+      ),
+    )
+    .toMatchObject({ ok: true, revision: 1 })
   await expect(editor.locator('.editor-scroll .doc-page.ProseMirror')).toContainText(
     'Retained DOCX content',
   )
@@ -156,6 +168,10 @@ test('an offscreen DOCX releases its document DOM and resumes the same session',
 test('DOCX checkpoints direct UI changes once per persisted state version', async ({ page }) => {
   await page.goto('/?format=docx&width=1280&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
+  const editor = page.frameLocator('#editor-frame')
+  await expect(editor.locator('html')).toHaveAttribute('data-live-editor-connection', 'connected', {
+    timeout: 30_000,
+  })
 
   await page.evaluate(() => {
     window.__codexVisualHost.enqueueCommand({
@@ -165,9 +181,17 @@ test('DOCX checkpoints direct UI changes once per persisted state version', asyn
       arguments: { text: 'Recovery baseline' },
     })
   })
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__codexVisualHost.acknowledgements.find(
+          (entry) => entry.commandId === 'docx-recovery-content',
+        ),
+      ),
+    )
+    .toMatchObject({ ok: true, revision: 1 })
   await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
 
-  const editor = page.frameLocator('#editor-frame')
   await editor.locator('.ribbon-tab:not(.ribbon-tab-file)').nth(3).click()
   await editor.locator('.rb-big').nth(3).click()
   await editor.locator('.color-palette-page .color-swatch').nth(1).click()

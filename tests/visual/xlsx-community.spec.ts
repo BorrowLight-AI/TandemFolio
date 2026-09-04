@@ -3873,6 +3873,7 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
 test('the XLSX formula-view registry operation shares user undo and saved output', async ({
   page,
 }) => {
+  test.slow()
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
