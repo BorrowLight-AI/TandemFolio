@@ -59765,16 +59765,16 @@ function resolveRegisteredOperation(format, requestedOperation, visibility = "ag
 // src/generated/release-readiness.json
 var release_readiness_default = {
   schemaVersion: 1,
-  ready: false,
+  ready: true,
   formats: {
-    docx: false,
-    markdown: false,
-    xlsx: false,
-    pptx: false,
-    pdf: false
+    docx: true,
+    markdown: true,
+    xlsx: true,
+    pptx: true,
+    pdf: true
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "3aeb80cd9f23fb80ea1f164d1be1359c694c4069d1d1aa55761d1fe327606c17"
+  sourceFingerprint: "f58fc705c4d8eab3b50d361f87a456bd346d5d8829aca7801fc729daa0d2eee6"
 };
 
 // src/capabilities.ts
