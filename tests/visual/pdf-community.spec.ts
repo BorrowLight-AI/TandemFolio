@@ -2,7 +2,9 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { PDFArray, PDFDict, PDFDocument, PDFName, StandardFonts } from 'pdf-lib'
-import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { loadPdfJsForNodeEvidence } from './pdfjs-node-bootstrap'
+
+const { getDocument, OPS } = await loadPdfJsForNodeEvidence()
 
 const NARROW = { width: 420, height: 900 }
 const SPLIT = { width: 720, height: 900 }
