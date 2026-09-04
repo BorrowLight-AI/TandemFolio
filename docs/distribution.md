@@ -134,8 +134,10 @@ prerelease tags). Its tag must match the root `package.json` version and the plu
 manifest version before any `+codex...` local cache suffix. The release archive uses
 that clean version without changing the developer's source manifest.
 
-The workflow runs the repository checks, approved source-current evidence gate, build,
-visual checks, and archive validation. Windows and macOS then verify/extract the archive
+The workflow first fetches the configured read-only upstream history because the pinned community
+commit is intentionally not part of the product repository's `origin` history. It then runs the
+repository checks, approved source-current evidence gate, build, visual checks, and archive validation.
+Windows and macOS then verify/extract the archive
 and run the real packaged MCP smoke, including local document saves. Only after all jobs
 pass does it create the GitHub Release with ZIP, tar.gz, and `SHA256SUMS`. SemVer prerelease
 tags produce GitHub prereleases. Missing or stale evidence blocks both stable and

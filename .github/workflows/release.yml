@@ -28,6 +28,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      # The pinned community commit is intentionally not part of origin history. Fetch its
+      # read-only provenance objects before tests inspect paths at that exact upstream commit.
+      - run: npm run upstream:fetch
       - run: npm run test:distribution
       # Includes the source-current evidence gate, build, MCP smoke, and licenses.
       - run: npm run check
