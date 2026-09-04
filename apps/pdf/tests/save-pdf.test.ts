@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName } from 'pdf-lib'
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import {
   applySaveRequest,
   extractPagesBytes,
@@ -9,6 +8,18 @@ import {
 } from '../src/domain/save-pdf'
 import { VISUAL_SIGNATURE_CONTENT_PREFIX } from '../src/shared/ipc'
 import type { SavePdfRequest } from '../src/shared/ipc'
+
+// PDF.js initialises an identity DOMMatrix at module load even when a test only reads
+// annotations. Its Node fallback depends on the optional native @napi-rs/canvas package,
+// which is not guaranteed to load on every CI platform.
+if (!globalThis.DOMMatrix) {
+  Object.defineProperty(globalThis, 'DOMMatrix', {
+    configurable: true,
+    writable: true,
+    value: class TestDOMMatrix {},
+  })
+}
+const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
 
 /** 1x1 red pixel PNG */
 const TINY_PNG =
