@@ -8,6 +8,7 @@ import type {
 } from 'react'
 import { EditorSaveIcon } from '@genoffice/ui'
 // The legacy PDF.js build avoids newer runtime APIs that are not available in every host.
+// Modified by TandemFolio contributors: forced checkpoints for browser document imports.
 import {
   AnnotationMode,
   GlobalWorkerOptions,
@@ -3167,7 +3168,8 @@ export default function App({
     // in-progress replacement would be silently dropped
     const edits = commitTextDraft()
     const anythingToSave = dirty || edits !== textEdits
-    if (!anythingToSave || !filePath) return Promise.resolve(!anythingToSave)
+    if (!filePath) return Promise.resolve(false)
+    if (autosave && !anythingToSave) return Promise.resolve(true)
     // An explicit save opts this file into autosave
     if (!autosave) savedOnceRef.current = true
     // What this save writes — the post-save reload subtracts exactly this, keeping
@@ -4210,8 +4212,8 @@ export default function App({
 
     return commandBridge.register({
       recoveryVersion: () => recoveryVersionRef.current,
-      recoverySnapshot: async () => {
-        if (!dirty || !filePath) return null
+      recoverySnapshot: async (force) => {
+        if ((!force && !dirty) || !filePath) return null
         const edits = commitTextDraft()
         return {
           fileName: decodeURIComponent(filePath.split('/').pop() ?? 'document.pdf'),
@@ -5153,7 +5155,7 @@ export default function App({
             className="qa-btn"
             data-tip={`${t('save')} (${platformShortcuts('⌘S')})`}
             aria-label={t('save')}
-            disabled={!dirty || saveState === 'saving'}
+            disabled={!filePath || saveState === 'saving'}
             onClick={() => void save()}
           >
             <EditorSaveIcon />

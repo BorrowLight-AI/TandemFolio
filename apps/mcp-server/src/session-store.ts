@@ -37,6 +37,34 @@ interface PollWaiter {
   timer: ReturnType<typeof setTimeout>
 }
 
+interface ViewHandoff {
+  id: string
+  owner: string
+  candidate: string
+  expiresAt: number
+  prepared: boolean
+  checkpoint: boolean
+  failed: boolean
+  userActivated: boolean
+}
+
+function sameMountedView(left: string, right: string): boolean {
+  try {
+    const a: unknown = JSON.parse(left)
+    const b: unknown = JSON.parse(right)
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === 2 &&
+      b.length === 2 &&
+      typeof a[0] === 'string' &&
+      a[0] === b[0]
+    )
+  } catch {
+    return false
+  }
+}
+
 const LEGACY_VIEW_ID = 'legacy-view'
 
 export class SessionError extends Error {
@@ -45,6 +73,7 @@ export class SessionError extends Error {
       | 'session_not_found'
       | 'editor_offline'
       | 'editor_view_conflict'
+      | 'document_restore_failed'
       | 'revision_conflict'
       | 'command_in_flight'
       | 'command_not_found'
@@ -69,6 +98,116 @@ export class SessionStore {
   readonly #commandCompletions = new Map<string, CommandCompletionRecord>()
   readonly #pollWaiters = new Map<string, PollWaiter>()
   readonly #activeViews = new Map<string, string>()
+  readonly #lastContact = new Map<string, number>()
+  readonly #handoffs = new Map<string, ViewHandoff>()
+
+  constructor(private readonly now: () => number = Date.now) {}
+
+  ownsView(sessionId: string, viewId = LEGACY_VIEW_ID): boolean {
+    return this.#activeViews.get(sessionId) === viewId
+  }
+
+  requestHandoff(sessionId: string, candidate: string, retry = false, activate = false): boolean {
+    const owner = this.#activeViews.get(sessionId)
+    if (!owner || owner === candidate || !sameMountedView(owner, candidate)) return false
+    let handoff = this.#handoffs.get(sessionId)
+    if (
+      !handoff ||
+      (activate && !handoff.prepared && handoff.candidate !== candidate) ||
+      (!handoff.prepared && !handoff.failed && handoff.expiresAt < this.now()) ||
+      (retry && handoff.failed && handoff.candidate === candidate)
+    ) {
+      handoff = {
+        id: randomUUID(),
+        owner,
+        candidate,
+        expiresAt: 0,
+        prepared: false,
+        checkpoint: false,
+        failed: false,
+        userActivated: false,
+      }
+      this.#handoffs.set(sessionId, handoff)
+    }
+    if (handoff.failed) return false
+    if (handoff.candidate === candidate) {
+      handoff.expiresAt = this.now() + 15_000
+      if (activate) handoff.userActivated = true
+    }
+    this.#finishPoll(sessionId, [])
+    return true
+  }
+
+  handoffFailed(sessionId: string, candidate: string): boolean {
+    const handoff = this.#handoffs.get(sessionId)
+    return handoff?.candidate === candidate && handoff.failed
+  }
+
+  handoffRequest(sessionId: string, owner: string): string | undefined {
+    const handoff = this.#handoffs.get(sessionId)
+    return handoff?.owner === owner && !handoff.failed && handoff.expiresAt >= this.now()
+      ? handoff.id
+      : undefined
+  }
+
+  handoffRequestedByUser(sessionId: string, owner: string): boolean {
+    return Boolean(
+      this.handoffRequest(sessionId, owner) && this.#handoffs.get(sessionId)?.userActivated,
+    )
+  }
+
+  prepareHandoff(sessionId: string, owner: string, id: string): void {
+    this.assertView(sessionId, owner)
+    const handoff = this.#handoffs.get(sessionId)
+    if (
+      !handoff ||
+      handoff.id !== id ||
+      handoff.failed ||
+      handoff.owner !== owner ||
+      handoff.expiresAt < this.now()
+    )
+      throw new SessionError('editor_view_conflict', 'The view handoff request has expired.')
+    if (handoff.prepared) return
+    this.assertCanEnqueue(sessionId, this.get(sessionId).revision)
+    handoff.prepared = true
+  }
+
+  assertNotHandingOff(sessionId: string): void {
+    if (this.#handoffs.get(sessionId)?.prepared)
+      throw new SessionError(
+        'command_in_flight',
+        'The editor is protecting its document for handoff.',
+      )
+  }
+
+  checkpointHandoff(sessionId: string, owner: string): void {
+    const handoff = this.#handoffs.get(sessionId)
+    if (handoff?.owner === owner && handoff.prepared) handoff.checkpoint = true
+  }
+
+  completeHandoff(sessionId: string, owner: string, id: string): void {
+    this.assertView(sessionId, owner)
+    const handoff = this.#handoffs.get(sessionId)
+    if (!handoff || handoff.id !== id || !handoff.prepared || !handoff.checkpoint)
+      throw new SessionError(
+        'document_restore_failed',
+        'A fresh checkpoint is required before handoff.',
+      )
+    this.#activeViews.set(sessionId, handoff.candidate)
+    this.get(sessionId).connected = false
+    this.#lastContact.set(sessionId, this.now())
+    this.#handoffs.delete(sessionId)
+    this.#finishPoll(sessionId, [])
+  }
+
+  abortHandoff(sessionId: string, owner: string, id: string): boolean {
+    this.assertView(sessionId, owner)
+    const handoff = this.#handoffs.get(sessionId)
+    if (handoff?.id !== id || !handoff.prepared) return false
+    handoff.prepared = false
+    handoff.failed = true
+    return true
+  }
 
   create(format: LiveSession['format'] = 'docx'): LiveSession {
     return this.restore(randomUUID(), format)
@@ -116,6 +255,7 @@ export class SessionStore {
         'This editor view does not own the editing session lease.',
       )
     }
+    this.#lastContact.set(sessionId, this.now())
     return session
   }
 
@@ -127,12 +267,21 @@ export class SessionStore {
     const session = this.get(sessionId)
     const activeViewId = this.#activeViews.get(sessionId)
     if (activeViewId && activeViewId !== viewId) {
-      throw new SessionError(
-        'editor_view_conflict',
-        'This editing session is already connected to another mounted editor view.',
-      )
+      if (
+        this.#handoffs.get(sessionId)?.prepared ||
+        this.now() - (this.#lastContact.get(sessionId) ?? 0) < 30_000 ||
+        session.pending.length > 0 ||
+        this.#activeCommands.has(sessionId)
+      ) {
+        throw new SessionError(
+          'editor_view_conflict',
+          'This editing session is already connected to another mounted editor view.',
+        )
+      }
+      this.disconnect(sessionId, activeViewId)
     }
     this.#activeViews.set(sessionId, viewId)
+    this.#lastContact.set(sessionId, this.now())
     session.connected = true
     Object.assign(session, context)
     return session
@@ -149,6 +298,7 @@ export class SessionStore {
     }
     session.connected = false
     this.#activeViews.delete(sessionId)
+    this.#handoffs.delete(sessionId)
     this.#finishPoll(sessionId, [])
   }
 
@@ -163,13 +313,28 @@ export class SessionStore {
         `Expected revision ${session.revision}, received ${baseRevision}. Refresh context and retry.`,
       )
     }
-    if (session.pending.length > 0 || this.#activeCommands.has(sessionId)) {
+    if (
+      session.pending.length > 0 ||
+      this.#activeCommands.has(sessionId) ||
+      this.#handoffs.get(sessionId)?.prepared
+    ) {
       throw new SessionError(
         'command_in_flight',
         'Wait for the active editor command to finish before submitting another mutation.',
       )
     }
     return session
+  }
+
+  assertCanReplaceDocument(sessionId: string, commandId?: string): void {
+    const active = this.#activeCommands.get(sessionId)
+    if (
+      commandId &&
+      active?.commandId === commandId &&
+      active.operation === 'pptx.document.create_blank'
+    )
+      return
+    this.assertCanEnqueue(sessionId, this.get(sessionId).revision)
   }
 
   enqueue(

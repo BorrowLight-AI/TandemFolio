@@ -2,6 +2,7 @@ import { build } from 'esbuild'
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import { brokerRequest, closeBrokers } from './broker-host.mjs'
 
 const root = process.cwd()
 const pluginRoot = join(root, 'plugins/tandemfolio')
@@ -51,6 +52,16 @@ function send(response, status, contentType, body) {
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1:4178')
   try {
+    if (url.pathname === '/broker' && request.method === 'POST') {
+      let body = ''
+      for await (const chunk of request) body += chunk
+      const result = await brokerRequest(
+        url.searchParams.get('id') ?? '',
+        url.searchParams.get('action'),
+        JSON.parse(body || '{}'),
+      )
+      return send(response, 200, 'application/json', JSON.stringify(result))
+    }
     if (url.pathname === '/health') return send(response, 200, 'text/plain', 'ok')
     if (url.pathname === '/') return send(response, 200, 'text/html; charset=utf-8', hostHtml)
     if (url.pathname === '/host.js') {
@@ -94,5 +105,5 @@ const server = createServer(async (request, response) => {
 server.listen(4178, '127.0.0.1')
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () => server.close(() => process.exit(0)))
+  process.on(signal, () => void closeBrokers().finally(() => server.close(() => process.exit(0))))
 }

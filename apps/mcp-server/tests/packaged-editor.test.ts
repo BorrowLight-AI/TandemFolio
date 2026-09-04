@@ -124,16 +124,32 @@ describe('packaged editor UI', () => {
     const html = await readFile(packagedXlsxEditor, 'utf8')
     const payloads = [
       ...html.matchAll(
-        /<script type="application\/x-tandemfolio-module" data-module="([^"]+)"( data-entry="true")?>([^<]+)<\/script>/g,
+        /<script type="application\/x-tandemfolio-module" data-module="([^"]+)">([^<]+)<\/script>/g,
       ),
     ]
-    const entry = payloads.find((match) => match[2] !== undefined)
+    const entry = html.match(
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+    )
 
-    expect(entry, 'missing embedded XLSX entry module').toBeDefined()
+    expect(entry, 'missing embedded XLSX entry module').not.toBeNull()
     expect(payloads.length).toBeGreaterThan(1)
-    expect(gunzipSync(Buffer.from(entry![3], 'base64')).byteLength).toBeLessThanOrEqual(11_000_000)
+    expect(Buffer.byteLength(entry![2])).toBeLessThanOrEqual(11_000_000)
     expect(html).toContain('data-tandemfolio-module-bootstrap')
     expect(html).not.toMatch(/(?:src|href)="[^"]+\.(?:js|css)"/)
+  })
+
+  it('loads the critical XLSX entry without runtime base64 or gzip decompression', async () => {
+    const html = await readFile(packagedXlsxEditor, 'utf8')
+    const entry = html.match(
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+    )
+
+    expect(entry, 'missing identity-encoded XLSX entry').not.toBeNull()
+    expect(entry![1]).toMatch(/^index-[A-Za-z0-9_-]+\.js$/)
+    const source = entry![2]
+    expect(Buffer.byteLength(source)).toBeLessThanOrEqual(11_000_000)
+    expect(source).toContain('__genofficeXlsxEntryModuleReadyAt')
+    expect(entry![2]).not.toMatch(/^[A-Za-z0-9+/]+=*$/)
   })
 
   it('packages the Markdown community renderer without product AI or Electron code', async () => {
@@ -143,6 +159,59 @@ describe('packaged editor UI', () => {
     expect(html).toContain('Export DOCX')
     expect(html).not.toMatch(/src="[^"]+\.js"/)
     expect(html).not.toMatch(/Genspark|electron|markdownApi|ai-panel/i)
+  })
+
+  it('packages a complete resolvable static graph for the deferred XLSX modules', async () => {
+    const html = await readFile(packagedXlsxEditor, 'utf8')
+    const graphTag = html.match(
+      /<script type="application\/json" data-tandemfolio-module-dependencies>([^<]+)<\/script>/,
+    )
+    expect(graphTag, 'missing static dependency metadata').not.toBeNull()
+    const graph = JSON.parse(graphTag![1]) as Record<string, string[]>
+    const payloadModules = [
+      ...html.matchAll(
+        /<script type="application\/x-tandemfolio-module" data-module="([^"]+)">([^<]+)<\/script>/g,
+      ),
+    ]
+    const entry = html.match(
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+    )!
+    const modules = [...payloadModules, ['', entry[1], entry[2]]]
+    expect(Object.keys(graph).sort()).toEqual(modules.map((m) => m[1]).sort())
+    for (const [, id, encoded] of modules) {
+      const source =
+        id === entry[1] ? encoded : gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8')
+      const dependencies = [
+        ...new Set(
+          [...source.matchAll(/genoffice-static:([A-Za-z0-9._-]+\.js)/g)].map((m) => m[1]),
+        ),
+      ]
+      expect(graph[id]).toEqual(dependencies)
+      for (const dependency of dependencies) expect(graph).toHaveProperty(dependency)
+    }
+  })
+
+  it('retains XLSX package I/O as an on-demand module outside the blank-editor entry', async () => {
+    const html = await readFile(packagedXlsxEditor, 'utf8')
+    const workbook = html.match(/data-module="(browser-workbook-[^"]+\.js)"/)
+    expect(workbook, 'workbook ZIP/XML adapter must remain loadable on demand').not.toBeNull()
+    const entry = html.match(
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+    )
+    const entrySource = entry![2]
+    expect(entrySource).toContain(`__genofficeImport("${workbook![1]}")`)
+    const graphTag = html.match(/data-tandemfolio-module-dependencies>([^<]+)<\/script>/)
+    const graph = JSON.parse(graphTag![1]) as Record<string, string[]>
+    const entryId = entry![1]
+    const pending = [entryId]
+    const visited = new Set<string>()
+    while (pending.length) {
+      const id = pending.pop()!
+      if (visited.has(id)) continue
+      visited.add(id)
+      pending.push(...graph[id])
+    }
+    expect(visited.has(workbook![1])).toBe(false)
   })
 
   it('packages the retained PPTX community renderer without prohibited product code', async () => {

@@ -1,6 +1,6 @@
 {
   "name": "tandemfolio",
-  "version": "0.1.0+codex.20260902084921",
+  "version": "0.1.0-beta.1+codex.20260904015406",
   "description": "Local-first DOCX, XLSX, PPTX, PDF, and Markdown editing in persistent MCP App surfaces.",
   "author": {
     "name": "TandemFolio contributors"

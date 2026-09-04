@@ -434,11 +434,12 @@ export const pptxOperationCatalog = {
       id: 'pptx.document.create_blank',
       format: 'pptx',
       family: 'document',
-      summary: 'Replace the current session with a new blank presentation.',
+      summary:
+        'Create a blank presentation. Replacing an opened, saved, restored, or edited document requires explicit user confirmation (confirmReplace: true); never use for a follow-up edit.',
       visibility: 'agent',
       inputSchema: {
         type: 'object',
-        properties: {},
+        properties: { confirmReplace: { type: 'boolean' } },
         required: [],
         additionalProperties: false,
       },

@@ -282,6 +282,10 @@ test('PDF stores each dirty edit version only once', async ({ page }) => {
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   await openFixture(page)
 
+  // Browser import checkpoints the clean document for exact continuation (ADR 0012).
+  // Observe it before editing so it cannot satisfy the first dirty-version assertion.
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
+
   await page.evaluate(() => {
     window.__codexVisualHost.enqueueCommand({
       commandId: 'pdf-recovery-v1',
@@ -290,10 +294,10 @@ test('PDF stores each dirty edit version only once', async ({ page }) => {
       arguments: { pageIndex: 0, rotation: 90 },
     })
   })
-  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(2)
 
   await page.waitForTimeout(2_300)
-  expect(await page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
+  expect(await page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(2)
 
   await page.evaluate(() => {
     window.__codexVisualHost.enqueueCommand({
@@ -303,7 +307,7 @@ test('PDF stores each dirty edit version only once', async ({ page }) => {
       arguments: { pageIndex: 0, rotation: 180 },
     })
   })
-  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(2)
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(3)
 })
 
 test('an MCP staged PDF opens in the same retained community renderer', async ({ page }) => {

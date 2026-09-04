@@ -5,6 +5,7 @@ This is the documentation home for users, contributors, and maintainers. The roo
 ## Start here
 
 - [Getting started](getting-started.md) — run from a checkout, build the local plugin, and open it in a compatible MCP Apps host.
+- [Windows/macOS releases](distribution.md) — download, verify, install, update, and publish a gated release bundle.
 - [Project facts and attribution](project-facts.md) — current release posture, source provenance, license obligations, and modification records.
 - [Development guide](development.md) — maintainer commands, packaging, testing, release evidence, and troubleshooting.
 
@@ -14,6 +15,7 @@ This is the documentation home for users, contributors, and maintainers. The roo
 - [Live-session protocol](protocol/live-session.md) — implemented resources, tools, sessions, revisions, acknowledgements, and local persistence.
 - [Operation registry contract](protocol/operation-registry.md) — typed format-owned operations and capability discovery.
 - [Performance baselines](performance-baselines.md) — measurable release constraints and evidence.
+- [Latest release verification](../release/validation.md) — source-current capture, checks, and remaining release blockers.
 
 ## Architecture decisions
 

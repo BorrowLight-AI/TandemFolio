@@ -2,6 +2,31 @@ import { describe, expect, it } from 'vitest'
 import { SessionError, SessionStore } from '../src/session-store'
 
 describe('SessionStore', () => {
+  it('keeps a lease alive while its owner transfers document bytes between polls', () => {
+    let now = 0
+    const store = new SessionStore(() => now)
+    const session = store.create('pdf')
+    store.poll(session.id, undefined, 'owner')
+    now = 29_000
+    store.assertView(session.id, 'owner')
+    now = 31_000
+    expect(() => store.poll(session.id, undefined, 'new-mount')).toThrow(/already connected/)
+  })
+
+  it('allows a cold mount to reclaim only an expired idle lease, never a live or in-flight one', () => {
+    let now = 0
+    const store = new SessionStore(() => now)
+    const session = store.create('pptx')
+    store.poll(session.id, undefined, 'view/mount-1')
+    expect(() => store.poll(session.id, undefined, 'view/mount-2')).toThrow(/already connected/)
+    now = 31_000
+    store.poll(session.id, undefined, 'view/mount-2')
+    expect(() => store.assertView(session.id, 'view/mount-1')).toThrow(/does not own/)
+    store.enqueue(session.id, 0, 'pptx.slide.add', {})
+    now += 31_000
+    expect(() => store.poll(session.id, undefined, 'view/mount-3')).toThrow(/already connected/)
+  })
+
   it('requires the shared editor to be connected before queuing a mutation', () => {
     const store = new SessionStore()
     const session = store.create()

@@ -7,6 +7,112 @@ import type { ShapeRenderNode } from '@genoffice/pptx-render'
 import { BrowserPresentation } from '../src/renderer/host/browser-presentation'
 
 describe('PPTX browser operation integration', () => {
+  it('allows initialization of an untouched mounted blank presentation without replacement confirmation', async () => {
+    const fakeWindow = { location: { href: 'https://example.test/slides/index.html' } } as Window
+    Object.assign(fakeWindow, { parent: fakeWindow })
+    vi.stubGlobal('window', fakeWindow)
+    try {
+      const host = createBrowserSlidesHost()
+      await host.api.newBlank(1200)
+      await expect(
+        host.adapter.execute({
+          commandId: 'initialize-blank',
+          baseRevision: 0,
+          operation: 'pptx.document.create_blank',
+          arguments: {},
+        }),
+      ).resolves.toMatchObject({ ok: true, output: { slideCount: 1 } })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it.each(['abc.pptx', 'Untitled.pptx'])(
+    'protects a clean restored %s even if it contains only one empty slide',
+    async (name) => {
+      const presentation = await BrowserPresentation.blank()
+      const bytes = await presentation.checkpoint()
+      const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+      const host = createBrowserSlidesHost()
+      await expect(
+        host.adapter.execute({
+          commandId: 'restore-document',
+          baseRevision: 0,
+          operation: 'pptx.document.load_staged',
+          arguments: { blobId: 'restore', name, size: bytes.byteLength, data },
+        }),
+      ).resolves.toMatchObject({ ok: true })
+      const restored = structuredClone(host.adapter.snapshot(1))
+      expect(restored.dirty).toBe(false)
+      expect(restored.fileName).toBe(name)
+      await expect(
+        host.adapter.execute({
+          commandId: 'reset-restored-document',
+          baseRevision: 1,
+          operation: 'pptx.document.create_blank',
+          arguments: {},
+        }),
+      ).resolves.toMatchObject({ ok: false, message: expect.stringContaining('confirmReplace') })
+      expect(host.adapter.snapshot(1)).toEqual(restored)
+    },
+  )
+
+  it('requires replacement confirmation for an unnamed edited presentation, including after undo', async () => {
+    const host = createBrowserSlidesHost()
+    await expect(
+      host.adapter.execute({
+        commandId: 'initial-blank',
+        baseRevision: 0,
+        operation: 'pptx.document.create_blank',
+        arguments: {},
+      }),
+    ).resolves.toMatchObject({ ok: true, output: { slideCount: 1 } })
+    await expect(
+      host.adapter.execute({
+        commandId: 'edit-blank',
+        baseRevision: 1,
+        operation: 'pptx.slide.add_blank',
+        arguments: { afterSlideIndex: 0 },
+      }),
+    ).resolves.toMatchObject({ ok: true })
+    const edited = structuredClone(host.adapter.snapshot(2))
+    await expect(
+      host.adapter.execute({
+        commandId: 'unconfirmed-reset',
+        baseRevision: 2,
+        operation: 'pptx.document.create_blank',
+        arguments: { confirmReplace: false },
+      }),
+    ).resolves.toMatchObject({ ok: false, message: expect.stringContaining('confirmReplace') })
+    expect(host.adapter.snapshot(2)).toEqual(edited)
+    await expect(
+      host.adapter.execute({
+        commandId: 'undo-edit',
+        baseRevision: 2,
+        operation: 'pptx.history.undo',
+        arguments: {},
+      }),
+    ).resolves.toMatchObject({ ok: true })
+    expect(host.adapter.snapshot(3).dirty).toBe(false)
+    await expect(
+      host.adapter.execute({
+        commandId: 'reset-after-undo',
+        baseRevision: 3,
+        operation: 'pptx.document.create_blank',
+        arguments: {},
+      }),
+    ).resolves.toMatchObject({ ok: false, message: expect.stringContaining('confirmReplace') })
+    await expect(
+      host.adapter.execute({
+        commandId: 'redo-preserved-edit',
+        baseRevision: 3,
+        operation: 'pptx.history.redo',
+        arguments: {},
+      }),
+    ).resolves.toMatchObject({ ok: true })
+    expect(host.adapter.snapshot(4).selection).toMatchObject({ slideCount: 2 })
+  })
+
   it('writes the first PPTX save to the selected local file before reporting success', async () => {
     let persisted = new ArrayBuffer(0)
     const writable = {

@@ -923,28 +923,31 @@ describe('browser XLSX workbook', () => {
     expect(reopened.cell('Budget', 'B2')?.value).toBe(84)
   })
 
-  it('serializes pending XLSX edits into recovery bytes without a picker or source mutation', async () => {
-    vi.stubGlobal('window', {})
-    const api = new BrowserWorkbookDesktopApi(async () => null)
-    const bytes = await fixture()
-    const opened = await api.openBuffer(
-      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
-      'budget.xlsx',
-    )
+  it.each([false, true])(
+    'serializes pending XLSX edits into recovery bytes without a picker or source mutation (embedded: %s)',
+    async (embedded) => {
+      vi.stubGlobal('window', embedded ? { parent: {} } : {})
+      const api = new BrowserWorkbookDesktopApi(async () => null)
+      const bytes = await fixture()
+      const opened = await api.openBuffer(
+        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
+        'budget.xlsx',
+      )
 
-    const recovery = await api.writeWorkbookRecovery(cellSaveRequest(opened, 42))
+      const recovery = await api.writeWorkbookRecovery(cellSaveRequest(opened, 42))
 
-    expect(recovery.ok).toBe(true)
-    if (!recovery.ok) throw new Error('The browser workbook recovery was not created.')
-    const reopened = await openBrowserWorkbook(new Uint8Array(recovery.data), recovery.fileName)
-    expect(reopened.cell('Budget', 'B2')?.value).toBe(42)
-    const source = await api.readWorkbookRange({
-      sessionId: opened.sessionId,
-      sheetId: opened.sheets[0]!.id,
-      range: { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1 },
-    })
-    expect(source.cells[0]?.value).toBe(10)
-  })
+      expect(recovery.ok).toBe(true)
+      if (!recovery.ok) throw new Error('The browser workbook recovery was not created.')
+      const reopened = await openBrowserWorkbook(new Uint8Array(recovery.data), recovery.fileName)
+      expect(reopened.cell('Budget', 'B2')?.value).toBe(42)
+      const source = await api.readWorkbookRange({
+        sessionId: opened.sessionId,
+        sheetId: opened.sheets[0]!.id,
+        range: { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1 },
+      })
+      expect(source.cells[0]?.value).toBe(10)
+    },
+  )
 
   it('routes duplicate and visibility journal operations through the browser desktop save', async () => {
     const memoryFile = inMemoryFileHandle('saved-budget.xlsx')

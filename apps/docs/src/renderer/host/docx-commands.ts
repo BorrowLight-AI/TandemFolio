@@ -31,7 +31,7 @@ export async function loadStagedDocx(
   loadFile: LoadFile,
 ): Promise<void> {
   await loadFile({
-    path: `mcp-local:${input.blobId}`,
+    path: `mcp-local:${input.blobId}/${input.name}`,
     name: input.name,
     data: input.data,
     hash: await sha256(input.data),

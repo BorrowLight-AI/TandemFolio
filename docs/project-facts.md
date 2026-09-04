@@ -7,8 +7,13 @@ This page is the public factual reference for TandemFolio's status, source prove
 - **Product:** TandemFolio
 - **Form:** a local-first MCP Apps plugin with persistent visual editors and a local MCP server
 - **Formats:** DOCX, XLSX, PPTX, PDF, and Markdown
-- **Status:** pre-release. The generated release-readiness projection is currently `false` for every format until the current source passes the required evidence gate.
+- **Status:** pre-release. Source-current local evidence passes and the generated release-readiness projection is `true` for every format; native release CI and publication remain pending.
 - **Distribution license:** [Apache License 2.0](../LICENSE)
+
+The [2026-09-03 full capture](../release/validation.md) now supplies the previously
+missing evidence and visual provenance. The 2026-09-04 approved recapture passes:
+XLSX bootstrap p95 is 432.5 ms against 500 ms and Markdown small-file open p95 is
+14.3 ms against 20 ms. This authorizes packaging but is not a published release.
 
 ## Source provenance
 

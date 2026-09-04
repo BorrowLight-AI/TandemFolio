@@ -1,6 +1,6 @@
 {
   "name": "tandemfolio",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "private": true,
   "type": "module",
   "description": "A lightweight GenOffice community renderer fork for MCP Apps hosts.",
@@ -37,6 +37,9 @@
     "build:pdf": "npm run build -w @genoffice/pdf",
     "build:server": "npm run build -w @tandemfolio/mcp-server",
     "package:plugin": "node tools/package-plugin.mjs",
+    "distribution:archive": "node tools/package-distribution.mjs",
+    "release:distribute": "npm run release:package && npm run distribution:archive",
+    "test:distribution": "node --test tools/tests/distribution.test.mjs",
     "operation-manifest:generate": "tsx tools/generate-operation-manifest.ts --input tools/operation-catalogs.ts --output apps/mcp-server/src/generated/operation-manifest.json",
     "operation-manifest:check": "npm run manifest:check -w @tandemfolio/operation-contract && tsx tools/generate-operation-manifest.ts --input tools/operation-catalogs.ts --output apps/mcp-server/src/generated/operation-manifest.json --check",
     "typecheck": "npm run typecheck -w @tandemfolio/operation-contract && npm run typecheck -w @tandemfolio/host-bridge && npm run typecheck -w @genoffice/docs && npm run typecheck -w @genoffice/markdown && npm run typecheck -w @genoffice/sheets && npm run typecheck -w @genoffice/slides && npm run typecheck -w @genoffice/pdf && npm run typecheck -w @tandemfolio/mcp-server",

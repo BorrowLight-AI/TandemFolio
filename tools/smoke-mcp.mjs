@@ -17,6 +17,8 @@ const expectedTools = [
   'office_execute',
   'office_open_local_file',
   'office_editor_poll',
+  'office_editor_handoff',
+  'office_editor_reset_document',
   'office_editor_begin_document_save',
   'office_editor_write_document_save_chunk',
   'office_editor_commit_document_save',

@@ -101,6 +101,10 @@ export class DocumentSaveStore {
     readonly maxBytes = 268_435_456,
   ) {}
 
+  hasPending(sessionId: string): boolean {
+    return [...this.#uploads.values()].some((upload) => upload.sessionId === sessionId)
+  }
+
   async bind(sessionId: string, format: LiveSession['format'], path: string): Promise<void> {
     assertTargetPath(format, path)
     await mkdir(this.bindingDirectory, { recursive: true })
@@ -118,6 +122,14 @@ export class DocumentSaveStore {
 
   async boundPath(sessionId: string, format: LiveSession['format']): Promise<string | null> {
     return (await this.#binding(sessionId, format))?.path ?? null
+  }
+
+  async unbind(sessionId: string): Promise<void> {
+    for (const upload of this.#uploads.values()) {
+      if (upload.sessionId === sessionId) await this.#discard(upload)
+    }
+    await rm(this.#bindingPath(sessionId), { force: true })
+    this.#bindings.delete(sessionId)
   }
 
   async begin(

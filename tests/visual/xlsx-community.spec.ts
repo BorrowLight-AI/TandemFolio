@@ -354,6 +354,9 @@ test('XLSX stores each dirty workbook version only once', async ({ page }) => {
   })
   await expect(editor.locator('.workbook-status')).toContainText('recovery-version.xlsx')
 
+  // The browser import first checkpoints the clean workbook for exact continuation.
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
+
   await page.evaluate(() => {
     window.__codexVisualHost.enqueueCommand({
       commandId: 'xlsx-recovery-v1',
@@ -362,10 +365,10 @@ test('XLSX stores each dirty workbook version only once', async ({ page }) => {
       arguments: { sheet: 'Sheet1', address: 'A1', value: 'First' },
     })
   })
-  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(2)
 
   await page.waitForTimeout(2_300)
-  expect(await page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(1)
+  expect(await page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(2)
 
   await page.evaluate(() => {
     window.__codexVisualHost.enqueueCommand({
@@ -375,7 +378,7 @@ test('XLSX stores each dirty workbook version only once', async ({ page }) => {
       arguments: { sheet: 'Sheet1', address: 'A1', value: 'Second' },
     })
   })
-  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(2)
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.recoveryCommits)).toBe(3)
 })
 
 test('the XLSX history operations undo and redo the latest mounted workbook edit', async ({

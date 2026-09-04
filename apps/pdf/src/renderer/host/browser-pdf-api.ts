@@ -314,9 +314,9 @@ export function createBrowserPdfHost(options: BrowserPdfHostOptions = {}): Brows
     selection: null,
   })
 
-  const recoverySnapshot = async () => {
-    if (!dirty || !options.commandBridge) return null
-    return options.commandBridge.recoverySnapshot()
+  const recoverySnapshot = async (force = false) => {
+    if ((!force && !dirty) || !options.commandBridge) return null
+    return options.commandBridge.recoverySnapshot(force)
   }
 
   return {

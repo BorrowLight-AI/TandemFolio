@@ -55,6 +55,7 @@ export {
   readLiveEditorBundledFontAsset,
   readLiveEditorLocalAsset,
   saveLiveEditorFile,
+  replaceLiveEditorDocument,
   subscribeLiveEditorDisplayMode,
   subscribeLiveEditorActivity,
   toggleLiveEditorFullscreen,

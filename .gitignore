@@ -4,13 +4,23 @@ dist/
 !plugins/tandemfolio/dist/
 !plugins/tandemfolio/dist/server.js
 /release/*.candidate.json
+
+# Local release investigation bundles. Publishable archives are generated under out/releases/.
+/release/*.tar.gz
+/release/*.tgz
+/release/*.zip
 *.log
 .DS_Store
+Thumbs.db
+Desktop.ini
 .refs/
 .env
 .env.*
 electron-builder.env
 ~$*
+*~
+*.swp
+*.swo
 
 # Local ad-hoc e2e driver scripts (not pushed); the folder and README are tracked, the scripts are not
 /scripts/drivers/driver.*.mjs
@@ -36,10 +46,13 @@ electron-builder.env
 
 # Test and analysis reports
 /coverage/
+/.nyc_output/
 
 # Local compiler/linter caches
 *.tsbuildinfo
 .eslintcache
+.electron-vite/
+.vite/
 
 .cursor/rules/git-remote.mdc
 __pycache__/
@@ -47,3 +60,4 @@ __pycache__/
 /MEMORY.md
 
 __screenshots__/
+!tests/visual/__screenshots__/

@@ -1,7 +1,7 @@
 # Live session protocol
 
 - Status: Implemented five-format source contract; release projection pending source-current evidence
-- Version: `0.3.28`
+- Version: `0.3.31`
 - Transport: MCP over stdio; MCP App calls proxied by the host
 - UI resources: `ui://tandemfolio/editor.html`, `markdown.html`, `xlsx.html`, `pptx.html`, and `pdf.html`
 - UI MIME type: `text/html;profile=mcp-app`
@@ -18,9 +18,12 @@ This file records what the current source contract implements. Under
 [ADR 0003](../adr/0003-complete-community-renderers-and-mcp-parity.md), all five pinned renderer
 producer baselines now map every retained state-changing command to typed MCP. R6-01 closes the
 shared pinned-source visual, runtime, acknowledgement, memory, resource, package, smoke, license,
-and repository gate. The current responsive-host repair invalidates the prior approved source
-fingerprint, so the formal release gate remains fail-closed until a source-current capture passes the
-fixed XLSX bootstrap budget; the last approved generated projection cannot authorize a new package.
+and repository gate. The 2026-09-03 source-current full capture restores the missing evidence
+and visual provenance. The 2026-09-04 approved recapture has XLSX bootstrap p95
+432.5 ms against the fixed 500 ms budget and Markdown small-file open 14.3 ms against 20 ms.
+The formal release gate passes and the generated projection is true for all formats;
+see the [verification record](../../release/validation.md). Historical projections cannot authorize
+a new package.
 R6-06 exposes that Registry through bounded summary pages and one-operation detail lookup rather
 than returning every schema in one response. R6-07 adds caller request identity, exact revision
 guarding, idempotent completed/in-flight replay, pre-dispatch typed validation, and an acknowledged
@@ -35,7 +38,20 @@ and undo/redo. The MCP broker owns session identity, one exclusive active view l
 state, one queued/active command, the last acknowledged revision, the session-scoped request journal,
 staged local bytes, opaque recovery transport, and the constrained opaque persistence sink from
 [ADR 0011](../adr/0011-session-bound-local-document-persistence.md). [ADR 0010](../adr/0010-immutable-editor-view-leases-and-exact-session-resume.md)
-defines the cross-format Session/view identity boundary.
+defines the cross-format Session/view identity boundary. [ADR 0012](../adr/0012-exact-document-resume-and-save-target-lifecycle.md)
+adds cold-mount identity, exact saved-file recovery, and browser replacement binding invalidation.
+[ADR 0013](../adr/0013-cooperative-same-view-handoff.md) permits checkpoint-fenced cooperative
+handoff from a hidden owner to a visible replay of its exact Session/view, without force takeover.
+[ADR 0014](../adr/0014-user-directed-editor-handoff.md) additionally permits explicit user-directed
+cooperation from an owner still reporting active, caps automatic waiting, and prevents yielded
+mounts from automatically reclaiming the view.
+[ADR 0015](../adr/0015-explicit-pptx-document-replacement.md) distinguishes continuing the same
+document from deliberately replacing it inside that Session. `pptx.document.create_blank` accepts
+optional boolean `confirmReplace` (default false). The mounted PPTX host rejects an unconfirmed
+reset of a named, dirty, or history-bearing document before detaching its Save target. The negative
+ACK preserves content, path and revision; it is not permission to auto-retry with confirmation.
+An untouched initial blank needs no confirmation. Explicitly confirmed replacement detaches the
+old target as before; normal continuation edits and Save retain it. No transport endpoint changes.
 
 The broker never parses or edits an Office document. Local recovery snapshots permitted by ADR 0002 are renderer-produced bytes and become editable only after they are loaded into a mounted renderer.
 
@@ -81,8 +97,12 @@ office_execute returns the transaction identity and result.revision=current+1
 ```
 
 A mounted iframe's `(sessionId, viewId)` pair is immutable. It ignores later show notifications for a
-different Session or view; switching documents requires teardown and a new mount. The Broker grants
-the first polling view an exclusive lease and returns `editor_view_conflict` to another `viewId`.
+different Session or view; rebinding to a different Session requires teardown and a new mount.
+File/Open within the same Session uses the replacement lifecycle below. The Broker grants
+the first polling `(viewId, mountId)` an exclusive lease and returns `editor_view_conflict` to a
+different mount, including a replay of the same show result in a second iframe. `mountId` is generated
+once by the bridge on attach; legacy clients may omit it. After 30 seconds without owner contact an
+idle abandoned lease can be reclaimed, but never while a command is queued or active.
 Only the lease owner may poll, acknowledge, transfer Session-bound bytes, write recovery, or
 disconnect, so tearing down a rejected duplicate cannot mark the healthy view offline.
 
@@ -98,10 +118,39 @@ The first poll uses `waitMs: 0`. XLSX first awaits its format-owned cold-start c
 attaches the one-shot R6-05 trace described below. After bootstrap, the shared DOCX/Markdown/XLSX/
 PPTX/PDF Host Bridge keeps one `waitMs: 10000` request pending. Broker enqueue
 resolves that waiter immediately;
-an empty timeout re-arms it without delay. A transport failure alone uses a 500 ms retry. A newer
+an empty timeout re-arms it without delay. Transport and structured transient failures use a 500 ms
+retry. `session_not_found`, `document_restore_failed`, and non-retryable view conflicts stop polling
+and recovery timers and display an explicit retry action. A visible same-view replay can request
+handoff with 1/2/4/5-second retry delays; hiding it stops retries, and showing it resumes only before
+the 30-second waiting deadline. An explicit **在此继续编辑** attempt retains user intent through
+stale inactive hints until restore, failure, or that deadline, without enabling heavy render work.
+If an ordinary **重试连接** poll is already in flight, the explicit action upgrades the next retry
+instead of being discarded. While that request is pending, both actions are disabled and the status
+states that the selected replica is waiting for safe handoff; one click is sufficient.
+At that deadline, new automatic attempts stop and the UI exposes an
+explicit continuation/retry action; visibility changes do not reset it. A failed handoff also stops
+automatic retries until the user explicitly retries. A newer
 poll supersedes a lost older waiter, and editor disconnect releases the outstanding waiter. This is
 the wakeable bounded-poll contract from [ADR 0006](../adr/0006-wakeable-live-session-command-delivery.md),
 not a new public MCP tool or a second document authority.
+
+A returning view blocks native pointer/keyboard editing until restoration succeeds; it cannot save
+or modify its default blank replica. File location is always visible, including a conflict response,
+and distinguishes an absolute bound path from an unsaved document. A hidden owner may cooperate
+automatically. **在此继续编辑** explicitly selects a same-view candidate and also requests cooperation
+from an owner still reporting active; visibility is not a reliable host-selection signal. Either
+path requires blocking input, waiting for pending local persistence, and passing the Broker's idle-command
+and idle-upload checks. During prepared handoff, Agent mutations and formal Save are rejected.
+A newly committed native checkpoint is required before the exclusive lease moves. The transfer gap
+is offline; the candidate then receives one restore command, whose ACK advances the revision before
+further edits. A yielded view stops polling and stays locked even when visible again; only explicit
+continuation requests editing authority for that mount. Checkpoint failure retains the
+old renderer and formal file, discards the handoff's incomplete upload, and requires explicit retry.
+An abandoned prepared handoff remains fail-closed because its mutation outcome is uncertain.
+If a prepare/commit response is lost, the outgoing mount must obtain a lease-checked abort before
+unlocking. If that outcome also cannot be confirmed, it remains locked with **重试连接**. Retry first
+reconciles ownership: a confirmed abort resumes the original; a confirmed lease conflict keeps it
+suspended and offers **在此继续编辑**. An unconfirmed response never enables a second editable copy.
 
 Before the first nested viewport observation, the bridge uses page visibility as its activity
 fallback. After the observation is known, intersection is authoritative: a visible task whose old
@@ -176,7 +225,9 @@ Input:
 
 `format` defaults to `docx` and `resume` defaults to `none`, so ordinary creation always returns an
 isolated blank Session. `resume: "exact"` requires `sessionId`: it reuses that same in-memory Session
-or stages only its exact `(format, sessionId)` recovery snapshot. A missing or format-mismatched exact
+or stages only its exact `(format, sessionId)` recovery snapshot, falling back to its bound formal
+file when no applicable checkpoint remains. Unreadable formal files fail with
+`document_restore_failed`. A missing or format-mismatched exact
 handle fails instead of selecting another document. `resume: "latest"` is explicit cross-session
 disaster recovery and accepts no `sessionId`. The result includes `recoveryAvailable` and `reused`,
 but recovery bytes are not returned to the Agent.
@@ -292,6 +343,30 @@ These tools use `_meta.ui.visibility: ["app"]`:
   atomically delivers its command immediately or by waking the Session's single pending waiter.
   `startupTrace` is accepted only as the strict XLSX shape below; the Broker validates and discards
   it rather than storing document or telemetry state.
+  Current bridges also send `mountId`, `format`, and `coldStart`. After broker restart, `format`
+  permits exact-session lookup only, never latest recovery. A cold mount receives one native
+  `*.document.load_staged` before its blank context can overwrite restored context; an already-warm
+  mounted renderer (`coldStart: false`) stays authoritative. Responses include `filePath` and an
+  optional `restoreCommandId`; native restore or byte-hydration failures are negatively acknowledged
+  and stop the bridge rather than accepting a blank document.
+  `active?: boolean` requests cooperative handoff only for a visible same-view replay. A conflict
+  response includes `filePath`; eligible waits include `retryAfterMs: 1000`. The owner receives
+  `handoffRequest?: string` (an opaque request id) and `handoffRequestedByUser: boolean`.
+  A candidate sends `activateView: true` only for **在此继续编辑**; this selects that exact mount and
+  asks the owner to cooperate even if active. An unprepared older candidate can be replaced by this
+  explicit selection, but an automatic waiter cannot redirect it and a prepared request is never
+  retargeted. Different Session/view identities are still rejected. Failed attempts return `handoffFailed: true`
+  without an automatic retry hint; `retryHandoff: true` on a manually requested candidate poll resets
+  that failure. Candidates renew a 15-second request window; an unprepared abandoned request expires.
+- `office_editor_handoff` requires `{ sessionId, viewId, mountId, handoffId, action }`, with
+  `action: "prepare" | "commit" | "abort"`. It is app-only and validates the old owner's lease
+  inside the Session's persistence queue. Prepare rejects queued/active commands and pending
+  document/recovery uploads. Commit accepts only a fresh checkpoint committed after preparation,
+  transfers the lease, and queues exact native restoration. Abort releases preparation, discards
+  its incomplete recovery upload, and records failure for the candidate. It never writes a formal
+  document or grants a new arbitrary path. Even an abort with no remaining preparation checks the
+  current owner lease, allowing uncertain transport outcomes to be reconciled without force takeover.
+  All five formats use the same endpoint.
 - `office_editor_acknowledge` carries the same `sessionId` and `viewId`, then accepts `ok: true` plus
   the next revision/context, or `ok: false` plus `unsupported_operation`, `invalid_arguments`, or
   `execution_failed`. Successful acknowledgements may include app-only hydration, execution, and
@@ -361,8 +436,14 @@ the trace for the retry; the first successful poll consumes it. Later polls omit
   active view lease; writes require exact ordered offsets; commit flushes and atomically renames the
   temporary file. `save` overwrites the Session binding, `save-as` writes and rebinds a collision-safe
   file, and `export-copy` writes without rebinding.
+- `office_editor_reset_document` invalidates the owner Session's Save binding, outstanding document
+  uploads, and old recovery before a browser-selected file or a new blank document replaces content.
+  It rejects active commands, except the exact owning `pptx.document.create_blank` command supplied
+  as `commandId`. The bridge waits for any save/checkpoint, detaches, runs native replacement,
+  forces a checkpoint even for a clean import, and only then resumes command execution. It never
+  obtains a source absolute path from a browser `File` or writes document content itself.
 
-Every Session-bound app-only endpoint carries the show result's `viewId`: poll, acknowledgement,
+Every Session-bound app-only endpoint carries the show result's `viewId` and the bridge's `mountId`: poll, acknowledgement,
 disconnect, document persistence, recovery upload, staged-file reads, and local-asset reads all
 validate the same lease.
 Bundled-font reads are format resources rather than Session state and therefore carry no lease.
@@ -375,8 +456,10 @@ sub-editor input; Markdown tracks TipTap/frontmatter changes; XLSX tracks its wo
 PPTX tracks retained history; PDF tracks page, annotation, form, metadata, text, and image edits.
 
 Recovery is bounded to 256 MiB per snapshot, retains at most one current snapshot per
-format/session pair, expires after seven days, and removes the current session's snapshot after an
-acknowledged explicit save. `resume: "exact"` stages only the named Session's snapshot;
+format/session pair and expires after seven days. A committed bound Save invalidates older recovery
+and outstanding recovery uploads; Export Copy does not. Binding changes, resets, and commits are
+ordered per Session so late old uploads cannot resurrect retired content. `resume: "exact"` stages
+the named Session's checkpoint or bound saved file;
 `resume: "latest"` explicitly selects the newest unexpired snapshot for the requested format and is
 never used implicitly.
 Temporary uploads are renamed atomically and incomplete temporary files are removed.
@@ -386,6 +469,10 @@ For a newly generated document, the default bound target is
 `TANDEMFOLIO_OUTPUT_DIR` on the MCP server to choose another output root. An explicitly opened
 local file is the bound target for normal Save. Bindings are persisted by exact Session id under the
 configured state directory so a broker restart cannot silently select another task's artifact.
+All five embedded editors display the committed absolute destination in a collapsible “文件位置”
+panel with copy/select fallback. Export Copy labels its output separately without rebinding. A
+browser-selected replacement has no trusted absolute source path: its first Save gets a new
+collision-safe output target, even if its name matches the previously opened document.
 
 ## Implemented format operations
 
@@ -717,6 +804,7 @@ All tool failures set `isError: true` and return `{ ok: false, error, message }`
 | `session_not_found`        | No live Session or exact recovery exists for the requested id.             | Use the recorded id with `resume: exact`; use `latest` only for explicit disaster recovery. |
 | `editor_offline`           | No mounted renderer is connected.                                          | Show/reopen the editor and wait for `connected: true`.                                      |
 | `editor_view_conflict`     | Another mounted view owns this Session's active lease.                     | Continue in the existing editor; do not mount or bind a duplicate view.                     |
+| `document_restore_failed`  | The exact saved source cannot be read or loaded.                           | Restore/reopen the original file; never substitute another Session's document.              |
 | `revision_conflict`        | A new request's base revision or a chunk offset is stale.                  | Refresh context and rebuild a new intended mutation; exact known replays are exempt.        |
 | `command_in_flight`        | Another mutation is pending or active.                                     | Wait for its result; replay only the exact accepted request when its outcome is uncertain.  |
 | `command_not_found`        | A command, staged file, or recovery upload does not belong to the session. | Refresh/restart the affected workflow.                                                      |
@@ -736,17 +824,18 @@ All tool failures set `isError: true` and return `{ ok: false, error, message }`
 These are current protocol or release limitations. They are not unexplained format-local retained
 command gaps.
 
-- Session metadata remains process-memory only; recovery stores opaque renderer snapshots keyed by
-  format and session id.
+- Live revision, request journal, selection, and undo history remain process-memory/native-runtime
+  state; broker restart is a new command epoch. Re-read context after restore; never replay a
+  pre-restart mutation without checking its outcome. Exact bindings and opaque checkpoints persist,
+  but cold restoration does not preserve native undo history or every last uncheckpointed keystroke.
 - Recovery is local plaintext crash protection; encryption at rest and a user-facing recovery
   candidate browser are not implemented.
 - DOCX and Markdown retained-command producer mappings are complete and both are included in the
   passing R6-01 release evidence.
 - Standalone-browser overwrite depends on a granted `FileSystemFileHandle`; cancelling the picker is
-  not a save. Inside an MCP Apps iframe, all five formats send generated bytes through the
-  host-mediated `ui/download-file` boundary and report success only after the host accepts the
-  download. PPTX Save reuses a standalone handle, while Save As always requests a new destination
-  and adopts the selected or explicitly entered file name.
+  not a save. Inside an MCP Apps iframe, all five formats use the lease-checked internal atomic
+  persistence protocol, not `ui/download-file`. Save As writes a collision-safe file under the
+  configured output root; there is no arbitrary-path picker in the embedded protocol.
 - XLSX mounts the pinned community `App` directly; all permitted renderer files and focused tests are restored, the substitute renderer is removed, and 114 format-owned operations cover the audited retained mutation surface through shared Univer/file-journal and browser save/reopen routes. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. XLSX passes the shared packaged-host visual, performance/resource, MCP smoke, and repository gate.
 - PPTX's 74-operation Registry covers every retained state-changing producer through its complete
   browser API, native history, recovery, and package save seam.

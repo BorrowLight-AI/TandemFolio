@@ -5,6 +5,7 @@ import {
   type McpDisplayModeState,
 } from './display-mode'
 import { createWakeablePollLoop } from './wakeable-poll-loop'
+import { createLiveSessionStatus } from './live-session-status'
 
 export interface LiveEditorSnapshot {
   revision: number
@@ -65,7 +66,7 @@ export type LiveEditorExecution =
 export interface LiveEditorAdapter {
   execute(command: LiveEditorCommand): Promise<LiveEditorExecution>
   snapshot(revision: number): LiveEditorSnapshot
-  recoverySnapshot?(): Promise<{ fileName: string; data: ArrayBuffer } | null>
+  recoverySnapshot?(force?: boolean): Promise<{ fileName: string; data: ArrayBuffer } | null>
   recoveryVersion?(): string | number
   startupTrace?(): Promise<LiveEditorStartupTrace>
 }
@@ -100,6 +101,13 @@ let localAssetReader:
   ((rootId: string, path: string) => Promise<LiveEditorLocalAsset | null>) | null = null
 let bundledFontReader: ((fileName: string) => Promise<ArrayBuffer>) | null = null
 let liveFileSaver: ((file: LiveEditorFileSave) => Promise<LiveEditorFileSaveResult>) | null = null
+let documentReplacer: (<T>(replace: () => Promise<T>) => Promise<T>) | null = null
+
+export async function replaceLiveEditorDocument<T>(replace: () => Promise<T>): Promise<T> {
+  if (window.parent === window) return replace()
+  if (!documentReplacer) throw new Error('The document session is not connected.')
+  return documentReplacer(replace)
+}
 
 export async function saveLiveEditorFile(
   file: LiveEditorFileSave,
@@ -278,19 +286,55 @@ async function storeRecovery(
 
 export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
   if (window.parent === window) return () => undefined
-  const createApp = (): McpApp =>
-    new McpApp(
+  const mountId = crypto.randomUUID()
+  const createApp = (): McpApp => {
+    const target = new McpApp(
       { name: 'tandemfolio-editor', version: '0.1.0' },
       { availableDisplayModes: ['inline', 'fullscreen'] },
     )
+    const call = target.callServerTool.bind(target)
+    target.callServerTool = (request, options) =>
+      call(
+        {
+          ...request,
+          arguments: { ...request.arguments, ...(request.arguments?.sessionId ? { mountId } : {}) },
+        },
+        options,
+      )
+    return target
+  }
   let app = createApp()
   let stopped = false
+  let terminalError = ''
+  let editingReady = false
+  let suspended = false
+  let retryableConflict = false
+  let resumeOnVisible = false
+  let retryHandoff = false
+  let activateView = false
+  // A user-selected handoff outlives stale visibility hints, but only until restore/timeout.
+  let continueHerePending = false
+  let handoffInProgress = false
+  let uncertainHandoff: string | null = null
+  let resumeTimer = 0
+  let resumeDelay = 1_000
+  let waitTimer = 0
+  let waitExpired = false
   let sessionId = new URLSearchParams(window.location.search).get('sessionId') ?? ''
   let viewId = new URLSearchParams(window.location.search).get('viewId') ?? ''
   let brokerSessionId = ''
+  let sessionFormat: string | undefined
+  let coldStart = true
+  let bindingVersion = 0
+  let boundPath: string | null = null
+  let pathKnown = false
   let connectRetryTimer = 0
   let recoveryTimer = 0
   let recoveryTask: Promise<void> | null = null
+  let documentChanging = false
+  let replacementBarrier: Promise<void> | null = null
+  let executingCommandId: string | undefined
+  let saveTask: Promise<LiveEditorFileSaveResult> | null = null
   const storedRecoveryVersions = new Map<string, string | number>()
   let appConnected = false
   let displayStarted = false
@@ -299,9 +343,95 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
   let editorIntersectionKnown = false
   let editorIntersecting = true
   let editorContentSkipped = false
+  const retryConnection = (activate = false): void => {
+    if (stopped) return
+    if (uncertainHandoff) {
+      void reconcileUncertainHandoff()
+      return
+    }
+    // A retry can already have an app-only poll in flight while the continuation
+    // action remains visible. Preserve the later, explicit user intent so the
+    // next conflict retry upgrades the existing handoff instead of dropping it.
+    if (!terminalError) {
+      if (!activate) return
+      retryHandoff = true
+      activateView = true
+      continueHerePending = true
+      showContinuationPending()
+      return
+    }
+    clearWait()
+    resumeDelay = 1_000
+    retryHandoff = true
+    activateView = activate
+    continueHerePending = activate
+    resumeConnection()
+    if (activate) showContinuationPending()
+  }
+  const status = createLiveSessionStatus(
+    () => retryConnection(),
+    () => retryConnection(true),
+  )
+  const showContinuationPending = (): void => {
+    status.activation(true)
+    status.actionsPending(true)
+    status.block('已请求在此继续编辑，正在等待原编辑器安全交接…')
+    status.error('已请求在此继续编辑，正在等待原编辑器安全交接…', true)
+  }
+  status.block('正在连接并恢复原文件…')
+  function clearWait(): void {
+    window.clearTimeout(waitTimer)
+    waitTimer = 0
+    waitExpired = false
+    continueHerePending = false
+    status.actionsPending(false)
+  }
+  function beginWait(): void {
+    if (waitTimer || waitExpired) return
+    waitTimer = window.setTimeout(() => {
+      waitTimer = 0
+      waitExpired = true
+      continueHerePending = false
+      status.actionsPending(false)
+      resumeOnVisible = false
+      window.clearTimeout(resumeTimer)
+      resumeTimer = 0
+      pollLoop.stop()
+      status.block('等待已超时，原文件尚未恢复。')
+      status.error(
+        '等待已超时（30 秒），已停止自动重试。可点击“在此继续编辑”请求原编辑器安全交接；未确认前不会开放编辑。',
+        true,
+      )
+    }, 30_000)
+  }
+  function resumeConnection(): void {
+    window.clearTimeout(resumeTimer)
+    resumeTimer = 0
+    if (
+      stopped ||
+      handoffInProgress ||
+      waitExpired ||
+      (!continueHerePending && !isEditorWorkActive())
+    )
+      return
+    terminalError = ''
+    suspended = false
+    status.error('正在重新连接…')
+    pollLoop.stop()
+    pollLoop = createWakeablePollLoop(poll)
+    pollLoop.start()
+  }
+  function scheduleResume(): void {
+    if (resumeTimer || stopped || waitExpired || (!continueHerePending && !isEditorWorkActive()))
+      return
+    resumeTimer = window.setTimeout(resumeConnection, resumeDelay)
+    resumeDelay = Math.min(resumeDelay * 2, 5_000)
+  }
   const requestLocalSave = async (file: LiveEditorFileSave): Promise<LiveEditorFileSaveResult> => {
     let uploadId = ''
     try {
+      if (terminalError || !editingReady)
+        return { ok: false, error: terminalError || 'The document is still restoring.' }
       if (!sessionId || !viewId) {
         return { ok: false, error: 'The editor is not bound to a local save session.' }
       }
@@ -362,6 +492,11 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
         )
       }
       uploadId = ''
+      bindingVersion += 1
+      if (file.mode !== 'export-copy') boundPath = committedPayload.path
+      pathKnown = true
+      status.path(committedPayload.path, file.mode === 'export-copy')
+      status.error(null)
       return { ok: true, path: committedPayload.path }
     } catch (error) {
       if (uploadId && sessionId && viewId) {
@@ -372,10 +507,68 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
           })
           .catch(() => undefined)
       }
-      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+      const message = error instanceof Error ? error.message : String(error)
+      status.error(`保存失败：${message}`)
+      return { ok: false, error: message }
     }
   }
-  liveFileSaver = requestLocalSave
+  const saveFile = async (file: LiveEditorFileSave): Promise<LiveEditorFileSaveResult> => {
+    if (documentChanging || saveTask)
+      return { ok: false, error: 'A document operation is already in progress.' }
+    const task = (async () => {
+      await recoveryTask
+      return requestLocalSave(file)
+    })()
+    saveTask = task
+    try {
+      return await task
+    } finally {
+      if (saveTask === task) saveTask = null
+    }
+  }
+  liveFileSaver = saveFile
+  const replaceDocument = async <T>(replace: () => Promise<T>): Promise<T> => {
+    if (terminalError || !editingReady || !brokerSessionId || documentChanging)
+      throw new Error(terminalError || 'The document session is not ready.')
+    documentChanging = true
+    let releaseReplacement!: () => void
+    replacementBarrier = new Promise<void>((resolve) => {
+      releaseReplacement = resolve
+    })
+    stopRecoveryTimer()
+    pollLoop.pause()
+    try {
+      await saveTask
+      await recoveryTask
+      const response = await app.callServerTool({
+        name: 'office_editor_reset_document',
+        arguments: {
+          sessionId,
+          viewId,
+          ...(executingCommandId ? { commandId: executingCommandId } : {}),
+        },
+      })
+      const payload = response.structuredContent as { ok?: boolean; message?: string } | undefined
+      if (response.isError || payload?.ok !== true)
+        throw new Error(payload?.message ?? 'Cannot detach the previous document.')
+      bindingVersion += 1
+      boundPath = null
+      pathKnown = true
+      status.path(null)
+      storedRecoveryVersions.delete(sessionId)
+      const result = await replace()
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+      await checkpoint(sessionId, true)
+      return result
+    } finally {
+      documentChanging = false
+      replacementBarrier = null
+      releaseReplacement()
+      startRecoveryTimer()
+      pollLoop.resume()
+    }
+  }
+  documentReplacer = replaceDocument
   const isEditorVisible = (): boolean => document.visibilityState !== 'hidden'
   const isEditorPaintActive = (): boolean =>
     editorIntersectionKnown ? editorIntersecting : isEditorVisible()
@@ -388,6 +581,11 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     publishLiveEditorActivity(nextWorkActive)
     if (nextWorkActive === editorWorkActive) return
     editorWorkActive = nextWorkActive
+    if (nextWorkActive && resumeOnVisible) resumeConnection()
+    if (!nextWorkActive && !continueHerePending) {
+      window.clearTimeout(resumeTimer)
+      resumeTimer = 0
+    }
     if (!displayStarted) return
     if (nextWorkActive) {
       startRecoveryTimer()
@@ -541,6 +739,8 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     target.ontoolinput = () => undefined
     target.ontoolresult = ({ structuredContent }) => {
       if ((structuredContent as { ok?: unknown } | undefined)?.ok !== true) return
+      if (!sessionId && typeof structuredContent?.format === 'string')
+        sessionFormat = structuredContent.format
       bindSession(
         (structuredContent as { sessionId?: unknown } | undefined)?.sessionId,
         (structuredContent as { viewId?: unknown } | undefined)?.viewId,
@@ -553,12 +753,18 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     if (stopped) return
     if (!sessionId || !viewId) return
     const polledSessionId = sessionId
+    const polledBindingVersion = bindingVersion
+    const requestedActivation = activateView
     const { fileName, dirty, selection } = adapter.snapshot(0)
     const response = await app.callServerTool({
       name: 'office_editor_poll',
       arguments: {
         sessionId: polledSessionId,
         viewId,
+        ...(sessionFormat ? { format: sessionFormat, coldStart } : {}),
+        active: continueHerePending || isEditorWorkActive(),
+        ...(retryHandoff ? { retryHandoff: true } : {}),
+        ...(requestedActivation ? { activateView: true } : {}),
         fileName,
         dirty,
         selection,
@@ -566,13 +772,96 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
         waitMs,
       },
     })
-    if ((response.structuredContent as { ok?: unknown } | undefined)?.ok === true) {
-      startupTracePending = false
-      if (sessionId === polledSessionId) brokerSessionId = polledSessionId
+    if (stopped) return
+    retryHandoff = false
+    if (requestedActivation) activateView = false
+    const payload = response.structuredContent as
+      | {
+          ok?: unknown
+          error?: string
+          message?: string
+          filePath?: string | null
+          restoreCommandId?: string
+          handoffRequest?: string
+          handoffRequestedByUser?: boolean
+          retryAfterMs?: number
+          handoffFailed?: boolean
+          commands?: LiveEditorCommand[]
+        }
+      | undefined
+    if (
+      polledBindingVersion === bindingVersion &&
+      payload?.filePath !== undefined &&
+      (!pathKnown || payload.filePath !== boundPath)
+    ) {
+      pathKnown = true
+      boundPath = payload.filePath
+      status.path(boundPath)
     }
-    const commands =
-      (response.structuredContent as { commands?: LiveEditorCommand[] } | undefined)?.commands ?? []
+    if (response.isError || payload?.ok !== true) {
+      if (
+        payload?.error === 'editor_view_conflict' ||
+        payload?.error === 'session_not_found' ||
+        payload?.error === 'document_restore_failed'
+      ) {
+        terminalError = payload.error
+        editingReady = false
+        if (waitExpired) return
+        retryableConflict =
+          terminalError === 'editor_view_conflict' && Boolean(payload.retryAfterMs)
+        resumeOnVisible = terminalError === 'editor_view_conflict' && !payload.handoffFailed
+        if (
+          terminalError === 'editor_view_conflict' &&
+          continueHerePending &&
+          payload.handoffFailed !== true
+        ) {
+          showContinuationPending()
+        } else {
+          status.activation(retryableConflict || payload.handoffFailed === true)
+          status.block(
+            retryableConflict
+              ? '正在等待原编辑器安全交接，原文件尚未恢复…'
+              : '原文件尚未恢复，请查看连接状态。',
+          )
+          status.error(
+            terminalError === 'editor_view_conflict'
+              ? payload.handoffFailed
+                ? '交接失败，原编辑器及内容已保留。请排查保存或连接问题后重试连接。'
+                : '正在等待原编辑器安全交接；若原编辑器仍可见，请继续使用它。'
+              : (payload.message ?? '未找到此会话的文件或恢复快照。请重新打开原文件。'),
+            true,
+          )
+        }
+        document.documentElement.dataset.liveEditorConnection = terminalError
+        pollLoop.stop()
+        stopRecoveryTimer()
+        if (retryableConflict) {
+          beginWait()
+          scheduleResume()
+        } else clearWait()
+        return
+      }
+      throw new Error(payload?.message ?? 'The editor poll did not succeed.')
+    }
+    clearWait()
+    if (document.documentElement.dataset.liveEditorConnection !== 'connected') status.error(null)
+    startupTracePending = false
+    if (sessionId === polledSessionId) brokerSessionId = polledSessionId
+    const commands = payload.commands ?? []
     for (const command of commands) {
+      await replacementBarrier
+      if (stopped) return
+      const stopFailedRestore = (message: string): boolean => {
+        if (payload.restoreCommandId !== command.commandId) return false
+        terminalError = 'document_restore_failed'
+        editingReady = false
+        status.block('原文件恢复失败，已禁止编辑空白副本。')
+        status.error(`恢复失败：${message}`, true)
+        document.documentElement.dataset.liveEditorConnection = terminalError
+        pollLoop.stop()
+        stopRecoveryTimer()
+        return true
+      }
       let hydrated = command
       let hydrateMs = 0
       if (isStagedFileOperation(command.operation)) {
@@ -587,6 +876,8 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
           }
           hydrateMs = performance.now() - hydrateStartedAt
         } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          const restoreFailed = stopFailedRestore(message)
           await app.callServerTool({
             name: 'office_editor_acknowledge',
             arguments: {
@@ -595,16 +886,30 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
               commandId: command.commandId,
               ok: false,
               error: 'execution_failed',
-              message: error instanceof Error ? error.message : String(error),
+              message,
             },
           })
+          if (restoreFailed) return
           continue
         }
       }
       const executeStartedAt = performance.now()
-      const execution = await adapter.execute(hydrated)
+      executingCommandId = command.commandId
+      let execution: LiveEditorExecution
+      try {
+        execution = await adapter.execute(hydrated)
+      } catch (error) {
+        execution = {
+          ok: false,
+          error: 'execution_failed',
+          message: error instanceof Error ? error.message : String(error),
+        }
+      } finally {
+        executingCommandId = undefined
+      }
       const executeMs = performance.now() - executeStartedAt
       if (!execution.ok) {
+        const restoreFailed = stopFailedRestore(execution.message)
         await app.callServerTool({
           name: 'office_editor_acknowledge',
           arguments: {
@@ -614,6 +919,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
             ...execution,
           },
         })
+        if (restoreFailed) return
         continue
       }
       if (execution.recovery) {
@@ -643,6 +949,19 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
         },
       })
     }
+    editingReady = true
+    retryableConflict = false
+    resumeOnVisible = false
+    suspended = false
+    resumeDelay = 1_000
+    coldStart = false
+    status.block(null)
+    status.activation(false)
+    document.documentElement.dataset.liveEditorConnection = 'connected'
+    if (payload.handoffRequest && (payload.handoffRequestedByUser || !isEditorWorkActive())) {
+      await handoff(payload.handoffRequest, payload.handoffRequestedByUser === true)
+      if (suspended) return
+    }
     if (!displayStarted) {
       displayStarted = true
       startRecoveryTimer()
@@ -655,13 +974,127 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     }
   }
 
-  const pollLoop = createWakeablePollLoop(poll)
+  async function handoff(handoffId: string, userActivated = false): Promise<void> {
+    if (handoffInProgress || documentChanging || executingCommandId || !adapter.recoverySnapshot)
+      return
+    handoffInProgress = true
+    editingReady = false
+    status.block('正在保护当前内容并交接编辑器…')
+    stopRecoveryTimer()
+    const transfer = async (action: 'prepare' | 'commit' | 'abort') => {
+      const response = await app.callServerTool({
+        name: 'office_editor_handoff',
+        arguments: { sessionId, viewId, handoffId, action },
+      })
+      const value = response.structuredContent as { ok?: boolean; message?: string } | undefined
+      if (response.isError || !value?.ok)
+        throw new Error(value?.message ?? 'Editor handoff failed.')
+    }
+    try {
+      await saveTask
+      await recoveryTask
+      if (!userActivated && isEditorWorkActive()) return
+      await transfer('prepare')
+      const recovery = await adapter.recoverySnapshot(true)
+      if (!recovery) throw new Error('无法生成恢复快照；已保留原编辑器。')
+      await storeRecovery(app, sessionId, viewId, recovery)
+      await transfer('commit')
+      suspended = true
+      resumeOnVisible = false
+      coldStart = true
+      brokerSessionId = ''
+      terminalError = 'suspended'
+      document.documentElement.dataset.liveEditorConnection = 'suspended'
+      status.error('此视图已暂停；如需在这里继续，请点击“在此继续编辑”。')
+      status.activation(true)
+      status.block('此视图已暂停，内容已安全交接。')
+      pollLoop.stop()
+    } catch (error) {
+      // A failed transport response may follow a successful prepare or commit. Only a
+      // lease-checked abort confirms that this mount still owns an editable document.
+      const aborted = await transfer('abort').then(
+        () => true,
+        () => false,
+      )
+      if (aborted) {
+        status.error(
+          `交接失败，已保留原编辑器：${error instanceof Error ? error.message : String(error)}`,
+          true,
+        )
+      } else {
+        uncertainHandoff = handoffId
+        brokerSessionId = ''
+        suspended = true
+        resumeOnVisible = false
+        terminalError = 'handoff_uncertain'
+        document.documentElement.dataset.liveEditorConnection = terminalError
+        status.block('交接结果尚未确认，已锁定此视图并保留内容。')
+        status.error(
+          '交接结果尚未确认，不能安全恢复编辑。请保留此视图，重试连接以确认编辑权。',
+          true,
+        )
+        status.activation(false)
+        pollLoop.stop()
+      }
+    } finally {
+      handoffInProgress = false
+      if (!suspended) {
+        editingReady = true
+        status.block(null)
+        startRecoveryTimer()
+      }
+    }
+  }
 
-  async function checkpoint(targetSessionId: string): Promise<void> {
-    if (stopped || !targetSessionId || !adapter.recoverySnapshot) return
-    if (!adapter.snapshot(0).dirty) return
+  async function reconcileUncertainHandoff(): Promise<void> {
+    if (!uncertainHandoff || handoffInProgress || stopped) return
+    handoffInProgress = true
+    let stillOwner = false
+    try {
+      const response = await app.callServerTool({
+        name: 'office_editor_handoff',
+        arguments: { sessionId, viewId, handoffId: uncertainHandoff, action: 'abort' },
+      })
+      if (stopped) return
+      const payload = response.structuredContent as
+        { ok?: boolean; error?: string; message?: string } | undefined
+      if (!response.isError && payload?.ok) {
+        uncertainHandoff = null
+        terminalError = ''
+        suspended = false
+        editingReady = true
+        stillOwner = true
+        status.block(null)
+        status.error(null)
+      } else if (payload?.error === 'editor_view_conflict') {
+        uncertainHandoff = null
+        coldStart = true
+        terminalError = 'suspended'
+        document.documentElement.dataset.liveEditorConnection = terminalError
+        status.block('此视图已暂停，内容已安全交接。')
+        status.error('已确认编辑权在另一个实例。如需在这里继续，请点击“在此继续编辑”。')
+        status.activation(true)
+      } else throw new Error(payload?.message ?? '无法确认编辑权')
+    } catch (error) {
+      if (!stopped)
+        status.error(
+          `交接结果尚未确认：${error instanceof Error ? error.message : String(error)}`,
+          true,
+        )
+    } finally {
+      handoffInProgress = false
+      if (stillOwner && !stopped) resumeConnection()
+    }
+  }
+
+  let pollLoop = createWakeablePollLoop(poll)
+
+  async function checkpoint(targetSessionId: string, force = false): Promise<void> {
+    if (stopped || terminalError || !targetSessionId || !adapter.recoverySnapshot) return
+    if (!force && (documentChanging || saveTask || !adapter.snapshot(0).dirty)) return
     const recoveryVersion = adapter.recoveryVersion?.()
     if (
+      !force &&
       recoveryVersion !== undefined &&
       storedRecoveryVersions.get(targetSessionId) === recoveryVersion
     )
@@ -669,7 +1102,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     if (recoveryTask) return recoveryTask
     const task = (async () => {
       try {
-        const recovery = await adapter.recoverySnapshot!()
+        const recovery = await adapter.recoverySnapshot!(force)
         if (recovery) {
           await storeRecovery(app, targetSessionId, viewId, recovery)
           if (recoveryVersion !== undefined)
@@ -693,7 +1126,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
   }
 
   function startRecoveryTimer(): void {
-    if (recoveryTimer || stopped || !isEditorWorkActive()) return
+    if (recoveryTimer || stopped || terminalError || !isEditorWorkActive()) return
     recoveryTimer = window.setInterval(() => void checkpoint(sessionId), 2_000)
   }
 
@@ -732,6 +1165,8 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
   return () => {
     stopped = true
     pollLoop.stop()
+    window.clearTimeout(resumeTimer)
+    clearWait()
     window.clearTimeout(connectRetryTimer)
     connectRetryTimer = 0
     stopRecoveryTimer()
@@ -742,6 +1177,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     )
     editorIntersectionObserver?.disconnect()
     delete document.documentElement.dataset.liveEditorActive
+    delete document.documentElement.dataset.liveEditorConnection
     publishLiveEditorActivity(true)
     if (sessionId && viewId && brokerSessionId === sessionId) {
       void app.callServerTool({
@@ -752,7 +1188,9 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     displayController.disconnect()
     if (localAssetReader === readLocalAsset) localAssetReader = null
     if (bundledFontReader === readBundledFont) bundledFontReader = null
-    if (liveFileSaver === requestLocalSave) liveFileSaver = null
+    if (liveFileSaver === saveFile) liveFileSaver = null
+    if (documentReplacer === replaceDocument) documentReplacer = null
+    status.dispose()
     void app.close().catch(() => undefined)
   }
 }

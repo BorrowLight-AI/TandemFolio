@@ -5,7 +5,7 @@ import type {
   LiveEditorExecution,
   LiveEditorSnapshot,
 } from '@tandemfolio/host-bridge'
-import { saveLiveEditorFile } from '@tandemfolio/host-bridge'
+import { replaceLiveEditorDocument, saveLiveEditorFile } from '@tandemfolio/host-bridge'
 import { BrowserPresentation } from './browser-presentation'
 import type {
   AnimationItem,
@@ -336,13 +336,15 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
   }
   const openFile = async (file: File, width: number): Promise<OpenResult> => {
     if (!file.name.toLowerCase().endsWith('.pptx')) throw new Error('请选择 .pptx 文件。')
-    return setPresentation(
-      await BrowserPresentation.open(file.name, await file.arrayBuffer()),
-      width,
-    )
+    const next = await BrowserPresentation.open(file.name, await file.arrayBuffer())
+    return replaceLiveEditorDocument(() => setPresentation(next, width))
   }
-  const createBlankPresentation = async (width: number): Promise<OpenResult> =>
-    setPresentation(await BrowserPresentation.blank(), width)
+  const createBlankPresentation = async (width: number): Promise<OpenResult> => {
+    const next = await BrowserPresentation.blank()
+    return presentation
+      ? replaceLiveEditorDocument(() => setPresentation(next, width))
+      : setPresentation(next, width)
+  }
   const saveCurrent = async (
     fileName?: string,
     forceSaveAs = false,
@@ -1875,8 +1877,10 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
 
   const api = implemented
 
-  const recoverySnapshot = async (): Promise<{ fileName: string; data: ArrayBuffer } | null> => {
-    if (!presentation?.dirty) return null
+  const recoverySnapshot = async (
+    force = false,
+  ): Promise<{ fileName: string; data: ArrayBuffer } | null> => {
+    if (!presentation || (!force && !presentation.dirty)) return null
     return {
       fileName: activeFileName || 'Untitled.pptx',
       data: toArrayBuffer(await presentation.checkpoint()),
@@ -1885,7 +1889,18 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
   const execute = async (command: LiveEditorCommand): Promise<LiveEditorExecution> => {
     try {
       const registered = await executePptxOperation(command, {
-        createBlank: async () => {
+        createBlank: async ({ confirmReplace }) => {
+          // A clean restored file or an undone edit still belongs to an existing document.
+          if (
+            !confirmReplace &&
+            presentation &&
+            (activeFileName || presentation.dirty || presentation.canUndo || presentation.canRedo)
+          ) {
+            throw new Error(
+              'Replacing the current PPTX requires explicit user confirmation (confirmReplace: true). ' +
+                'To continue editing, keep this document and use its editing operations.',
+            )
+          }
           const created = await createBlankPresentation(fitWidthPx)
           return { fileName: created.path || 'Untitled.pptx', slideCount: created.slides.length }
         },

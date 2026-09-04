@@ -1,4 +1,32 @@
 import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+
+test('XLSX lazy locale modules remain available and share one mounted runtime', async ({
+  page,
+}) => {
+  const html = await readFile('plugins/tandemfolio/assets/editors/xlsx/index.html', 'utf8')
+  const locale = html.match(/data-module="(fr-FR-[^"]+\.js)"/)
+  expect(locale).not.toBeNull()
+  await page.goto('/?format=xlsx&width=720&height=900')
+  await page.waitForFunction(() => window.__codexVisualHost?.firstPollAt != null)
+  const editor = page.frameLocator('#editor-frame')
+  const result = await editor.locator('html').evaluate(async (_, moduleId) => {
+    const runtime = globalThis as typeof globalThis & {
+      __genofficeImport(id: string): Promise<Record<string, unknown>>
+    }
+    const [first, second] = await Promise.all([
+      runtime.__genofficeImport(moduleId),
+      runtime.__genofficeImport(moduleId),
+    ])
+    return { sameModule: first === second, exports: Object.keys(first) }
+  }, locale![1])
+  expect(result.sameModule).toBe(true)
+  expect(result.exports.length).toBeGreaterThan(0)
+  await expect(editor.locator('#univer-container canvas').first()).toBeVisible()
+  const state = await page.evaluate(() => window.__codexVisualHost)
+  expect(state.editorLoads).toBe(1)
+  expect(state.errors).toEqual([])
+})
 
 test('XLSX reports four cold-start phases only after the mounted workbook commits', async ({
   page,
@@ -67,12 +95,14 @@ test('an offscreen XLSX releases canvas backing stores and resumes the same work
 
   const editor = page.frameLocator('#editor-frame')
   const canvasPixels = () =>
-    editor.locator('#univer-container').evaluate((container) =>
-      [...container.querySelectorAll('canvas')].reduce(
-        (sum, canvas) => sum + canvas.width * canvas.height,
-        0,
-      ),
-    )
+    editor
+      .locator('#univer-container')
+      .evaluate((container) =>
+        [...container.querySelectorAll('canvas')].reduce(
+          (sum, canvas) => sum + canvas.width * canvas.height,
+          0,
+        ),
+      )
   await expect.poll(canvasPixels).toBeGreaterThan(0)
 
   await editor.locator('#root').evaluate((root) => {

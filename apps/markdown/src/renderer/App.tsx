@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: exact-session document replacement and recovery.
 import {
   useCallback,
   useEffect,
@@ -11,6 +12,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import type { Editor } from '@tiptap/core'
 import {
   attachMcpLiveSession,
+  replaceLiveEditorDocument,
   getLiveEditorActivity,
   getLiveEditorDisplayMode,
   readLiveEditorLocalAsset,
@@ -291,7 +293,9 @@ export default function App() {
     void openMarkdownFile()
       .then(async (loaded) => {
         if (!loaded) return
-        await loadText(loaded.fileName, loaded.text, true)
+        await replaceLiveEditorDocument(async () => {
+          await loadText(loaded.fileName, loaded.text, true)
+        })
         if (loaded.assetFiles?.size) {
           await hydrateMarkdownLocalImages(editor, 'browser-directory', (_rootId, path) =>
             readLoadedMarkdownAsset(loaded, path),
@@ -353,8 +357,8 @@ export default function App() {
         dirty: dirtyRef.current,
         selection: markdownSelection(editor),
       }),
-      recoverySnapshot: async () => {
-        if (!dirtyRef.current) return null
+      recoverySnapshot: async (force) => {
+        if (!force && !dirtyRef.current) return null
         return {
           fileName: fileNameRef.current ?? 'Untitled.md',
           data: recoveryBytes(serializeCurrent()),

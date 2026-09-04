@@ -13,7 +13,7 @@ describe('DOCX MCP commands', () => {
     })
 
     expect(opened).toMatchObject({
-      path: 'mcp-local:blob-1',
+      path: 'mcp-local:blob-1/local.docx',
       name: 'local.docx',
       data,
       hash: expect.stringMatching(/^[a-f0-9]{64}$/),

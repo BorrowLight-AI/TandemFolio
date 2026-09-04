@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: exact-session document replacement and recovery.
 import {
   useCallback,
   useEffect,
@@ -149,6 +150,7 @@ import { Ruler } from './components/Ruler'
 import { docBodyFont, docLineFactor, docThemeCss } from './doc-style-css'
 import {
   attachMcpLiveSession,
+  replaceLiveEditorDocument,
   getLiveEditorActivity,
   subscribeLiveEditorActivity,
 } from '@tandemfolio/host-bridge'
@@ -1084,13 +1086,13 @@ export function App() {
         if (bootHandledRef.current) return
         bootHandledRef.current = true
         if (pending) await loadFile(pending)
-        else await newFile()
+        else await newFile(false)
       })
       // Open failures also land on a blank document, or the tab stays at "Opening…" forever
       .catch(() => {
         if (bootHandledRef.current) return
         bootHandledRef.current = true
-        void newFile().catch(() => {})
+        void newFile(false).catch(() => {})
       })
     return unsubscribe
     // newFile depends on editor (already in deps); we capture it by closure
@@ -1100,13 +1102,15 @@ export function App() {
   }, [editor, loadFile])
 
   const openFile = useCallback(async () => {
-    await loadFile(await window.desktop.openDocx())
+    const opened = await window.desktop.openDocx()
+    if (opened) await replaceLiveEditorDocument(() => loadFile(opened))
   }, [loadFile])
 
   /** New document from the built-in blank template. */
-  const newFile = useCallback(() => {
+  const newFile = useCallback((replace = true) => {
     managedNotesRef.current.clear()
-    return newFileImpl(fileCtxRef.current)
+    const create = () => newFileImpl(fileCtxRef.current)
+    return replace ? replaceLiveEditorDocument(create) : create()
   }, [])
 
   const openRecent = useCallback(
@@ -2723,9 +2727,8 @@ export function App() {
   useEffect(() => {
     if (!editor) return
     const recovery = async () => {
-      return createDocxRecoverySnapshot(
-        fileCtxRef.current.doc?.fileName ?? 'document.docx',
-        () => buildDocBytes(fileCtxRef.current),
+      return createDocxRecoverySnapshot(fileCtxRef.current.doc?.fileName ?? 'document.docx', () =>
+        buildDocBytes(fileCtxRef.current),
       )
     }
     return attachMcpLiveSession({
@@ -2892,8 +2895,8 @@ export function App() {
           message: `Unsupported operation: ${command.operation}`,
         }
       },
-      recoverySnapshot: async () => {
-        if (!isDocDirty(fileCtxRef.current)) return null
+      recoverySnapshot: async (force) => {
+        if (!force && !isDocDirty(fileCtxRef.current)) return null
         return (await recovery()) ?? null
       },
       recoveryVersion: () => mcpRecoveryVersionRef.current,
@@ -3226,205 +3229,209 @@ export function App() {
               {editorActive ? (
                 <>
                   <main className="editor-scroll">
-                {doc ? (
-                  <div
-                    className={docZoomClass}
-                    onClick={onDocClick}
-                    onContextMenu={onDocContextMenu}
-                    style={docZoomStyle}
-                  >
-                    {showRuler && section && (
-                      <Ruler
-                        section={section}
-                        editor={editor}
-                        onTabStopsChange={(stops) => {
-                          if (!editor) return
-                          editor
-                            .chain()
-                            .focus()
-                            .updateAttributes('docParagraph', {
-                              tabStops: serializeParagraphTabStops(stops),
-                            })
-                            .updateAttributes('docHeading', {
-                              tabStops: serializeParagraphTabStops(stops),
-                            })
-                            .updateAttributes('docListItem', {
-                              tabStops: serializeParagraphTabStops(stops),
-                            })
-                            .run()
-                        }}
-                      />
-                    )}
-                    <div className={`page-wrap ${section?.pageBorder ? 'page-bordered' : ''}`}>
-                      {watermark && (
-                        <div className="page-watermark" aria-hidden="true">
-                          {watermark}
-                        </div>
-                      )}
-                      {!readMode && (
-                        <div
-                          className={`hf-variant-chips${titlePg || evenOddHf ? '' : ' hf-chips-idle'}`}
-                        >
-                          {/* Always-available entry point: the ribbon checkbox alone was
+                    {doc ? (
+                      <div
+                        className={docZoomClass}
+                        onClick={onDocClick}
+                        onContextMenu={onDocContextMenu}
+                        style={docZoomStyle}
+                      >
+                        {showRuler && section && (
+                          <Ruler
+                            section={section}
+                            editor={editor}
+                            onTabStopsChange={(stops) => {
+                              if (!editor) return
+                              editor
+                                .chain()
+                                .focus()
+                                .updateAttributes('docParagraph', {
+                                  tabStops: serializeParagraphTabStops(stops),
+                                })
+                                .updateAttributes('docHeading', {
+                                  tabStops: serializeParagraphTabStops(stops),
+                                })
+                                .updateAttributes('docListItem', {
+                                  tabStops: serializeParagraphTabStops(stops),
+                                })
+                                .run()
+                            }}
+                          />
+                        )}
+                        <div className={`page-wrap ${section?.pageBorder ? 'page-bordered' : ''}`}>
+                          {watermark && (
+                            <div className="page-watermark" aria-hidden="true">
+                              {watermark}
+                            </div>
+                          )}
+                          {!readMode && (
+                            <div
+                              className={`hf-variant-chips${titlePg || evenOddHf ? '' : ' hf-chips-idle'}`}
+                            >
+                              {/* Always-available entry point: the ribbon checkbox alone was
                           undiscoverable while editing the header, so the toggle also lives here
                           (revealed on header hover until enabled) */}
-                          <button
-                            className={`hf-first-toggle${titlePg ? ' on' : ''}`}
-                            title={t('ribbonDiffFirstPageTip')}
-                            onClick={() => toggleTitlePg(!titlePg)}
-                          >
-                            {titlePg ? '✓ ' : ''}
-                            {t('ribbonDiffFirstPage')}
-                          </button>
-                          {titlePg && (
-                            <button
-                              className={headerAreaView === 'first' ? 'on' : ''}
-                              onClick={() => setHfView('first')}
-                            >
-                              {t('appFirstPage')}
-                            </button>
-                          )}
-                          {(titlePg || evenOddHf) && (
-                            <button
-                              className={headerAreaView === 'default' ? 'on' : ''}
-                              onClick={() => setHfView('default')}
-                            >
-                              {evenOddHf ? t('appOddPage') : t('appDefaultPage')}
-                            </button>
-                          )}
-                          {evenOddHf && (
-                            <button
-                              className={headerAreaView === 'even' ? 'on' : ''}
-                              onClick={() => setHfView('even')}
-                            >
-                              {t('appEvenPage')}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {(multiHf ||
-                        (hfViewTouched && effHfView !== 'default') ||
-                        shownHeader?.text ||
-                        shownHeader?.paras?.length ||
-                        hfImagesOf('header')?.length) && (
-                        <HeaderFooterArea
-                          kind="header"
-                          value={shownHeader ?? { text: '' }}
-                          images={hfImagesOf('header')}
-                          readOnly={isProtected || readMode}
-                          onCommit={(next) => commitHf('header', next)}
-                          pageTotal={pageInfo.total}
-                        />
-                      )}
-                      <EditorContent editor={editor} />
-                      {footnotes.some((n) => !gapNoteIds.has(n.id)) && (
-                        <div className="page-notes">
-                          {/* footnotes already shown per page in page gaps aren't repeated at the end (last page's footnotes still live here) */}
-                          {footnotes
-                            .filter((n) => !gapNoteIds.has(n.id))
-                            .map((n) => (
-                              <div key={`f${n.id}`} className="page-note">
-                                <sup>{footnotes.indexOf(n) + 1}</sup>
-                                <span className="page-note-text">{n.text}</span>
-                                <button
-                                  className="page-note-btn"
-                                  title={t('appEditFootnote')}
-                                  onClick={() => editNote('footnote', n.id)}
-                                >
-                                  ✎
-                                </button>
-                                <button
-                                  className="page-note-btn"
-                                  title={t('appDeleteFootnote')}
-                                  onClick={() => deleteNote('footnote', n.id)}
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                      {endnotes.length > 0 && (
-                        // endnotes live in their own document-end area, roman-numbered — never mixed into the footnote block
-                        <div className="page-notes page-endnotes">
-                          <div className="page-notes-label">{t('appEndnotesLabel')}</div>
-                          {endnotes.map((n, i) => (
-                            <div key={`e${n.id}`} className="page-note">
-                              <sup>{toRoman(i + 1)}</sup>
-                              <span className="page-note-text">{n.text}</span>
                               <button
-                                className="page-note-btn"
-                                title={t('appEditEndnote')}
-                                onClick={() => editNote('endnote', n.id)}
+                                className={`hf-first-toggle${titlePg ? ' on' : ''}`}
+                                title={t('ribbonDiffFirstPageTip')}
+                                onClick={() => toggleTitlePg(!titlePg)}
                               >
-                                ✎
+                                {titlePg ? '✓ ' : ''}
+                                {t('ribbonDiffFirstPage')}
                               </button>
-                              <button
-                                className="page-note-btn"
-                                title={t('appDeleteEndnote')}
-                                onClick={() => deleteNote('endnote', n.id)}
-                              >
-                                ×
-                              </button>
+                              {titlePg && (
+                                <button
+                                  className={headerAreaView === 'first' ? 'on' : ''}
+                                  onClick={() => setHfView('first')}
+                                >
+                                  {t('appFirstPage')}
+                                </button>
+                              )}
+                              {(titlePg || evenOddHf) && (
+                                <button
+                                  className={headerAreaView === 'default' ? 'on' : ''}
+                                  onClick={() => setHfView('default')}
+                                >
+                                  {evenOddHf ? t('appOddPage') : t('appDefaultPage')}
+                                </button>
+                              )}
+                              {evenOddHf && (
+                                <button
+                                  className={headerAreaView === 'even' ? 'on' : ''}
+                                  onClick={() => setHfView('even')}
+                                >
+                                  {t('appEvenPage')}
+                                </button>
+                              )}
                             </div>
-                          ))}
+                          )}
+                          {(multiHf ||
+                            (hfViewTouched && effHfView !== 'default') ||
+                            shownHeader?.text ||
+                            shownHeader?.paras?.length ||
+                            hfImagesOf('header')?.length) && (
+                            <HeaderFooterArea
+                              kind="header"
+                              value={shownHeader ?? { text: '' }}
+                              images={hfImagesOf('header')}
+                              readOnly={isProtected || readMode}
+                              onCommit={(next) => commitHf('header', next)}
+                              pageTotal={pageInfo.total}
+                            />
+                          )}
+                          <EditorContent editor={editor} />
+                          {footnotes.some((n) => !gapNoteIds.has(n.id)) && (
+                            <div className="page-notes">
+                              {/* footnotes already shown per page in page gaps aren't repeated at the end (last page's footnotes still live here) */}
+                              {footnotes
+                                .filter((n) => !gapNoteIds.has(n.id))
+                                .map((n) => (
+                                  <div key={`f${n.id}`} className="page-note">
+                                    <sup>{footnotes.indexOf(n) + 1}</sup>
+                                    <span className="page-note-text">{n.text}</span>
+                                    <button
+                                      className="page-note-btn"
+                                      title={t('appEditFootnote')}
+                                      onClick={() => editNote('footnote', n.id)}
+                                    >
+                                      ✎
+                                    </button>
+                                    <button
+                                      className="page-note-btn"
+                                      title={t('appDeleteFootnote')}
+                                      onClick={() => deleteNote('footnote', n.id)}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                          {endnotes.length > 0 && (
+                            // endnotes live in their own document-end area, roman-numbered — never mixed into the footnote block
+                            <div className="page-notes page-endnotes">
+                              <div className="page-notes-label">{t('appEndnotesLabel')}</div>
+                              {endnotes.map((n, i) => (
+                                <div key={`e${n.id}`} className="page-note">
+                                  <sup>{toRoman(i + 1)}</sup>
+                                  <span className="page-note-text">{n.text}</span>
+                                  <button
+                                    className="page-note-btn"
+                                    title={t('appEditEndnote')}
+                                    onClick={() => editNote('endnote', n.id)}
+                                  >
+                                    ✎
+                                  </button>
+                                  <button
+                                    className="page-note-btn"
+                                    title={t('appDeleteEndnote')}
+                                    onClick={() => deleteNote('endnote', n.id)}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {(multiHf ||
+                            (hfViewTouched && effHfView !== 'default') ||
+                            shownFooter?.text ||
+                            shownFooter?.pageNumber ||
+                            shownFooter?.paras?.length ||
+                            hfImagesOf('footer')?.length) && (
+                            <HeaderFooterArea
+                              kind="footer"
+                              value={shownFooter ?? { text: '' }}
+                              images={hfImagesOf('footer')}
+                              readOnly={isProtected || readMode}
+                              onCommit={(next) => commitHf('footer', next)}
+                              pageNo={lastPageNo?.text ?? pageInfo.total}
+                              pageTotal={pageInfo.total}
+                            />
+                          )}
+                          {(inkAnnotations.length > 0 || inkTool !== 'select') && !readMode && (
+                            <InkOverlay
+                              tool={isProtected ? 'select' : inkTool}
+                              color={
+                                inkTool === 'highlighter' ? inkHighlighter.color : inkPen.color
+                              }
+                              width={
+                                inkTool === 'highlighter' ? inkHighlighter.width : inkPen.width
+                              }
+                              zoom={zoom}
+                              annotations={inkAnnotations}
+                              onAdd={addInk}
+                              onRemove={removeInks}
+                            />
+                          )}
                         </div>
-                      )}
-                      {(multiHf ||
-                        (hfViewTouched && effHfView !== 'default') ||
-                        shownFooter?.text ||
-                        shownFooter?.pageNumber ||
-                        shownFooter?.paras?.length ||
-                        hfImagesOf('footer')?.length) && (
-                        <HeaderFooterArea
-                          kind="footer"
-                          value={shownFooter ?? { text: '' }}
-                          images={hfImagesOf('footer')}
-                          readOnly={isProtected || readMode}
-                          onCommit={(next) => commitHf('footer', next)}
-                          pageNo={lastPageNo?.text ?? pageInfo.total}
-                          pageTotal={pageInfo.total}
-                        />
-                      )}
-                      {(inkAnnotations.length > 0 || inkTool !== 'select') && !readMode && (
-                        <InkOverlay
-                          tool={isProtected ? 'select' : inkTool}
-                          color={inkTool === 'highlighter' ? inkHighlighter.color : inkPen.color}
-                          width={inkTool === 'highlighter' ? inkHighlighter.width : inkPen.width}
-                          zoom={zoom}
-                          annotations={inkAnnotations}
-                          onAdd={addInk}
-                          onRemove={removeInks}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="start-screen start-booting">{t('appStartOpening')}</div>
-                )}
+                      </div>
+                    ) : (
+                      <div className="start-screen start-booting">{t('appStartOpening')}</div>
+                    )}
                   </main>
                   {doc && splitView && (
                     <div className="split-pane">
-                  <div className="split-pane-bar">
-                    <span>{t('appSplitPaneLabel')}</span>
-                    <button
-                      className="split-pane-close"
-                      title={t('appRemoveSplit')}
-                      onClick={() => setSplitView(false)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="split-pane-scroll">
-                    <div className={docZoomClass} style={docZoomStyle}>
-                      <div className="page-wrap">
-                        <div
-                          className="doc-page ProseMirror split-doc"
-                          dangerouslySetInnerHTML={{ __html: splitHtml }}
-                        />
+                      <div className="split-pane-bar">
+                        <span>{t('appSplitPaneLabel')}</span>
+                        <button
+                          className="split-pane-close"
+                          title={t('appRemoveSplit')}
+                          onClick={() => setSplitView(false)}
+                        >
+                          ×
+                        </button>
                       </div>
-                    </div>
-                  </div>
+                      <div className="split-pane-scroll">
+                        <div className={docZoomClass} style={docZoomStyle}>
+                          <div className="page-wrap">
+                            <div
+                              className="doc-page ProseMirror split-doc"
+                              dangerouslySetInnerHTML={{ __html: splitHtml }}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>

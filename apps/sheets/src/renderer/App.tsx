@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: exact-session document replacement and recovery.
 import {
   absRangeRef,
   activateFormulaClosure,
@@ -41,6 +42,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import {
   attachMcpLiveSession,
+  replaceLiveEditorDocument,
   getLiveEditorActivity,
   getLiveEditorDisplayMode,
   subscribeLiveEditorActivity,
@@ -488,11 +490,14 @@ export function App(): React.JSX.Element {
             : null,
         }
       },
-      recoverySnapshot: async () => {
-        if (!lazyWorkbookRef.current || journalSize(lazyWorkbookRef.current.editJournal) === 0) {
+      recoverySnapshot: async (force) => {
+        if (
+          !lazyWorkbookRef.current ||
+          (!force && journalSize(lazyWorkbookRef.current.editJournal) === 0)
+        ) {
           return null
         }
-        const recovery = await handleSaveRef.current('recovery')
+        const recovery = await handleSaveRef.current('recovery', true, force)
         return recovery?.ok && 'data' in recovery
           ? { fileName: recovery.fileName, data: recovery.data }
           : null
@@ -704,7 +709,7 @@ export function App(): React.JSX.Element {
               await trackWorkbookOpen(opened)
             },
             save: async () => {
-              const saved = await handleSaveRef.current('save-as')
+              const saved = await handleSaveRef.current('save')
               return saved ?? { ok: false, message: t('appSaveFailed') }
             },
           })
@@ -840,6 +845,7 @@ export function App(): React.JSX.Element {
     (
       mode: 'save' | 'save-as' | 'recovery',
       quiet?: boolean,
+      forceRecovery?: boolean,
     ) => Promise<SaveActionResult | undefined>
   >(() => Promise.resolve(undefined))
   const closeSaveRef = useRef<() => Promise<void>>(() => Promise.resolve())
@@ -2375,7 +2381,7 @@ export function App(): React.JSX.Element {
           setMessage(t('appOpenCanceled'))
           return
         }
-        await trackWorkbookOpen(selected)
+        await replaceLiveEditorDocument(() => trackWorkbookOpen(selected))
         setMessage(t('appOpened', { name: selected.name }))
       })
       workbookReadyRef.current = opening
@@ -2390,8 +2396,9 @@ export function App(): React.JSX.Element {
   async function handleSave(
     mode: 'save' | 'save-as' | 'recovery',
     quiet = false,
+    forceRecovery = false,
   ): Promise<SaveActionResult | undefined> {
-    return handleSaveImpl(saveContext(), mode, quiet)
+    return handleSaveImpl(saveContext(), mode, quiet, forceRecovery)
   }
   closeSaveRef.current = async () => {
     const state = lazyWorkbookRef.current
@@ -2648,7 +2655,7 @@ export function App(): React.JSX.Element {
             const opening = file
               .arrayBuffer()
               .then((data) => browserHostRef.current!.openBuffer(data, file.name))
-              .then(trackWorkbookOpen)
+              .then((opened) => replaceLiveEditorDocument(() => trackWorkbookOpen(opened)))
               .then(() => setMessage(t('appOpened', { name: file.name })))
             workbookReadyRef.current = opening
             void opening.catch((error) =>

@@ -53,6 +53,15 @@ v4 requires all three subphases, fixes bootstrap p95 at 500 ms, retains the 1,40
 cold-start ceiling, and caps initial executable JavaScript at 11 MB. The first poll, one mounted
 iframe, 114-operation Registry, languages, native history, and save/reopen authority are unchanged.
 
+The 2026-09-04 refinement records the vault's static dependencies at build time,
+keeps dependency-free modules as UTF-8 bytes through Blob construction, and embeds
+the critical entry as identity text so its one importable Blob URL avoids startup
+base64 and gzip work. XLSX ZIP/XML package I/O loads inside the existing asynchronous `openBuffer` only when needed;
+the initial native blank worksheet does not need that adapter. All modules remain
+embedded and loadable, and first-open latency is measured separately rather than
+hidden behind the bootstrap result. No startup boundary or budget changes. The
+source-current approved capture records XLSX bootstrap p95 at 432.5 ms.
+
 R6-06 makes Registry discovery bounded as capability count grows. `office_get_capabilities` now
 defaults to a schema-free summary of at most twenty Agent-visible operations, supports family
 filtering and stable cursor pagination, and returns a full schema only for one exact canonical
@@ -60,7 +69,7 @@ operation requested through the detail view. An optional live session projects s
 reasons without hiding operations. Internal operations and compatibility aliases never enter public
 discovery, every summary response is gated below 8 KiB, and every generated descriptor is capped at
 64 KiB. The Agent-visible surface remains ten tools and five UI resources; app-only transport now
-uses thirteen lease-checked endpoints.
+uses fifteen endpoints (including lease-checked document replacement reset and cooperative handoff).
 
 R6-07 makes mutation submission revision-guarded and idempotently replayable. The public
 `office_execute` transaction envelope carries a caller `requestId`, exact `baseRevision`, and one
@@ -91,6 +100,38 @@ view lease and atomically writes those opaque bytes, and `office_get_context.fil
 bound result. An opened local file is overwritten only by its own Session; a new document receives a
 Session-isolated output path; Save As rebinds; Export Copy does not. This adds no headless editing or
 broker-side format semantics.
+
+R6-12 completes exact recovery and Save-target lifecycle under ADR 0012. Each cold renderer mount
+has its own identity in addition to the immutable Session/view pair. A live owner cannot be forcibly replaced;
+an idle abandoned lease can be reclaimed after 30 seconds without contact, never with an in-flight
+command. Exact recovery loads the Session's checkpoint or bound formal file through the native
+renderer. Terminal connection errors stop polling and surface a manual retry. Browser file
+replacement invalidates the old binding before native load, then checkpoints the new document;
+Save displays the committed absolute path with a copy action. XLSX recovery stays in memory and
+its canonical Save uses the existing bound target. No legacy data migration or second authority is
+introduced; source-current release evidence remains required.
+
+R6-13 refines replayed-view recovery under ADR 0013: a visible replay of the same logical view can
+request a cooperative handoff from its hidden owner. Preparation fences Agent commands and formal
+saves, then a fresh native checkpoint precedes exclusive lease transfer and native restore/ACK.
+Visible owners remain authoritative. Waiting views use bounded retries only while visible; a failed
+checkpoint retains the original and requires explicit retry. Restoring views cannot edit a blank
+replica, and file location remains visible even during conflict. No other Session is adopted.
+
+R6-14 refines ADR 0013 under ADR 0014: visibility is a work-scheduling hint, not evidence of which
+host replica the user intends to edit. **在此继续编辑** selects the exact same-view candidate and
+requests cooperative handoff even when the old mount still reports active. The same native
+checkpoint/restore fence applies; this is not force takeover. Automatic waiting stops after 30
+seconds, and yielded mounts require explicit continuation rather than reclaiming on visibility.
+Uncertain transport outcomes keep the old mount locked until lease-checked reconciliation confirms
+ownership. These rules apply to all five formats without changing their renderer authorities.
+
+R6-15 adds explicit document-replacement intent under ADR 0015. A follow-up edit preserves the
+current document and Save target, not merely its Session/view. PPTX `document.create_blank` rejects
+resetting a named, edited, or history-bearing presentation unless `confirmReplace: true` records
+explicit user replacement intent. Untouched initial blanks remain usable. Confirmed replacement
+still detaches the old Save target; ordinary slide edits and saves keep it. The shared Skill applies
+the continuation rule to every format without adding reset operations or changing native authority.
 
 Every state-changing capability retained from a community renderer must be reachable through a typed MCP operation against the same mounted state and undo stack. A format is not complete until its pinned command inventory has matching retained UI and MCP routes with save/reopen tests. Capability discovery is a bounded projection of the generated Manifest; it does not redefine the product boundary.
 

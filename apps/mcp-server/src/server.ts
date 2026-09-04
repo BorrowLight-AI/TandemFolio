@@ -1,7 +1,7 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -15,6 +15,10 @@ import { getCanonicalRegisteredOperation, resolveRegisteredOperation } from './o
 import { RecoveryStore, RecoveryUploadStore, type RecoverySnapshot } from './recovery-store'
 import { SessionError, SessionStore, type LiveSession } from './session-store'
 import { TransactionJournal, type TransactionJournalStart } from './transaction-journal'
+
+function leaseView(viewId?: string, mountId?: string): string | undefined {
+  return viewId && mountId ? JSON.stringify([viewId, mountId]) : viewId
+}
 
 const RESOURCE_URI = 'ui://tandemfolio/editor.html'
 const XLSX_RESOURCE_URI = 'ui://tandemfolio/xlsx.html'
@@ -34,6 +38,47 @@ const documentSaves = new DocumentSaveStore(
   join(stateDirectory, 'document-bindings'),
 )
 const pendingRecoveries = new Map<string, RecoverySnapshot>()
+const persistenceTasks = new Map<string, Promise<unknown>>()
+
+function persistInOrder<T>(sessionId: string, work: () => Promise<T>): Promise<T> {
+  const task = (persistenceTasks.get(sessionId) ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(work)
+  persistenceTasks.set(sessionId, task)
+  void task
+    .catch(() => undefined)
+    .finally(() => {
+      if (persistenceTasks.get(sessionId) === task) persistenceTasks.delete(sessionId)
+    })
+  return task
+}
+
+async function retireRecovery(session: LiveSession): Promise<void> {
+  recoveryUploads.invalidate(session.id)
+  await recoveryStore.clear(session.format, session.id)
+  pendingRecoveries.delete(session.id)
+}
+
+async function exactResumeSource(
+  format: LiveSession['format'],
+  sessionId: string,
+): Promise<RecoverySnapshot | null> {
+  const recovery = await recoveryStore.latest(format, sessionId)
+  if (recovery) return recovery
+  const path = await documentSaves.boundPath(sessionId, format)
+  if (!path) return null
+  try {
+    const metadata = await stat(path)
+    if (!metadata.isFile() || metadata.size > documentSaves.maxBytes)
+      throw new Error('Invalid document size or type.')
+    return { sessionId, format, fileName: basename(path), data: await readFile(path) }
+  } catch (error) {
+    throw new SessionError(
+      'document_restore_failed',
+      `Cannot restore ${path}: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}
 const configuredCommandTimeoutMs = Number(process.env.TANDEMFOLIO_COMMAND_TIMEOUT_MS)
 const COMMAND_TIMEOUT_MS =
   Number.isInteger(configuredCommandTimeoutMs) &&
@@ -148,10 +193,7 @@ async function editorHtml(
       : format === 'xlsx'
         ? [
             new URL('../assets/editors/xlsx/index.html', import.meta.url),
-            new URL(
-              '../../../plugins/tandemfolio/assets/editors/xlsx/index.html',
-              import.meta.url,
-            ),
+            new URL('../../../plugins/tandemfolio/assets/editors/xlsx/index.html', import.meta.url),
           ]
         : format === 'pptx'
           ? [
@@ -334,14 +376,16 @@ server.registerTool(
         } catch (error) {
           if (!(error instanceof SessionError && error.code === 'session_not_found')) throw error
         }
-        const recovery = await recoveryStore.latest(format, sessionId)
+        const recovery = await exactResumeSource(format, sessionId)
         if (!recovery) {
           throw new SessionError(
             'session_not_found',
-            `No live session or exact recovery exists for ${sessionId}.`,
+            `No live session, exact recovery, or bound document exists for ${sessionId}.`,
           )
         }
         const session = store.restore(sessionId, format)
+        session.filePath = await documentSaves.boundPath(sessionId, format)
+        session.fileName = recovery.fileName
         pendingRecoveries.set(session.id, recovery)
         return result({ ok: true, session, recoveryAvailable: true, reused: false })
       }
@@ -642,8 +686,8 @@ server.registerTool(
         void store
           .waitForCommand(sessionId, command.commandId, null)
           .then(async (completion) => {
-            if (completion.output?.saved === true) {
-              await recoveryStore.clear(store.get(sessionId).format, sessionId)
+            if (completion.output?.saved === true && !store.get(sessionId).filePath) {
+              await persistInOrder(sessionId, () => retireRecovery(store.get(sessionId)))
             }
             activeTransaction.complete(executionResult(completion, canonicalOperation))
           })
@@ -758,7 +802,10 @@ server.registerTool(
         ...(assetRootId ? { assetRootId } : {}),
       })
       const completion = await store.waitForCommand(sessionId, command.commandId)
-      await documentSaves.bind(sessionId, session.format, path)
+      await persistInOrder(sessionId, async () => {
+        await documentSaves.bind(sessionId, session.format, path)
+        await retireRecovery(session)
+      })
       session.filePath = path
       return result({ ok: true, command, result: completion })
     } catch (error) {
@@ -777,7 +824,13 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       fileName: z.string().nullable().optional(),
+      format: z.enum(['docx', 'markdown', 'xlsx', 'pptx', 'pdf']).optional(),
+      coldStart: z.boolean().optional(),
+      active: z.boolean().optional(),
+      retryHandoff: z.boolean().optional(),
+      activateView: z.boolean().optional(),
       dirty: z.boolean().optional(),
       selection: z.record(z.string(), z.unknown()).nullable().optional(),
       startupTrace: z
@@ -805,35 +858,192 @@ server.registerTool(
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, fileName, dirty, selection, waitMs }) => {
+  async ({
+    sessionId,
+    viewId,
+    mountId,
+    format,
+    coldStart,
+    active,
+    retryHandoff,
+    activateView,
+    fileName,
+    dirty,
+    selection,
+    waitMs,
+  }) => {
     try {
-      const sessionBeforePoll = store.get(sessionId)
-      const reconnecting = !sessionBeforePoll.connected
+      let sessionBeforePoll: LiveSession
+      try {
+        sessionBeforePoll = store.get(sessionId)
+      } catch (error) {
+        if (!(error instanceof SessionError) || error.code !== 'session_not_found' || !format)
+          throw error
+        const source = await exactResumeSource(format, sessionId)
+        if (!source) throw error
+        sessionBeforePoll = store.restore(sessionId, format)
+        sessionBeforePoll.filePath = await documentSaves.boundPath(sessionId, format)
+        sessionBeforePoll.fileName = source.fileName
+        if (coldStart !== false) pendingRecoveries.set(sessionId, source)
+      }
+      if (format && sessionBeforePoll.format !== format)
+        throw new SessionError(
+          'invalid_arguments',
+          'The editor format does not match this Session.',
+        )
+      const reconnecting = !store.ownsView(sessionId, leaseView(viewId, mountId))
+      store.connect(sessionId, undefined, leaseView(viewId, mountId))
       const context = {
         ...(fileName !== undefined ? { fileName } : {}),
         ...(dirty !== undefined ? { dirty } : {}),
         ...(selection !== undefined ? { selection } : {}),
       }
-      let commands = store.poll(sessionId, context, viewId)
-      const recovery =
-        pendingRecoveries.get(sessionId) ??
-        (reconnecting ? await recoveryStore.latest(sessionBeforePoll.format, sessionId) : null)
+      let recovery: RecoverySnapshot | null | undefined
+      try {
+        recovery =
+          pendingRecoveries.get(sessionId) ??
+          (reconnecting && coldStart !== false
+            ? await exactResumeSource(sessionBeforePoll.format, sessionId)
+            : null)
+      } catch (error) {
+        store.disconnect(sessionId, leaseView(viewId, mountId))
+        throw error
+      }
+      let commands = store.poll(
+        sessionId,
+        recovery ? undefined : context,
+        leaseView(viewId, mountId),
+      )
       if (commands.length === 0 && recovery) {
         const staged = localFiles.stageBuffer(sessionId, recovery.fileName, recovery.data)
         const session = store.get(sessionId)
-        store.enqueue(sessionId, session.revision, stagedFileOperation(session.format), {
-          ...staged,
-        })
-        commands = store.poll(sessionId, context, viewId)
+        const restoreCommand = store.enqueue(
+          sessionId,
+          session.revision,
+          stagedFileOperation(session.format),
+          {
+            ...staged,
+            ...(session.format === 'markdown' && session.filePath
+              ? { assetRootId: localFiles.registerAssetRoot(sessionId, session.filePath) }
+              : {}),
+          },
+        )
+        session.fileName = recovery.fileName
+        session.filePath = await documentSaves.boundPath(sessionId, session.format)
+        const completion = store.waitForCommand(sessionId, restoreCommand.commandId, null)
+        void completion
+          .catch(() => {
+            if (store.ownsView(sessionId, leaseView(viewId, mountId)))
+              store.disconnect(sessionId, leaseView(viewId, mountId))
+          })
+          .finally(() => localFiles.release(staged.blobId))
+        commands = store.poll(sessionId, undefined, leaseView(viewId, mountId))
         pendingRecoveries.delete(sessionId)
       }
       if (commands.length === 0 && waitMs > 0) {
-        commands = await store.waitForPoll(sessionId, context, waitMs, viewId)
+        commands = await store.waitForPoll(sessionId, context, waitMs, leaseView(viewId, mountId))
       }
       return result({
         ok: true,
         commands,
+        filePath: sessionBeforePoll.filePath,
+        handoffRequest: store.handoffRequest(sessionId, leaseView(viewId, mountId) ?? ''),
+        handoffRequestedByUser: store.handoffRequestedByUser(
+          sessionId,
+          leaseView(viewId, mountId) ?? '',
+        ),
+        ...(recovery && commands[0] ? { restoreCommandId: commands[0].commandId } : {}),
       })
+    } catch (error) {
+      if (error instanceof SessionError && error.code === 'editor_view_conflict') {
+        const candidate = leaseView(viewId, mountId) ?? ''
+        const retry =
+          active &&
+          viewId &&
+          mountId &&
+          store.requestHandoff(sessionId, candidate, retryHandoff, activateView)
+        return {
+          ...failure(error),
+          structuredContent: {
+            ...failure(error).structuredContent,
+            filePath: store.get(sessionId).filePath,
+            handoffFailed: store.handoffFailed(sessionId, candidate),
+            ...(retry ? { retryAfterMs: 1_000 } : {}),
+          },
+        }
+      }
+      return failure(error)
+    }
+  },
+)
+
+server.registerTool(
+  'office_editor_handoff',
+  {
+    title: 'Safely hand off a mounted editor view',
+    description: 'Editor-only checkpoint-fenced ownership transfer for a replayed view.',
+    inputSchema: {
+      sessionId: z.string().min(1),
+      viewId: z.string().min(1),
+      mountId: z.string().min(1),
+      handoffId: z.string().min(1),
+      action: z.enum(['prepare', 'commit', 'abort']),
+    },
+    _meta: { ui: { visibility: ['app'] } },
+  },
+  async ({ sessionId, viewId, mountId, handoffId, action }) => {
+    try {
+      const owner = leaseView(viewId, mountId)!
+      await persistInOrder(sessionId, async () => {
+        const session = store.assertView(sessionId, owner)
+        if (action === 'prepare') {
+          if (documentSaves.hasPending(sessionId) || recoveryUploads.hasPending(sessionId))
+            throw new SessionError(
+              'command_in_flight',
+              'Wait for pending document transfers before handoff.',
+            )
+          store.prepareHandoff(sessionId, owner, handoffId)
+        } else if (action === 'abort') {
+          if (store.abortHandoff(sessionId, owner, handoffId)) recoveryUploads.invalidate(sessionId)
+        } else {
+          const recovery = await recoveryStore.latest(session.format, sessionId)
+          if (!recovery)
+            throw new SessionError('document_restore_failed', 'Handoff checkpoint is missing.')
+          store.completeHandoff(sessionId, owner, handoffId)
+          pendingRecoveries.set(sessionId, recovery)
+        }
+      })
+      return result({ ok: true })
+    } catch (error) {
+      return failure(error)
+    }
+  },
+)
+
+server.registerTool(
+  'office_editor_reset_document',
+  {
+    title: 'Detach the previous document save target',
+    description:
+      'Editor-only endpoint before a browser-selected document replaces the mounted contents.',
+    inputSchema: {
+      sessionId: z.string().min(1),
+      viewId: z.string().min(1),
+      mountId: z.string().min(1).optional(),
+      commandId: z.string().min(1).optional(),
+    },
+    _meta: { ui: { visibility: ['app'] } },
+  },
+  async ({ sessionId, viewId, mountId, commandId }) => {
+    try {
+      const session = store.assertView(sessionId, leaseView(viewId, mountId))
+      store.assertCanReplaceDocument(sessionId, commandId)
+      await persistInOrder(sessionId, async () => {
+        await documentSaves.unbind(sessionId)
+        await retireRecovery(session)
+      })
+      session.filePath = null
+      return result({ ok: true, filePath: null })
     } catch (error) {
       return failure(error)
     }
@@ -848,16 +1058,21 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1),
+      mountId: z.string().min(1).optional(),
       fileName: z.string().min(1).max(240),
       size: z.number().int().nonnegative().max(268_435_456),
       mode: z.enum(['save', 'save-as', 'export-copy']).default('save'),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, fileName, size, mode }) => {
+  async ({ sessionId, viewId, mountId, fileName, size, mode }) => {
     try {
-      const session = store.assertView(sessionId, viewId)
-      const begun = await documentSaves.begin(sessionId, session.format, fileName, size, mode)
+      const session = store.assertView(sessionId, leaseView(viewId, mountId))
+      const begun = await persistInOrder(sessionId, () => {
+        store.assertView(sessionId, leaseView(viewId, mountId))
+        store.assertNotHandingOff(sessionId)
+        return documentSaves.begin(sessionId, session.format, fileName, size, mode)
+      })
       return result({ ok: true, ...begun })
     } catch (error) {
       return failure(error)
@@ -873,16 +1088,19 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1),
+      mountId: z.string().min(1).optional(),
       uploadId: z.string().min(1),
       offset: z.number().int().nonnegative(),
       data: z.string().max(262_144),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, uploadId, offset, data }) => {
+  async ({ sessionId, viewId, mountId, uploadId, offset, data }) => {
     try {
-      store.assertView(sessionId, viewId)
-      const nextOffset = await documentSaves.write(sessionId, uploadId, offset, data)
+      store.assertView(sessionId, leaseView(viewId, mountId))
+      const nextOffset = await persistInOrder(sessionId, () =>
+        documentSaves.write(sessionId, uploadId, offset, data),
+      )
       return result({ ok: true, nextOffset })
     } catch (error) {
       return failure(error)
@@ -898,14 +1116,19 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1),
+      mountId: z.string().min(1).optional(),
       uploadId: z.string().min(1),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, uploadId }) => {
+  async ({ sessionId, viewId, mountId, uploadId }) => {
     try {
-      const session = store.assertView(sessionId, viewId)
-      const committed = await documentSaves.commit(sessionId, uploadId)
+      const session = store.assertView(sessionId, leaseView(viewId, mountId))
+      const committed = await persistInOrder(sessionId, async () => {
+        const saved = await documentSaves.commit(sessionId, uploadId)
+        if (saved.bound) await retireRecovery(session)
+        return saved
+      })
       if (committed.bound) session.filePath = committed.path
       return result({ ok: true, uploadId, ...committed })
     } catch (error) {
@@ -922,14 +1145,15 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1),
+      mountId: z.string().min(1).optional(),
       uploadId: z.string().min(1),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, uploadId }) => {
+  async ({ sessionId, viewId, mountId, uploadId }) => {
     try {
-      store.assertView(sessionId, viewId)
-      await documentSaves.abort(sessionId, uploadId)
+      store.assertView(sessionId, leaseView(viewId, mountId))
+      await persistInOrder(sessionId, () => documentSaves.abort(sessionId, uploadId))
       return result({ ok: true, uploadId })
     } catch (error) {
       return failure(error)
@@ -945,15 +1169,18 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       fileName: z.string().min(1),
       size: z.number().int().nonnegative().max(268_435_456),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, fileName, size }) => {
+  async ({ sessionId, viewId, mountId, fileName, size }) => {
     try {
-      const session = store.assertView(sessionId, viewId)
-      const uploadId = recoveryUploads.begin(sessionId, session.format, fileName, size)
+      const session = store.assertView(sessionId, leaseView(viewId, mountId))
+      const uploadId = await persistInOrder(sessionId, async () =>
+        recoveryUploads.begin(sessionId, session.format, fileName, size),
+      )
       return result({ ok: true, uploadId })
     } catch (error) {
       return failure(error)
@@ -969,15 +1196,16 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       uploadId: z.string().min(1),
       offset: z.number().int().nonnegative(),
       data: z.string(),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, uploadId, offset, data }) => {
+  async ({ sessionId, viewId, mountId, uploadId, offset, data }) => {
     try {
-      store.assertView(sessionId, viewId)
+      store.assertView(sessionId, leaseView(viewId, mountId))
       return result({
         ok: true,
         nextOffset: recoveryUploads.write(sessionId, uploadId, offset, data),
@@ -996,14 +1224,19 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       uploadId: z.string().min(1),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, uploadId }) => {
+  async ({ sessionId, viewId, mountId, uploadId }) => {
     try {
-      store.assertView(sessionId, viewId)
-      await recoveryUploads.commit(sessionId, uploadId)
+      store.assertView(sessionId, leaseView(viewId, mountId))
+      await persistInOrder(sessionId, async () => {
+        store.assertView(sessionId, leaseView(viewId, mountId))
+        await recoveryUploads.commit(sessionId, uploadId)
+        store.checkpointHandoff(sessionId, leaseView(viewId, mountId) ?? '')
+      })
       return result({ ok: true, uploadId })
     } catch (error) {
       return failure(error)
@@ -1019,12 +1252,13 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId }) => {
+  async ({ sessionId, viewId, mountId }) => {
     try {
-      store.disconnect(sessionId, viewId)
+      store.disconnect(sessionId, leaseView(viewId, mountId))
       localFiles.releaseAssetRoots(sessionId)
       return result({ ok: true, sessionId })
     } catch (error) {
@@ -1041,6 +1275,7 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       rootId: z.string().min(1),
       path: z.string().min(1).max(4096),
       offset: z.number().int().nonnegative(),
@@ -1048,9 +1283,9 @@ server.registerTool(
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, rootId, path, offset, length }) => {
+  async ({ sessionId, viewId, mountId, rootId, path, offset, length }) => {
     try {
-      store.assertView(sessionId, viewId)
+      store.assertView(sessionId, leaseView(viewId, mountId))
       return result({
         ok: true,
         ...(await localFiles.readLocalAsset(sessionId, rootId, path, offset, length)),
@@ -1070,15 +1305,16 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       blobId: z.string().min(1),
       offset: z.number().int().nonnegative(),
       length: z.number().int().positive().max(262_144),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, blobId, offset, length }) => {
+  async ({ sessionId, viewId, mountId, blobId, offset, length }) => {
     try {
-      store.assertView(sessionId, viewId)
+      store.assertView(sessionId, leaseView(viewId, mountId))
       return result({ ok: true, ...localFiles.read(sessionId, blobId, offset, length) })
     } catch (error) {
       return failure(error)
@@ -1115,6 +1351,7 @@ server.registerTool(
     inputSchema: {
       sessionId: z.string().min(1),
       viewId: z.string().min(1).optional(),
+      mountId: z.string().min(1).optional(),
       commandId: z.string().min(1),
       revision: z.number().int().nonnegative().optional(),
       ok: z.boolean().default(true),
@@ -1151,6 +1388,7 @@ server.registerTool(
   async ({
     sessionId,
     viewId,
+    mountId,
     commandId,
     revision,
     ok,
@@ -1163,7 +1401,7 @@ server.registerTool(
     selection,
   }) => {
     try {
-      store.assertView(sessionId, viewId)
+      store.assertView(sessionId, leaseView(viewId, mountId))
       if (!ok) {
         const session = store.reject(
           sessionId,

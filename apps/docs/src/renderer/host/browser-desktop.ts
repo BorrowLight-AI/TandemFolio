@@ -38,7 +38,7 @@ async function openWithInput(accept: string): Promise<File | null> {
 
 async function toOpenResult(file: File, handle?: FileSystemFileHandle): Promise<OpenFileResult> {
   const data = await file.arrayBuffer()
-  const path = `browser:${file.name}:${file.lastModified}`
+  const path = `browser:${file.lastModified}/${file.name}`
   if (handle) handles.set(path, handle)
   if (!recent.includes(path)) recent.unshift(path)
   return { path, name: file.name, data, hash: await sha256(data) }
@@ -99,7 +99,7 @@ async function saveAs(defaultName: string, data: ArrayBuffer) {
       })
       await writeHandle(handle, data)
       const file = await handle.getFile()
-      const path = `browser:${file.name}:${file.lastModified}`
+      const path = `browser:${file.lastModified}/${file.name}`
       handles.set(path, handle)
       return { ok: true, path }
     }

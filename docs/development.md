@@ -87,11 +87,96 @@ See [`migration/upstream-sync.md`](migration/upstream-sync.md) for classificatio
   `resume: "none"`; a known document uses `resume: "exact"` with its recorded `sessionId`, while
   `resume: "latest"` is explicit cross-session disaster recovery. Recovery always mounts the matching
   renderer and never enables UI-closed editing.
-- Recovery retains only the latest snapshot per format, rejects snapshots over 256 MiB, expires snapshots after seven days, and clears a format snapshot after an acknowledged explicit save.
+- Recovery retains one snapshot per format/session, rejects snapshots over 256 MiB, expires after
+  seven days, and retires older snapshots/uploads on committed bound Save (not Export Copy).
+
+## Embedded save, resume, and performance troubleshooting
+
+- Expand **文件位置** in the editor to see/copy the committed absolute path, including while waiting
+  for a view handoff. Unbound documents explicitly show **尚未保存**. Context also
+  returns `session.filePath`. New documents default to
+  `~/Documents/TandemFolio/<format>-<session-hash>/<file-name>`; `TANDEMFOLIO_OUTPUT_DIR` overrides the
+  root. `office_open_local_file` binds normal Save to that explicit path. Browser File/Open cannot
+  discover an absolute source path: it detaches the old target and the next Save creates a new output
+  file. Save As rebinds; Export Copy reports its destination without changing the normal Save target.
+- Continuing an opened/restored document preserves that file as well as its Session. Do not call
+  `pptx.document.create_blank` to prepare a follow-up generation: it deliberately replaces the
+  document and detaches the Save target. ADR 0015 rejects resetting named, edited, or history-bearing
+  presentations unless `confirmReplace: true` records explicit user replacement intent. A rejection
+  leaves the original intact; do not auto-retry with the flag. Apply slide/object edits to continue,
+  then use normal Save when requested. Confirmed new saves separately without overwriting the
+  prior file; pristine initial blank presentations do not require confirmation.
+- A host cold remount or broker restart restores only the recorded Session, preferring its checkpoint
+  and otherwise reading its bound file through the native renderer. Keep the original `sessionId`;
+  do not use `latest` for a known document. Missing/unreadable sources display an error, not a silently
+  empty successful editor. Snapshots are best-effort crash protection, not guaranteed delivery;
+  explicitly Save important changes. Native undo history is not persisted across cold mounts.
+- A visible replay of the same logical view automatically requests safe handoff from its hidden
+  owner. Keep the same Session/view; do not create more editors. If both surfaces wait, or an old
+  mount still reports active although the host no longer displays it, click **在此继续编辑** on the
+  desired surface. The old owner must still cooperate and checkpoint before authority transfers.
+  Automatic waiting stops after 30 seconds; explicit continuation/retry starts another attempt.
+  If an old editor disappeared without disconnect, its idle lease can expire after 30 seconds,
+  but prepared/uncertain mutations still prevent takeover. A failed checkpoint keeps the original;
+  address the reported disk/connection problem before retrying. An uncertain handoff locks the old
+  surface; its **重试连接** first confirms ownership, never blindly unlocks it. Yielded views do not
+  reclaim authority when they become visible; select **在此继续编辑** to return to one. Restoration
+  must finish before editing is enabled. Checkpoints do not imply formal Save or persist native undo.
+  Hidden automatic waiting views do not retry; an explicitly selected continuation attempt retains
+  its intent through stale visibility hints, still bounded by the 30-second deadline. Healthy hidden
+  owners keep one 10-second bounded poll while
+  suspending heavy rendering, and yielded owners stop polling. Transient transport errors back off.
+- Run `npm run build`, then
+  `npx playwright test --config playwright.host.config.ts tests/visual/document-lifecycle.spec.ts tests/visual/session-handoff.spec.ts tests/visual/view-continuation.spec.ts`.
+  This suite uses real packaged renderers and isolated stdio brokers to verify each format's Save
+  path, exact cold resume after broker restart, same-name browser import/checkpoint/re-save without
+  overwriting the previous file, and terminal-error polling across multiple PPTX
+  views. Handoff scenarios cover all five native formats, unsaved PPTX round trips, hidden waiting
+  views, abandoned owners, failure/explicit retry, path visibility, active-owner user continuation,
+  lost prepare/commit responses, yielded views remaining suspended, and PPTX rejection of implicit
+  reset followed by edits/saving the original path or explicitly confirmed separate-file creation.
+  Tests write only temporary
+  fixtures/output and are not full source-current release evidence.
+
+Previous ADR 0013 validation baseline: all fourteen lifecycle/handoff browser scenarios passed, along with
+42 Host Bridge tests, six dedicated Broker handoff regressions, typecheck/build/package/MCP smoke,
+asset budgets, and license checks. The full repository suite still has three release-evidence failures
+(readiness expected true, baseline CLI evidence, missing upstream visual manifest); `release:gate`
+reports missing `release/release-evidence.json`. Do not convert these into passing release claims.
 
 These fallbacks are development and recovery behavior; they do not create a second document authority.
 
+ADR 0014 validation (2026-09-03): all **22** packaged-browser lifecycle/handoff/continuation cases,
+**44** Host Bridge tests, and **21** focused SessionStore/Broker tests pass. All-workspace typecheck,
+five-format build/package, operation-manifest checks, MCP smoke (25 tools), asset budgets, plugin/
+skill validation, and license checks pass. The full suite retains the same three release-evidence
+failures above. `upstream:check` separately stops because the existing `AGENTS.md` does not record
+the configured baseline; it was not changed by this repair. `release:gate` remains fail-closed.
+These browser cases use an isolated real Broker and renderers, not a completed native Codex UI
+acceptance run. After local plugin reinstall, use a new task to load the new tools/skill; existing
+mounted resources do not hot-update. Preserve old unsaved editors and exact document handles.
+
+ADR 0015 validation (2026-09-03): TDD first reproduced a successful implicit reset to Untitled after
+real view continuation, then verified rejection without content/path/revision changes. A second
+RED/GREEN cycle added typed explicit confirmation and separate-file Save. All **24** packaged-browser
+lifecycle/handoff/continuation cases and **177** PPTX tests pass, including continued slide edits
+persisting to the original path, clean named/restored blanks, pristine initialization, and preserved
+undo/redo. Full-workspace tests report **3,439 passing, one skipped, and the same three release-evidence
+failures** listed above. All-workspace typecheck and operation Manifest checks pass. Five-format
+build/package, installed MCP smoke, asset budgets, plugin/Skill validation and licenses pass. No
+native Codex UI acceptance or formal release certification is claimed; `release:gate` still reports
+missing evidence and remains false. User documents were not changed or merged by this repair.
+
 ## Codex host width visual regression
+
+Latest release-evidence verification (2026-09-04): the visual manifest and
+28 inherited screenshot references are now retained in the checkout. A full 7/7/21
+five-format capture produced an approved `release/release-evidence.json` after the
+XLSX identity-entry change: XLSX bootstrap p95 is 432.5 ms against
+the fixed 500 ms gate; Markdown small-file open p95 is 14.3 ms against 20 ms. The gate
+accepts the source-current bundle. See [the verification record](../release/validation.md)
+for TDD fixes, actual measurements, test results and the next release steps. Do not
+copy `approved`/`ready` flags from historical evidence or relax the fixed ceiling.
 
 `npm run test:visual:host` serves each active packaged renderer in a deterministic Codex host harness. The harness uses the real MCP Apps `AppBridge` and postMessage transport instead of replacing the renderer with a test double. Chromium is fixed to device scale factor 1, Simplified Chinese, light color scheme, and reduced motion.
 
@@ -158,13 +243,23 @@ local iteration artifact and is ignored.
 
 ## Build outputs
 
+For GitHub Actions publication and Windows/macOS end-user installers, see
+[Release distribution](distribution.md). `npm run test:distribution` exercises bundle
+integrity and native installer preflight in temporary directories. After approved evidence
+is available, `npm run release:distribute` runs the existing release-package chain and a
+second read-only source gate before archiving into `out/releases/`. ZIP/tar creation uses
+`tar` and `zip` on macOS/Linux; the resulting Node/Web bundle supports both Windows/macOS.
+The generated archive has a separate `tandemfolio-releases` catalog and preserves the
+checkout's existing `personal` catalog and local manifest cachebuster. `.github/workflows/release.yml`
+publishes only after native Windows/macOS extracted-package smoke succeeds.
+
 `npm run build` produces:
 
-| Output                                                                      | Purpose                                     | Tracked |
-| --------------------------------------------------------------------------- | ------------------------------------------- | ------- |
-| `apps/docs/dist/renderer/`                                                  | Intermediate Vite build                     | No      |
-| `apps/{markdown,sheets,slides,pdf}/dist/renderer/`                          | Intermediate format builds                  | No      |
-| `apps/mcp-server/dist/server.js`                                            | Intermediate bundled MCP server             | No      |
+| Output                                                                   | Purpose                                     | Tracked |
+| ------------------------------------------------------------------------ | ------------------------------------------- | ------- |
+| `apps/docs/dist/renderer/`                                               | Intermediate Vite build                     | No      |
+| `apps/{markdown,sheets,slides,pdf}/dist/renderer/`                       | Intermediate format builds                  | No      |
+| `apps/mcp-server/dist/server.js`                                         | Intermediate bundled MCP server             | No      |
 | `plugins/tandemfolio/assets/editor/index.html`                           | Self-contained MCP App HTML/CSS/JS resource | Yes     |
 | `plugins/tandemfolio/assets/editors/{markdown,xlsx,pptx,pdf}/index.html` | Self-contained format resources             | Yes     |
 | `plugins/tandemfolio/assets/fonts/`                                      | External lazy DOCX font assets              | Yes     |

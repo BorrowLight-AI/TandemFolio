@@ -265,6 +265,7 @@ describe('MCP editor session', () => {
       expect(mcp.calls).toContainEqual({
         name: 'office_editor_acknowledge',
         arguments: {
+          mountId: expect.any(String),
           sessionId: 'session-1',
           viewId: 'view-1',
           commandId: 'command-1',
@@ -294,9 +295,11 @@ describe('MCP editor session', () => {
       expect(mcp.calls).toContainEqual({
         name: 'office_editor_poll',
         arguments: {
+          mountId: expect.any(String),
           sessionId: 'session-1',
           viewId: 'view-1',
           fileName: 'kept.docx',
+          active: true,
           dirty: true,
           selection: { from: 4, to: 4, empty: true },
           waitMs: 0,
@@ -489,6 +492,7 @@ describe('MCP editor session', () => {
       expect(mcp.calls).toContainEqual({
         name: 'office_editor_write_recovery_chunk',
         arguments: {
+          mountId: expect.any(String),
           sessionId: 'session-1',
           viewId: 'view-1',
           uploadId: 'upload-1',

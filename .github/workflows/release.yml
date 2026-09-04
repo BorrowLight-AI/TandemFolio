@@ -1,0 +1,116 @@
+name: Release plugin
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.archive.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:distribution
+      # Includes the source-current evidence gate, build, MCP smoke, and licenses.
+      - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:visual:host
+      - name: Gate and archive the final package
+        id: archive
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: npm run distribution:archive -- "--tag=$RELEASE_TAG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-release
+          if-no-files-found: error
+          path: |
+            ${{ steps.archive.outputs.directory }}/*.zip
+            ${{ steps.archive.outputs.directory }}/*.tar.gz
+            ${{ steps.archive.outputs.directory }}/SHA256SUMS
+
+  native-smoke:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-release
+          path: out/download
+      - name: Verify and extract the release archive
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          $name = "tandemfolio-$env:RELEASE_VERSION.zip"
+          $entry = Get-Content out/download/SHA256SUMS | Where-Object { $_.EndsWith("  $name") }
+          if (-not $entry) { throw 'Missing archive checksum.' }
+          $actual = (Get-FileHash "out/download/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $entry.Split(' ')[0]) { throw 'Archive checksum mismatch.' }
+          Expand-Archive "out/download/$name" 'out/Install with spaces'
+          $bundle = Join-Path (Resolve-Path 'out/Install with spaces') "tandemfolio-$env:RELEASE_VERSION"
+          & (Join-Path $bundle 'install.ps1') -Check
+          if ($LASTEXITCODE -ne 0) { throw 'Installer verification failed.' }
+          "TANDEMFOLIO_PLUGIN_ROOT=$(Join-Path $bundle 'plugins/tandemfolio')" >> $env:GITHUB_ENV
+      - name: Check macOS launcher and tar archive
+        if: runner.os == 'macOS'
+        env:
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          mkdir -p 'out/Tar install with spaces'
+          tar -xzf "out/download/tandemfolio-$RELEASE_VERSION.tar.gz" -C 'out/Tar install with spaces'
+          bash "out/Tar install with spaces/tandemfolio-$RELEASE_VERSION/install.sh" --check
+      - name: Exercise the extracted MCP server and local saves
+        run: npm run smoke:mcp
+
+  publish:
+    needs: [package, native-smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-release
+          path: release-assets
+      - name: Publish verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          flags=()
+          if [[ "$RELEASE_VERSION" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" release-assets/* \
+            --verify-tag --title "TandemFolio $RELEASE_VERSION" \
+            --generate-notes "${flags[@]}"

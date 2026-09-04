@@ -1,7 +1,9 @@
+// Modified by TandemFolio contributors: detach stale save bindings before browser file replacement.
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   attachMcpLiveSession,
+  replaceLiveEditorDocument,
   getLiveEditorActivity,
   getLiveEditorDisplayMode,
   subscribeLiveEditorActivity,
@@ -69,7 +71,7 @@ function CommunityPdfEditor(): React.ReactElement {
             if (!file) return
             void file
               .arrayBuffer()
-              .then((data) => host.stageFile(file.name, data))
+              .then((data) => replaceLiveEditorDocument(() => host.stageFile(file.name, data)))
               .catch(() => undefined)
           }}
         />

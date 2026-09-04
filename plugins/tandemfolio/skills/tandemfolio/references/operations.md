@@ -237,6 +237,11 @@ visual, performance/resource, MCP smoke, and all-format R6-01 release gates.
 
 ## PPTX
 
+`pptx.document.create_blank` is a whole-document replacement, not a prerequisite for editing or
+generating slides in the current file. An opened, saved, restored, or edited presentation rejects
+replacement unless `confirmReplace: true` records explicit user replacement intent. Discover its
+current detail schema before use. Ordinary continuation edits preserve the existing Save target.
+
 - Document/history/selection: `pptx.document.create_blank`, `pptx.document.save`,
   `pptx.document.save_as`, `pptx.history.undo`, `pptx.history.redo`, `pptx.selection.set`.
 - Slides/sections: `pptx.slide.add_blank`, `pptx.slide.add_with_layout`,

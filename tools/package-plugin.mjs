@@ -69,13 +69,19 @@ function replaceModuleSpecifiers(source, knownModules) {
 }
 
 const moduleVaultBootstrap = `(function () {
+  const dependencyNode = document.querySelector('script[data-tandemfolio-module-dependencies]');
+  const dependencies = JSON.parse(dependencyNode.textContent);
+  dependencyNode.remove();
   const payloadNodes = document.querySelectorAll('script[type="application/x-tandemfolio-module"]');
   const payloads = new Map();
   let entryModule = '';
   for (const node of payloadNodes) {
     const moduleId = node.dataset.module;
     if (!moduleId) continue;
-    payloads.set(moduleId, (node.textContent || '').trim());
+    payloads.set(moduleId, {
+      source: node.textContent || '',
+      encoding: node.dataset.encoding || 'gzip',
+    });
     if (node.dataset.entry === 'true') entryModule = moduleId;
     node.remove();
   }
@@ -86,7 +92,7 @@ const moduleVaultBootstrap = `(function () {
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
     const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-    return new Response(stream).text();
+    return new Response(stream);
   }
   async function ensureModule(moduleId) {
     const existing = urls.get(moduleId);
@@ -94,16 +100,25 @@ const moduleVaultBootstrap = `(function () {
     const inflight = pending.get(moduleId);
     if (inflight) return inflight;
     const task = (async function () {
-      const encoded = payloads.get(moduleId);
-      if (!encoded) throw new Error('Missing embedded module: ' + moduleId);
-      let source = await inflate(encoded);
-      const dependencyIds = Array.from(
-        source.matchAll(/genoffice-static:([A-Za-z0-9._-]+\\.js)/g),
-        function (match) { return match[1]; },
-      );
-      for (const dependencyId of new Set(dependencyIds)) {
-        const dependencyUrl = await ensureModule(dependencyId);
-        source = source.replaceAll('genoffice-static:' + dependencyId, dependencyUrl);
+      const payload = payloads.get(moduleId);
+      if (!payload) throw new Error('Missing embedded module: ' + moduleId);
+      const dependencyIds = dependencies[moduleId];
+      if (!Array.isArray(dependencyIds)) throw new Error('Missing module dependencies: ' + moduleId);
+      let source;
+      if (payload.encoding === 'identity') {
+        source = payload.source;
+      } else if (dependencyIds.length === 0) {
+        // Keep dependency-free modules as UTF-8 bytes: avoid decoding a large
+        // entry to a JS string only to re-encode it when constructing its Blob.
+        const response = await inflate(payload.source.trim());
+        source = await response.blob();
+      } else {
+        const response = await inflate(payload.source.trim());
+        source = await response.text();
+        for (const dependencyId of dependencyIds) {
+          const dependencyUrl = await ensureModule(dependencyId);
+          source = source.replaceAll('genoffice-static:' + dependencyId, dependencyUrl);
+        }
       }
       const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
       urls.set(moduleId, url);
@@ -142,23 +157,37 @@ async function inlineDeferredEditor(dist) {
   const moduleIds = (await readdir(assetDir)).filter((fileName) => fileName.endsWith('.js'))
   const knownModules = new Set(moduleIds)
   const payloads = []
+  const dependencies = {}
+  let entryPayload = ''
   for (const moduleId of moduleIds.sort()) {
     const source = replaceModuleSpecifiers(
       await readFile(join(assetDir, moduleId), 'utf8'),
       knownModules,
     )
+    dependencies[moduleId] = [
+      ...new Set(
+        parse(source)[0]
+          .filter((entry) => entry.d === -1 && entry.n?.startsWith('genoffice-static:'))
+          .map((entry) => entry.n.slice('genoffice-static:'.length)),
+      ),
+    ]
+    if (moduleId === entryModule) {
+      if (dependencies[moduleId].length > 0) {
+        throw new Error('The directly executable XLSX entry cannot have static chunk imports.')
+      }
+      entryPayload = `<script type="application/x-tandemfolio-module" data-module="${moduleId}" data-entry="true" data-encoding="identity">${source.replaceAll('</script', '<\\/script')}</script>`
+      continue
+    }
     const encoded = gzipSync(source, { level: 9 }).toString('base64')
     payloads.push(
-      `<script type="application/x-tandemfolio-module" data-module="${moduleId}"${
-        moduleId === entryModule ? ' data-entry="true"' : ''
-      }>${encoded}</script>`,
+      `<script type="application/x-tandemfolio-module" data-module="${moduleId}">${encoded}</script>`,
     )
   }
-  if (!knownModules.has(entryModule)) throw new Error('The XLSX entry module was not packaged.')
+  if (!entryPayload) throw new Error('The XLSX entry module was not packaged.')
   html = html.replace(
     entryTag[0],
     () =>
-      `${payloads.join('')}<script data-tandemfolio-module-bootstrap>${moduleVaultBootstrap}</script>`,
+      `${payloads.join('')}${entryPayload}<script type="application/json" data-tandemfolio-module-dependencies>${JSON.stringify(dependencies)}</script><script data-tandemfolio-module-bootstrap>${moduleVaultBootstrap}</script>`,
   )
   html = html.replace(
     "script-src 'self' 'unsafe-inline'",

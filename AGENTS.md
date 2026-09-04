@@ -16,6 +16,7 @@
 
 ## Source, license, and documentation
 
+- The pinned community source is `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`, as recorded in `upstream.config.json`.
 - Follow [project facts and attribution](docs/project-facts.md) for upstream-derived code, copyright, license, modification, and review requirements.
 - Update `docs/migration/provenance.md` and `docs/migration/ledger.md` whenever retained or modified upstream-derived areas move.
 - Update the relevant protocol, runbook, or status document in the same change when behavior or support status changes.

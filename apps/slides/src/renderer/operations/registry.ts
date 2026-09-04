@@ -198,7 +198,7 @@ export interface PptxOperationServices {
     readonly authorId: number
     readonly index: number
   }) => boolean | Promise<boolean>
-  readonly createBlank?: () => Promise<{
+  readonly createBlank?: (input: { readonly confirmReplace: boolean }) => Promise<{
     readonly fileName: string
     readonly slideCount: number
   }>
@@ -814,7 +814,7 @@ const handlers = {
       }
     return { ok: true, output: { updated: true } }
   },
-  'pptx.document.create_blank': async (_arguments, services) => {
+  'pptx.document.create_blank': async (arguments_, services) => {
     if (!services.createBlank) {
       return {
         ok: false,
@@ -822,7 +822,9 @@ const handlers = {
         message: 'PPTX blank-presentation service is unavailable.',
       }
     }
-    const created = await services.createBlank()
+    const created = await services.createBlank({
+      confirmReplace: arguments_.confirmReplace === true,
+    })
     return {
       ok: true,
       output: { opened: true, ...created },

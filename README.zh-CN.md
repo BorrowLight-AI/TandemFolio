@@ -35,6 +35,12 @@ TandemFolio 为 Codex 等 MCP Apps 宿主提供持续存在的可视化编辑能
 
 ## 快速开始
 
+Windows/macOS 用户可前往 [GitHub Releases](https://github.com/BorrowLight-AI/TandemFolio/releases)
+下载 `tandemfolio-X.Y.Z.zip`（两平台通用）或 `.tar.gz`（macOS），核对 `SHA256SUMS` 后，
+按照[安装与更新教程](docs/distribution.md)运行包内的 `install.ps1` 或 `install.sh`。
+需要 Node.js 22.12+ 和支持插件的 Codex CLI，无需编译源码或安装项目依赖。
+只有当前源码发布证据和 Windows/macOS 冒烟验证通过后，流水线才会提供发布附件。
+
 在源码目录中，用一条命令安装依赖并启动本地 MCP 服务：
 
 ```bash
@@ -59,6 +65,7 @@ TandemFolio 仍处于预发布阶段。五种格式的编辑器均已打包，�
 ## 文档
 
 - [快速开始](docs/getting-started.md) — 从源码运行、构建插件、在宿主中打开。
+- [Windows/macOS 安装](docs/distribution.md) — 下载、校验、安装、更新和回退。
 - [项目事实与归属](docs/project-facts.md) — 来源、Apache-2.0 义务与修改记录。
 - [实时会话协议](docs/protocol/live-session.md) — 已实现的会话、工具、版本与持久化行为。
 - [开发指南](docs/development.md) — 构建、测试、打包、发布和排障。

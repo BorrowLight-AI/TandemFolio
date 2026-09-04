@@ -821,8 +821,9 @@ master/layout-part edits. The browser host implements the complete retained `Sli
 time; picker inputs converge on bounded byte operations, Presenter/Audience share same-origin
 browser state, and export/print/show are classified as non-mutating host effects. The machine-
 checked PPTX retained-command baseline maps every descriptor with no `missing` disposition.
-Format-local retained-command parity is closed; shared source/round-trip/visual/performance/
-packaging/release gates still keep `ready` false.
+Format-local retained-command parity is closed. Those shared gates kept `ready`
+false at this historical milestone; current authorization is recorded in
+[`../../release/validation.md`](../../release/validation.md).
 
 The following locations are migration scaffolds rather than extension points:
 
@@ -836,13 +837,13 @@ Existing behavior moves first and must remain behaviorally equivalent. Each repl
 
 ## Current facts
 
-| Format   | Pinned community renderer | Current implementation                                                          | Decision status                                                   |
-| -------- | ------------------------: | ------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| DOCX     |                 130 files | Community renderer selectively retained                                         | Retained-command parity and R6-01 release gate complete; ready    |
+| Format   | Pinned community renderer | Current implementation                                                                 | Decision status                                                   |
+| -------- | ------------------------: | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| DOCX     |                 130 files | Community renderer selectively retained                                                | Retained-command parity and R6-01 release gate complete; ready    |
 | XLSX     |                 111 files | 76 permitted pinned files plus TandemFolio host/operation adapters; pinned App mounted | Renderer/mutation parity and R6-01 release gate complete; ready   |
-| PPTX     |                 104 files | 61 identical + 19 adapted permitted files; original App mounted                 | Retained-command parity and R6-01 release gate complete; ready    |
-| PDF      |                  40 files | All 33 permitted renderer files boot from `src/renderer`                        | Retained producer baseline and R6-01 release gate complete; ready |
-| Markdown |         30 renderer files | 21 pinned non-AI files plus browser/operation adapters                          | Retained-command parity and R6-01 release gate complete; ready    |
+| PPTX     |                 104 files | 61 identical + 19 adapted permitted files; original App mounted                        | Retained-command parity and R6-01 release gate complete; ready    |
+| PDF      |                  40 files | All 33 permitted renderer files boot from `src/renderer`                               | Retained producer baseline and R6-01 release gate complete; ready |
+| Markdown |         30 renderer files | 21 pinned non-AI files plus browser/operation adapters                                 | Retained-command parity and R6-01 release gate complete; ready    |
 
 These counts are pinned-source evidence, not a completion metric by themselves. Completion is determined by the source and capability gates below.
 

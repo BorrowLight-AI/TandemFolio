@@ -1,4 +1,6 @@
 /**
+ * Modified by TandemFolio contributors: persist explicit clean saves and support forced import checkpoints.
+ *
  * The ⌘S save flow: serializes the edit journal and Univer-owned states
  * (filters, CF, DV, notes, defined names) into one saveWorkbookEdits call,
  * with the two-phase split when structural changes entangle additions.
@@ -66,6 +68,7 @@ export async function handleSave(
   ctx: SaveContext,
   mode: 'save' | 'save-as' | 'recovery',
   quiet = false,
+  forceRecovery = false,
 ): Promise<SaveActionResult | undefined> {
   const state = ctx.lazyWorkbookRef.current
   if (!state) {
@@ -188,10 +191,7 @@ export async function handleSave(
     visualEdits.length +
     tableAdditions.length +
     pivotAdditions.length
-  if (total === 0 && mode !== 'save-as') {
-    if (mode !== 'recovery') ctx.setMessage(t('appNoEditsToSave'))
-    return
-  }
+  if (total === 0 && mode === 'recovery' && !forceRecovery) return
   // Sheet ops rebuild workbook.xml's tab list, so the save needs the final
   // on-screen order.
   const sheetOrder =

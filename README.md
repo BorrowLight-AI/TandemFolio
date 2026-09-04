@@ -35,6 +35,13 @@ This preview shows Codex opening TandemFolio's PPTX editor and building a 10-sli
 
 ## Quick start
 
+For a prebuilt Windows/macOS package, visit [GitHub Releases](https://github.com/BorrowLight-AI/TandemFolio/releases).
+Download the attached `tandemfolio-X.Y.Z.zip` (both platforms) or `.tar.gz` (macOS),
+verify `SHA256SUMS`, and follow the [installation and update guide](docs/distribution.md).
+The package includes `install.ps1` and `install.sh`; it requires Node.js 22.12+ and a
+plugin-capable Codex CLI, with no source build or dependency installation. Release assets
+will be available only after the source-current evidence gate and Windows/macOS smoke pass.
+
 From a source checkout, install dependencies and start the local MCP server with one command:
 
 ```bash
@@ -59,6 +66,7 @@ TandemFolio is pre-release software. All five format editors are packaged, but r
 ## Documentation
 
 - [Getting started](docs/getting-started.md) — run from source, build the plugin, and open it in a host.
+- [Windows/macOS installation](docs/distribution.md) — release downloads, checksums, install, update, and rollback.
 - [Project facts and attribution](docs/project-facts.md) — provenance, Apache-2.0 obligations, and modification records.
 - [Live-session protocol](docs/protocol/live-session.md) — implemented session, tool, revision, and persistence behavior.
 - [Development guide](docs/development.md) — build, test, packaging, release, and troubleshooting.

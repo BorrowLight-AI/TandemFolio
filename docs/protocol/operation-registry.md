@@ -1,6 +1,6 @@
 # Format-owned operation registry contract
 
-- Status: Implemented first-release runtime contract through R6-09; format-local retained-command
+- Status: Implemented first-release runtime contract through R6-15; format-local retained-command
   parity, shared release gates, bounded Manifest discovery, revision-guarded replay, and
   transaction-only canonical public execution pass for all five formats
 - Governing decision: [ADR 0004](../adr/0004-format-owned-operation-registries.md)
@@ -21,6 +21,14 @@ It separates four concerns:
 This document records the accepted contract and its staged implementation. [`live-session.md`](live-session.md) remains the exact implemented wire contract.
 
 ## Implemented foundation
+
+R6-15 / [ADR 0015](../adr/0015-explicit-pptx-document-replacement.md) adds optional boolean
+`confirmReplace` to the existing `pptx.document.create_blank` descriptor, default false. The
+format-owned host checks native name/dirty/history state before calling the shared replacement
+factory. Named, restored, saved, or edited presentations require explicit user replacement intent;
+an untouched initial blank does not. Rejection returns `execution_failed` without changing the
+document, Save binding, recovery, or revision. Confirmed replacement preserves the existing
+detach-and-new-target behavior. No operation IDs, transport tools, or non-PPTX dispatch change.
 
 The R2 chronology below records the compatibility aliases used while each tracer replaced its
 pre-registry route. R6-09 supersedes those transitional alias statements: all thirty-six

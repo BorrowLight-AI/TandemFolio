@@ -1,5 +1,23 @@
 # Performance and visual baselines
 
+## Current verification (2026-09-04)
+
+The [source-current verification record](../release/validation.md) and
+`release/release-evidence.json` contain the new complete five-format 7/7/21 capture.
+Visual differences are 0.1–0.5% under the unchanged 3% limit.
+The source-current approved capture passes every fixed gate. XLSX bootstrap p95 is
+**432.5 ms < 500 ms**, with two preceding seven-sample XLSX candidates at 423.5 ms
+and 422.7 ms. Markdown small-file open p95 is **14.3 ms < 20 ms**. The generated
+readiness projection is true for all five formats; Windows/macOS release CI remains pending.
+The reference PNGs and visual manifest are included in the checkout; no baseline
+images were refreshed.
+
+## Historical R6 measurements (not current release authorization)
+
+The following 2026-08-31 values describe the earlier implementation. Its approved
+JSON was not present in this checkout, and these historical numbers must not be
+presented as current evidence or used to fabricate a replacement approved bundle.
+
 - Captured: 2026-08-31 (Asia/Shanghai)
 - Host: Apple M4, 10 logical CPUs, 16 GiB RAM, macOS arm64
 - Browser: packaged Playwright Chromium 140.0.7339.16

@@ -1826,7 +1826,13 @@ describe('office_execute', () => {
     }
   })
 
-  it('reports only migrated format capabilities as ready', async () => {
+  it('reports registry capabilities with evidence-gated readiness', async () => {
+    const projection = JSON.parse(
+      await readFile(new URL('../src/generated/release-readiness.json', import.meta.url), 'utf8'),
+    ) as { ready: boolean }
+    // ADR 0005 applies one all-format release decision. A development build may
+    // expose the complete registry without claiming that release evidence passed.
+    const expectedReady = projection.ready
     const client = await connectClient()
     const docx = await readAllCapabilitySchemas(client, 'docx')
     const markdown = await readAllCapabilitySchemas(client, 'markdown')
@@ -1838,7 +1844,7 @@ describe('office_execute', () => {
       ok: true,
       capabilities: {
         format: 'docx',
-        ready: true,
+        ready: expectedReady,
         displayModes: ['inline', 'fullscreen'],
         defaultDisplayMode: 'fullscreen',
         localFile: { picker: true, path: true, recovery: true },
@@ -1867,7 +1873,7 @@ describe('office_execute', () => {
       ok: true,
       capabilities: {
         format: 'markdown',
-        ready: true,
+        ready: expectedReady,
         showTool: 'office_show_markdown_editor',
         localFile: { picker: true, path: true, recovery: true },
         operations: {
@@ -1881,7 +1887,7 @@ describe('office_execute', () => {
       ok: true,
       capabilities: {
         format: 'xlsx',
-        ready: true,
+        ready: expectedReady,
         showTool: 'office_show_xlsx_editor',
         displayModes: ['inline', 'fullscreen'],
         defaultDisplayMode: 'fullscreen',
@@ -2031,7 +2037,7 @@ describe('office_execute', () => {
       ok: true,
       capabilities: {
         format: 'pptx',
-        ready: true,
+        ready: expectedReady,
         showTool: 'office_show_pptx_editor',
         defaultDisplayMode: 'fullscreen',
         localFile: { picker: true, path: true, recovery: true },
@@ -2069,7 +2075,7 @@ describe('office_execute', () => {
       ok: true,
       capabilities: {
         format: 'pdf',
-        ready: true,
+        ready: expectedReady,
         showTool: 'office_show_pdf_editor',
         defaultDisplayMode: 'fullscreen',
         localFile: { picker: true, path: true, recovery: true },
@@ -7405,6 +7411,287 @@ describe('office_execute', () => {
       await expect(readFile(path)).resolves.toEqual(data)
     },
   )
+
+  it.each([
+    ['docx', 'saved.docx'],
+    ['markdown', 'saved.md'],
+    ['xlsx', 'saved.xlsx'],
+    ['pptx', 'saved.pptx'],
+    ['pdf', 'saved.pdf'],
+  ] as const)(
+    'restores saved %s bytes after remount and broker restart without a recovery snapshot',
+    async (format, fileName) => {
+      const root = await mkdtemp(join(tmpdir(), 'tandemfolio-saved-resume-'))
+      temporaryDirectories.push(root)
+      const environment = { TANDEMFOLIO_OUTPUT_DIR: join(root, 'outputs') }
+      let client = await connectClient(join(root, 'state'), environment)
+      const created = await client.callTool({
+        name: 'office_create_session',
+        arguments: { format },
+      })
+      const sessionId = (created.structuredContent as { session: { id: string } }).session.id
+      let viewId = 'initial-view'
+      await client.callTool({ name: 'office_editor_poll', arguments: { sessionId, viewId } })
+      const data = Buffer.from(`saved-by-${format}-renderer`)
+      const begun = await client.callTool({
+        name: 'office_editor_begin_document_save',
+        arguments: {
+          sessionId,
+          viewId,
+          fileName,
+          size: data.length,
+        },
+      })
+      const { uploadId, path } = begun.structuredContent as { uploadId: string; path: string }
+      await client.callTool({
+        name: 'office_editor_write_document_save_chunk',
+        arguments: {
+          sessionId,
+          viewId,
+          uploadId,
+          offset: 0,
+          data: data.toString('base64'),
+        },
+      })
+      await client.callTool({
+        name: 'office_editor_commit_document_save',
+        arguments: { sessionId, viewId, uploadId },
+      })
+      for (const restart of [false, true, 'automatic'] as const) {
+        await client.callTool({
+          name: 'office_editor_disconnect',
+          arguments: { sessionId, viewId },
+        })
+        if (restart) {
+          await client.close()
+          clients.splice(clients.indexOf(client), 1)
+          client = await connectClient(join(root, 'state'), environment)
+          if (restart !== 'automatic') {
+            const resumed = await client.callTool({
+              name: 'office_create_session',
+              arguments: { format, sessionId, resume: 'exact' },
+            })
+            expect(resumed.structuredContent).toMatchObject({
+              ok: true,
+              session: { id: sessionId, filePath: path },
+            })
+          }
+        }
+        viewId = `resumed-${restart}`
+        const response = await client.callTool({
+          name: 'office_editor_poll',
+          arguments: {
+            sessionId,
+            viewId,
+            format,
+            coldStart: true,
+            fileName: 'Untitled',
+            dirty: false,
+          },
+        })
+        expect(response.structuredContent).toMatchObject({
+          ok: true,
+          commands: [
+            { operation: `${format}.document.load_staged`, arguments: { name: fileName } },
+          ],
+        })
+        const command = (
+          response.structuredContent as {
+            commands: Array<{
+              commandId: string
+              baseRevision: number
+              arguments: { blobId: string }
+            }>
+          }
+        ).commands[0]
+        const chunk = await client.callTool({
+          name: 'office_editor_read_file_chunk',
+          arguments: {
+            sessionId,
+            viewId,
+            blobId: command.arguments.blobId,
+            offset: 0,
+            length: 262144,
+          },
+        })
+        expect(chunk.structuredContent).toMatchObject({ ok: true, data: data.toString('base64') })
+        await client.callTool({
+          name: 'office_editor_acknowledge',
+          arguments: {
+            sessionId,
+            viewId,
+            commandId: command.commandId,
+            revision: command.baseRevision + 1,
+            fileName,
+            dirty: false,
+          },
+        })
+      }
+      await client.callTool({ name: 'office_editor_disconnect', arguments: { sessionId, viewId } })
+      await rm(path)
+      const missing = await client.callTool({
+        name: 'office_editor_poll',
+        arguments: { sessionId, viewId: 'missing-file', format, coldStart: true },
+      })
+      expect(missing.structuredContent).toMatchObject({
+        ok: false,
+        error: 'document_restore_failed',
+      })
+      const retried = await client.callTool({
+        name: 'office_editor_poll',
+        arguments: { sessionId, viewId: 'missing-file', format, coldStart: true },
+      })
+      expect(retried.structuredContent).toMatchObject({
+        ok: false,
+        error: 'document_restore_failed',
+      })
+    },
+  )
+
+  it('rejects a duplicate mount replaying the same show identity without changing document context', async () => {
+    const client = await connectClient()
+    const created = await client.callTool({
+      name: 'office_create_session',
+      arguments: { format: 'pptx' },
+    })
+    const sessionId = (created.structuredContent as { session: { id: string } }).session.id
+    await client.callTool({
+      name: 'office_editor_poll',
+      arguments: {
+        sessionId,
+        viewId: 'same-show',
+        mountId: 'owner',
+        fileName: 'Owner.pptx',
+        dirty: true,
+      },
+    })
+    const duplicate = await client.callTool({
+      name: 'office_editor_poll',
+      arguments: {
+        sessionId,
+        viewId: 'same-show',
+        mountId: 'duplicate',
+        fileName: 'Untitled.pptx',
+        dirty: false,
+      },
+    })
+    expect(duplicate.structuredContent).toMatchObject({ ok: false, error: 'editor_view_conflict' })
+    const context = await client.callTool({ name: 'office_get_context', arguments: { sessionId } })
+    expect(context.structuredContent).toMatchObject({
+      session: { fileName: 'Owner.pptx', dirty: true },
+    })
+  })
+
+  it.each([
+    ['docx', 'docx'],
+    ['markdown', 'md'],
+    ['xlsx', 'xlsx'],
+    ['pptx', 'pptx'],
+    ['pdf', 'pdf'],
+  ] as const)(
+    'browser replacement in %s cannot overwrite the previous document, even with the same name',
+    async (format, extension) => {
+      const root = await mkdtemp(join(tmpdir(), 'tandemfolio-replace-'))
+      temporaryDirectories.push(root)
+      const client = await connectClient(join(root, 'state'), {
+        TANDEMFOLIO_OUTPUT_DIR: join(root, 'outputs'),
+      })
+      const created = await client.callTool({
+        name: 'office_create_session',
+        arguments: { format },
+      })
+      const sessionId = (created.structuredContent as { session: { id: string } }).session.id
+      const viewId = 'replace-view'
+      await client.callTool({ name: 'office_editor_poll', arguments: { sessionId, viewId } })
+      const save = async (text: string) => {
+        const data = Buffer.from(text)
+        const begun = await client.callTool({
+          name: 'office_editor_begin_document_save',
+          arguments: { sessionId, viewId, fileName: `same.${extension}`, size: data.length },
+        })
+        const { uploadId } = begun.structuredContent as { uploadId: string }
+        await client.callTool({
+          name: 'office_editor_write_document_save_chunk',
+          arguments: { sessionId, viewId, uploadId, offset: 0, data: data.toString('base64') },
+        })
+        const committed = await client.callTool({
+          name: 'office_editor_commit_document_save',
+          arguments: { sessionId, viewId, uploadId },
+        })
+        return (committed.structuredContent as { path: string }).path
+      }
+      const firstPath = await save('first-document')
+      const reset = await client.callTool({
+        name: 'office_editor_reset_document',
+        arguments: { sessionId, viewId },
+      })
+      expect(reset.structuredContent).toMatchObject({ ok: true, filePath: null })
+      const secondPath = await save('second-document')
+      expect(secondPath).not.toBe(firstPath)
+      await expect(readFile(firstPath, 'utf8')).resolves.toBe('first-document')
+      await expect(readFile(secondPath, 'utf8')).resolves.toBe('second-document')
+    },
+  )
+
+  it('retires pre-save recovery and rejects a late checkpoint so a remount loads the committed file', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'tandemfolio-save-recovery-'))
+    temporaryDirectories.push(root)
+    const client = await connectClient(join(root, 'state'), {
+      TANDEMFOLIO_OUTPUT_DIR: join(root, 'outputs'),
+    })
+    const created = await client.callTool({
+      name: 'office_create_session',
+      arguments: { format: 'markdown' },
+    })
+    const sessionId = (created.structuredContent as { session: { id: string } }).session.id
+    const viewId = 'save-recovery'
+    await client.callTool({ name: 'office_editor_poll', arguments: { sessionId, viewId } })
+    const draft = Buffer.from('old draft')
+    const beginRecovery = async () => {
+      const begun = await client.callTool({
+        name: 'office_editor_begin_recovery',
+        arguments: { sessionId, viewId, fileName: 'draft.md', size: draft.length },
+      })
+      const { uploadId } = begun.structuredContent as { uploadId: string }
+      await client.callTool({
+        name: 'office_editor_write_recovery_chunk',
+        arguments: { sessionId, viewId, uploadId, offset: 0, data: draft.toString('base64') },
+      })
+      return uploadId
+    }
+    await client.callTool({
+      name: 'office_editor_commit_recovery',
+      arguments: { sessionId, viewId, uploadId: await beginRecovery() },
+    })
+    const lateRecovery = await beginRecovery()
+    const saved = Buffer.from('latest saved contents')
+    const begun = await client.callTool({
+      name: 'office_editor_begin_document_save',
+      arguments: { sessionId, viewId, fileName: 'saved.md', size: saved.length },
+    })
+    const { uploadId } = begun.structuredContent as { uploadId: string }
+    await client.callTool({
+      name: 'office_editor_write_document_save_chunk',
+      arguments: { sessionId, viewId, uploadId, offset: 0, data: saved.toString('base64') },
+    })
+    await client.callTool({
+      name: 'office_editor_commit_document_save',
+      arguments: { sessionId, viewId, uploadId },
+    })
+    const late = await client.callTool({
+      name: 'office_editor_commit_recovery',
+      arguments: { sessionId, viewId, uploadId: lateRecovery },
+    })
+    expect(late.structuredContent).toMatchObject({ ok: false, error: 'command_not_found' })
+    await client.callTool({ name: 'office_editor_disconnect', arguments: { sessionId, viewId } })
+    const resumed = await client.callTool({
+      name: 'office_editor_poll',
+      arguments: { sessionId, viewId: 'new-view' },
+    })
+    expect(resumed.structuredContent).toMatchObject({
+      commands: [{ arguments: { name: 'saved.md', size: saved.length } }],
+    })
+  })
 
   it('binds a successfully opened file so Save atomically overwrites that exact path', async () => {
     const root = await mkdtemp(join(tmpdir(), 'tandemfolio-open-file-save-'))

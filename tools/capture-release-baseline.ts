@@ -30,9 +30,7 @@ const defaultOutput = join(root, 'release', 'release-evidence.candidate.json')
 const baseUrl = 'http://127.0.0.1:4178'
 const formats = [...releaseMeasurementMatrix.formats] as ReleaseFormat[]
 const sizes = [...releaseMeasurementMatrix.fixtureSizes] as ReleaseFixtureSize[]
-const upstreamVisualManifest = JSON.parse(
-  await readFile(join(root, 'release/upstream-visual-manifest.json'), 'utf8'),
-) as {
+let upstreamVisualManifest: {
   upstreamCommit: string
   formats: Record<
     ReleaseFormat,
@@ -766,6 +764,9 @@ async function main(): Promise<void> {
   if (approved && (!canonicalSamples || selectedFormats.length !== formats.length)) {
     throw new Error('Approved release evidence requires every format and at least 7/7/21 samples.')
   }
+  upstreamVisualManifest = JSON.parse(
+    await readFile(join(root, 'release/upstream-visual-manifest.json'), 'utf8'),
+  )
   const artifactRoot = join(dirname(output), 'artifacts')
   await mkdir(artifactRoot, { recursive: true })
 

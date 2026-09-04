@@ -1,6 +1,10 @@
 # Getting started
 
-TandemFolio is currently distributed as a source checkout and local Codex plugin. It needs Node.js 22.12+ and npm 10+. A compatible MCP Apps host is required for the embedded visual experience.
+For prebuilt Windows/macOS release downloads, installation scripts, and updates, see
+[Install a release](distribution.md). The release workflow publishes those bundles only
+after the required evidence and native smoke checks pass.
+
+The source-checkout workflow below needs Node.js 22.12+ and npm 10+. A compatible MCP Apps host is required for the embedded visual experience.
 
 ## Start the local server
 

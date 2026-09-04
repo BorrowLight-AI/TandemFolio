@@ -1,0 +1,42 @@
+{
+  "upstreamCommit": "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
+  "review": "release/visual-review.md",
+  "baselineKind": "community-renderer-host-adaptation",
+  "formats": {
+    "docx": {
+      "baselinePath": "tests/visual/__screenshots__/host-widths.spec.ts/docx-split-view.png",
+      "baselineSha256": "6160ef862e2ca3d5ab58696dd3a6a0bd8cfbafea9ce30f296af758ad57b00c61",
+      "upstreamPaths": ["apps/docs/src/renderer/App.tsx", "apps/docs/src/renderer/components/Ribbon.tsx"],
+      "maxDiffPixelRatio": 0.03,
+      "masks": []
+    },
+    "markdown": {
+      "baselinePath": "tests/visual/__screenshots__/host-widths.spec.ts/markdown-split-view.png",
+      "baselineSha256": "2cdfa7734c5385b818ce61bfc491dcbbf370130c7722ee1d446e957b2331113c",
+      "upstreamPaths": ["apps/markdown/src/renderer/App.tsx", "apps/markdown/src/renderer/components/Ribbon.tsx"],
+      "maxDiffPixelRatio": 0.03,
+      "masks": []
+    },
+    "xlsx": {
+      "baselinePath": "tests/visual/__screenshots__/host-widths.spec.ts/xlsx-split-view.png",
+      "baselineSha256": "c253bdc20e550bb84a4dc8519e985bd7c2f2d23dcf30ecdfff5fbffd418c3cd1",
+      "upstreamPaths": ["apps/sheets/src/renderer/App.tsx", "apps/sheets/src/renderer/main.tsx"],
+      "maxDiffPixelRatio": 0.03,
+      "masks": []
+    },
+    "pptx": {
+      "baselinePath": "tests/visual/__screenshots__/host-widths.spec.ts/pptx-split-view.png",
+      "baselineSha256": "353a91e9ea1f3c2ab9d0a1c6eca3a67d650c306bc178917c7ff5014f5002cad9",
+      "upstreamPaths": ["apps/slides/src/renderer/App.tsx", "apps/slides/src/renderer/components/Ribbon.tsx"],
+      "maxDiffPixelRatio": 0.03,
+      "masks": []
+    },
+    "pdf": {
+      "baselinePath": "tests/visual/__screenshots__/host-widths.spec.ts/pdf-split-view.png",
+      "baselineSha256": "cc77deaf91ad24c0f5225713af5af16dcab2b0f99d4a51c50d4e9bfa7f1a93b9",
+      "upstreamPaths": ["apps/pdf/src/renderer/App.tsx", "apps/pdf/src/renderer/main.tsx"],
+      "maxDiffPixelRatio": 0.03,
+      "masks": []
+    }
+  }
+}

@@ -199,6 +199,16 @@ export class RecoveryUploadStore {
 
   constructor(readonly recoveries: RecoveryStore) {}
 
+  hasPending(sessionId: string): boolean {
+    return [...this.#uploads.values()].some((upload) => upload.sessionId === sessionId)
+  }
+
+  invalidate(sessionId: string): void {
+    for (const [id, upload] of this.#uploads) {
+      if (upload.sessionId === sessionId) this.#uploads.delete(id)
+    }
+  }
+
   begin(sessionId: string, format: LiveSession['format'], fileName: string, size: number): string {
     const upload: RecoveryUpload = {
       uploadId: randomUUID(),

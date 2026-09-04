@@ -12,6 +12,10 @@ const mcp = vi.hoisted(() => ({
   sizeNotifications: [] as Array<{ width: number; height: number }>,
   pollWaiters: [] as Array<() => void>,
   pollFailures: 0,
+  pollError: null as string | null,
+  pollRetryAfterMs: undefined as number | undefined,
+  pollFilePath: undefined as string | null | undefined,
+  restoreCommandId: undefined as string | undefined,
   connectFailures: 0,
   downloads: [] as Array<Record<string, unknown>>,
   instance: null as {
@@ -63,19 +67,48 @@ vi.mock('@modelcontextprotocol/ext-apps', () => ({
       mcp.events.push(`tool:${call.name}`)
       mcp.calls.push(call)
       if (call.name === 'office_editor_poll') {
+        if (mcp.pollError) {
+          return {
+            isError: true,
+            structuredContent: {
+              ok: false,
+              error: mcp.pollError,
+              retryAfterMs: mcp.pollRetryAfterMs,
+            },
+          }
+        }
         if (mcp.pollFailures > 0) {
           mcp.pollFailures -= 1
           throw new Error('temporary transport failure')
         }
         const commands = mcp.commands.splice(0)
         if (commands.length > 0 || !(Number(call.arguments.waitMs) > 0)) {
-          return { structuredContent: { ok: true, commands } }
+          return {
+            structuredContent: {
+              ok: true,
+              commands,
+              restoreCommandId: mcp.restoreCommandId,
+              filePath: mcp.pollFilePath,
+            },
+          }
         }
-        return await new Promise<{ structuredContent: { ok: true; commands: never[] } }>(
-          (resolve) => {
-            mcp.pollWaiters.push(() => resolve({ structuredContent: { ok: true, commands: [] } }))
-          },
-        )
+        return await new Promise<{
+          structuredContent: {
+            ok: true
+            commands: Array<Record<string, unknown>>
+            filePath?: string | null
+          }
+        }>((resolve) => {
+          mcp.pollWaiters.push(() =>
+            resolve({
+              structuredContent: {
+                ok: true,
+                commands: mcp.commands.splice(0),
+                filePath: mcp.pollFilePath,
+              },
+            }),
+          )
+        })
       }
       if (call.name === 'office_editor_read_file_chunk' && mcp.stagedBytes) {
         const offset = call.arguments.offset as number
@@ -179,6 +212,7 @@ import {
   readLiveEditorBundledFontAsset,
   readLiveEditorLocalAsset,
   saveLiveEditorFile,
+  replaceLiveEditorDocument,
   subscribeLiveEditorActivity,
 } from '../src/mcp-live-session'
 
@@ -194,6 +228,10 @@ afterEach(() => {
   mcp.requestedModes = []
   mcp.sizeNotifications = []
   mcp.pollFailures = 0
+  mcp.pollError = null
+  mcp.pollRetryAfterMs = undefined
+  mcp.pollFilePath = undefined
+  mcp.restoreCommandId = undefined
   mcp.connectFailures = 0
   mcp.downloads = []
   for (const release of mcp.pollWaiters.splice(0)) release()
@@ -248,6 +286,339 @@ function bindEditor(sessionId: string, viewId = `view-${sessionId}`): void {
 }
 
 describe('format-neutral MCP live session', () => {
+  it('honors explicit continuation despite a stale inactive viewport hint', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const intersect = stubEditorIntersection(true)
+    mcp.pollError = 'editor_view_conflict'
+    mcp.pollRetryAfterMs = 1000
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({ revision, fileName: null, dirty: false, selection: null }),
+    })
+    try {
+      bindEditor('explicit-inactive')
+      await vi.advanceTimersByTimeAsync(100)
+      intersect(false)
+      const prior = mcp.calls.filter((call) => call.name === 'office_editor_poll').length
+      const button = [...document.querySelectorAll('button')].find(
+        (el) => el.textContent === '在此继续编辑',
+      )!
+      button.click()
+      await vi.advanceTimersByTimeAsync(100)
+      const polls = mcp.calls.filter((call) => call.name === 'office_editor_poll')
+      expect(polls).toHaveLength(prior + 1)
+      expect(polls.at(-1)?.arguments).toMatchObject({ activateView: true, active: true })
+      // The outgoing owner needs time to checkpoint: retain the explicit intent for retries.
+      mcp.pollError = null
+      await vi.advanceTimersByTimeAsync(1100)
+      expect(document.documentElement.dataset.liveEditorConnection).toBe('connected')
+      expect(document.documentElement.dataset.liveEditorActive).toBe('false')
+    } finally {
+      teardown()
+    }
+  })
+
+  it('stops waiting after 30 seconds and requires an explicit action to try again', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const intersect = stubEditorIntersection(true)
+    mcp.pollError = 'editor_view_conflict'
+    mcp.pollRetryAfterMs = 1000
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({ revision, fileName: null, dirty: false, selection: null }),
+    })
+    try {
+      bindEditor('bounded-wait')
+      await vi.advanceTimersByTimeAsync(100)
+      expect(document.documentElement.dataset.liveEditorConnection).toBe('editor_view_conflict')
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(document.querySelector('[data-live-session-status]')?.textContent).toContain(
+        '等待已超时',
+      )
+      const polls = mcp.calls.filter((call) => call.name === 'office_editor_poll').length
+      intersect(false)
+      intersect(true)
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(mcp.calls.filter((call) => call.name === 'office_editor_poll')).toHaveLength(polls)
+      mcp.pollError = null
+      const button = [...document.querySelectorAll('button')].find(
+        (el) => el.textContent === '在此继续编辑',
+      )!
+      button.click()
+      await vi.advanceTimersByTimeAsync(100)
+      expect(document.documentElement.dataset.liveEditorConnection).toBe('connected')
+    } finally {
+      teardown()
+    }
+  })
+
+  it.each(['hydrate', 'execute'])(
+    'stops a failed %s restore instead of accepting a blank session',
+    async (phase) => {
+      Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+      mcp.restoreCommandId = 'restore'
+      mcp.commands.push({
+        commandId: 'restore',
+        operation: 'markdown.document.load_staged',
+        baseRevision: 0,
+        arguments: { blobId: 'recovery', fileName: 'restored.md', size: 4 },
+      })
+      if (phase === 'execute') mcp.stagedBytes = new TextEncoder().encode('test')
+      const teardown = attachMcpLiveSession({
+        execute: async () => {
+          throw new Error('Cannot load recovered bytes')
+        },
+        snapshot: (revision) => ({ revision, fileName: null, dirty: false, selection: null }),
+      })
+      try {
+        bindEditor('failed-restore')
+        await vi.waitFor(() =>
+          expect(document.documentElement.dataset.liveEditorConnection).toBe(
+            'document_restore_failed',
+          ),
+        )
+        expect(mcp.calls.filter((call) => call.name === 'office_editor_poll')).toHaveLength(1)
+        expect(
+          mcp.calls.find((call) => call.name === 'office_editor_acknowledge')?.arguments,
+        ).toMatchObject({ commandId: 'restore', ok: false })
+      } finally {
+        teardown()
+      }
+    },
+  )
+
+  it('shows the actual committed path and lets the user copy it', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    let copied = ''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          copied = text
+        },
+      },
+    })
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({
+        revision,
+        fileName: 'Quarterly Review.pptx',
+        dirty: false,
+        selection: null,
+      }),
+    })
+    try {
+      bindEditor('path-visible')
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('connected'),
+      )
+      await saveLiveEditorFile({ fileName: 'Quarterly Review.pptx', data: new ArrayBuffer(0) })
+      const path = document.querySelector<HTMLInputElement>('[aria-label="文件绝对路径"]')
+      expect(path?.value).toBe('/tmp/tandemfolio/Quarterly Review.pptx')
+      document.querySelector<HTMLButtonElement>('[aria-label="复制文件路径"]')?.click()
+      await vi.waitFor(() => expect(copied).toBe(path?.value))
+    } finally {
+      teardown()
+    }
+  })
+
+  it('detaches the previous target before a browser replacement and checkpoints the new document', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({ revision, fileName: 'new.md', dirty: false, selection: null }),
+      recoverySnapshot: async () => ({
+        fileName: 'new.md',
+        data: new TextEncoder().encode('new document').buffer,
+      }),
+    })
+    try {
+      bindEditor('replace')
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('connected'),
+      )
+      await replaceLiveEditorDocument(async () => {
+        expect(mcp.calls.some((call) => call.name === 'office_editor_reset_document')).toBe(true)
+      })
+      expect(mcp.calls.some((call) => call.name === 'office_editor_commit_recovery')).toBe(true)
+    } finally {
+      teardown()
+    }
+  })
+
+  it('keeps the Export Copy destination visible when ordinary polls repeat the bound source path', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    mcp.pollFilePath = '/tmp/source.pptx'
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({
+        revision,
+        fileName: 'source.pptx',
+        dirty: false,
+        selection: null,
+      }),
+    })
+    try {
+      bindEditor('export-path')
+      await vi.waitFor(() => expect(mcp.pollWaiters.length).toBeGreaterThan(0))
+      await saveLiveEditorFile({
+        fileName: 'Quarterly Review.pptx',
+        data: new ArrayBuffer(0),
+        mode: 'export-copy',
+      })
+      for (let index = 0; index < 2; index++) {
+        mcp.pollWaiters.shift()!()
+        await vi.waitFor(() => expect(mcp.pollWaiters.length).toBeGreaterThan(0))
+      }
+      expect(document.querySelector<HTMLInputElement>('[aria-label="文件绝对路径"]')?.value).toBe(
+        '/tmp/tandemfolio/Quarterly Review.pptx',
+      )
+      expect(document.querySelector('[data-live-session-status] summary')?.textContent).toBe(
+        '导出副本位置',
+      )
+    } finally {
+      teardown()
+    }
+  })
+
+  it('waits for browser replacement before executing a command delivered by an already pending poll', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const execute = vi.fn(async () => ({ ok: true as const }))
+    const teardown = attachMcpLiveSession({
+      execute,
+      snapshot: (revision) => ({ revision, fileName: 'new.md', dirty: false, selection: null }),
+    })
+    let release!: () => void
+    const replacing = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let replacement: Promise<void> | undefined
+    try {
+      bindEditor('replace-concurrent')
+      await vi.waitFor(() => expect(mcp.pollWaiters.length).toBeGreaterThan(0))
+      replacement = replaceLiveEditorDocument(() => replacing)
+      await vi.waitFor(() =>
+        expect(mcp.calls.some((call) => call.name === 'office_editor_reset_document')).toBe(true),
+      )
+      mcp.commands.push({
+        commandId: 'after-open',
+        operation: 'markdown.text.insert',
+        arguments: {},
+        baseRevision: 0,
+      })
+      mcp.pollWaiters.shift()!()
+      await new Promise((resolve) => window.setTimeout(resolve, 50))
+      expect(execute).not.toHaveBeenCalled()
+      release()
+      await replacement
+      await vi.waitFor(() => expect(execute).toHaveBeenCalledTimes(1))
+    } finally {
+      release()
+      await replacement
+      teardown()
+    }
+  })
+
+  it('gives each cold mount a distinct transport identity even when the host replays the same show result', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const adapter = {
+      execute: async () => ({ ok: true as const }),
+      snapshot: (revision: number) => ({ revision, fileName: null, dirty: false, selection: null }),
+    }
+    const mounts: unknown[] = []
+    for (let index = 0; index < 2; index++) {
+      const teardown = attachMcpLiveSession(adapter)
+      try {
+        bindEditor('same-session', 'same-view')
+        await vi.waitFor(() =>
+          expect(
+            mcp.calls.filter((call) => call.name === 'office_editor_poll').length,
+          ).toBeGreaterThan(0),
+        )
+        mounts.push(mcp.calls.find((call) => call.name === 'office_editor_poll')!.arguments.mountId)
+      } finally {
+        teardown()
+        mcp.calls = []
+      }
+    }
+    expect(mounts[0]).toEqual(expect.any(String))
+    expect(mounts[1]).not.toBe(mounts[0])
+  })
+
+  it('backs off a structured transient poll error and then resumes command delivery', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    mcp.pollError = 'internal_error'
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({ revision, fileName: null, dirty: false, selection: null }),
+    })
+    try {
+      bindEditor('transient-error')
+      await vi.waitFor(() =>
+        expect(mcp.calls.some((call) => call.name === 'office_editor_poll')).toBe(true),
+      )
+      await new Promise((resolve) => window.setTimeout(resolve, 250))
+      expect(mcp.calls.filter((call) => call.name === 'office_editor_poll')).toHaveLength(1)
+      mcp.pollError = null
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('connected'),
+      )
+    } finally {
+      teardown()
+    }
+  })
+
+  it('rechecks an initially hidden conflicting view when it first becomes visible', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const intersect = stubEditorIntersection(false)
+    mcp.pollError = 'editor_view_conflict'
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({ revision, fileName: null, dirty: false, selection: null }),
+    })
+    try {
+      bindEditor('initially-hidden')
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('editor_view_conflict'),
+      )
+      expect(mcp.calls.filter((call) => call.name === 'office_editor_poll')).toHaveLength(1)
+      mcp.pollError = null
+      intersect(true)
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('connected'),
+      )
+    } finally {
+      teardown()
+    }
+  })
+
+  it.each(['editor_view_conflict', 'session_not_found'])(
+    'stops a rejected view instead of spinning on %s, including while hidden',
+    async (error) => {
+      Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+      mcp.pollError = error
+      const teardown = attachMcpLiveSession({
+        execute: async () => ({ ok: true }),
+        snapshot: (revision) => ({ revision, fileName: null, dirty: false, selection: null }),
+      })
+      try {
+        bindEditor('rejected-view')
+        await vi.waitFor(() =>
+          expect(mcp.calls.some((call) => call.name === 'office_editor_poll')).toBe(true),
+        )
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+        document.dispatchEvent(new Event('visibilitychange'))
+        await new Promise((resolve) => window.setTimeout(resolve, 600))
+        expect(mcp.calls.filter((call) => call.name === 'office_editor_poll')).toHaveLength(1)
+        expect(document.documentElement.dataset.liveEditorConnection).toBe(error)
+      } finally {
+        teardown()
+      }
+    },
+  )
+
   it('persists a generated binary file through the local server-tool save protocol', async () => {
     Object.defineProperty(window, 'parent', { configurable: true, value: {} })
     const teardown = attachMcpLiveSession({
@@ -263,6 +634,9 @@ describe('format-neutral MCP live session', () => {
     try {
       await vi.waitFor(() => expect(mcp.instance).not.toBeNull())
       bindEditor('session-save', 'view-save')
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('connected'),
+      )
       await expect(
         saveLiveEditorFile({
           fileName: 'Quarterly Review.pptx',
@@ -279,6 +653,7 @@ describe('format-neutral MCP live session', () => {
           arguments: {
             sessionId: 'session-save',
             viewId: 'view-save',
+            mountId: expect.any(String),
             fileName: 'Quarterly Review.pptx',
             size: 3,
             mode: 'save-as',
@@ -289,6 +664,7 @@ describe('format-neutral MCP live session', () => {
           arguments: {
             sessionId: 'session-save',
             viewId: 'view-save',
+            mountId: expect.any(String),
             uploadId: 'save-session-save',
             offset: 0,
             data: 'AQID',
@@ -299,6 +675,7 @@ describe('format-neutral MCP live session', () => {
           arguments: {
             sessionId: 'session-save',
             viewId: 'view-save',
+            mountId: expect.any(String),
             uploadId: 'save-session-save',
           },
         },
@@ -976,6 +1353,7 @@ describe('format-neutral MCP live session', () => {
         arguments: {
           sessionId: 'session-1',
           viewId: 'view-session-1',
+          mountId: expect.any(String),
           commandId: 'command-1',
           ok: true,
           output: { changed: 1 },
@@ -1140,6 +1518,7 @@ describe('format-neutral MCP live session', () => {
     expect(mcp.calls).toContainEqual({
       name: 'office_editor_read_local_asset_chunk',
       arguments: {
+        mountId: expect.any(String),
         sessionId: 'session-1',
         viewId: 'view-session-1',
         rootId: 'root-1',

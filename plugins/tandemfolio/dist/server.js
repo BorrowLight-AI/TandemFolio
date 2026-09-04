@@ -6915,10 +6915,10 @@ var require_dist = __commonJS({
 });
 
 // src/server.ts
-import { readFile as readFile5 } from "node:fs/promises";
+import { readFile as readFile5, stat as stat2 } from "node:fs/promises";
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { homedir } from "node:os";
-import { join as join3 } from "node:path";
+import { basename as basename3, join as join3 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // ../../node_modules/zod/v3/helpers/util.js
@@ -31179,6 +31179,15 @@ import { randomUUID as randomUUID2 } from "node:crypto";
 
 // src/session-store.ts
 import { randomUUID } from "node:crypto";
+function sameMountedView(left, right) {
+  try {
+    const a = JSON.parse(left);
+    const b = JSON.parse(right);
+    return Array.isArray(a) && Array.isArray(b) && a.length === 2 && b.length === 2 && typeof a[0] === "string" && a[0] === b[0];
+  } catch {
+    return false;
+  }
+}
 var LEGACY_VIEW_ID = "legacy-view";
 var SessionError = class extends Error {
   constructor(code, message) {
@@ -31188,11 +31197,100 @@ var SessionError = class extends Error {
   code;
 };
 var SessionStore = class {
+  constructor(now = Date.now) {
+    this.now = now;
+  }
+  now;
   #sessions = /* @__PURE__ */ new Map();
   #activeCommands = /* @__PURE__ */ new Map();
   #commandCompletions = /* @__PURE__ */ new Map();
   #pollWaiters = /* @__PURE__ */ new Map();
   #activeViews = /* @__PURE__ */ new Map();
+  #lastContact = /* @__PURE__ */ new Map();
+  #handoffs = /* @__PURE__ */ new Map();
+  ownsView(sessionId, viewId = LEGACY_VIEW_ID) {
+    return this.#activeViews.get(sessionId) === viewId;
+  }
+  requestHandoff(sessionId, candidate, retry = false, activate = false) {
+    const owner = this.#activeViews.get(sessionId);
+    if (!owner || owner === candidate || !sameMountedView(owner, candidate)) return false;
+    let handoff = this.#handoffs.get(sessionId);
+    if (!handoff || activate && !handoff.prepared && handoff.candidate !== candidate || !handoff.prepared && !handoff.failed && handoff.expiresAt < this.now() || retry && handoff.failed && handoff.candidate === candidate) {
+      handoff = {
+        id: randomUUID(),
+        owner,
+        candidate,
+        expiresAt: 0,
+        prepared: false,
+        checkpoint: false,
+        failed: false,
+        userActivated: false
+      };
+      this.#handoffs.set(sessionId, handoff);
+    }
+    if (handoff.failed) return false;
+    if (handoff.candidate === candidate) {
+      handoff.expiresAt = this.now() + 15e3;
+      if (activate) handoff.userActivated = true;
+    }
+    this.#finishPoll(sessionId, []);
+    return true;
+  }
+  handoffFailed(sessionId, candidate) {
+    const handoff = this.#handoffs.get(sessionId);
+    return handoff?.candidate === candidate && handoff.failed;
+  }
+  handoffRequest(sessionId, owner) {
+    const handoff = this.#handoffs.get(sessionId);
+    return handoff?.owner === owner && !handoff.failed && handoff.expiresAt >= this.now() ? handoff.id : void 0;
+  }
+  handoffRequestedByUser(sessionId, owner) {
+    return Boolean(
+      this.handoffRequest(sessionId, owner) && this.#handoffs.get(sessionId)?.userActivated
+    );
+  }
+  prepareHandoff(sessionId, owner, id) {
+    this.assertView(sessionId, owner);
+    const handoff = this.#handoffs.get(sessionId);
+    if (!handoff || handoff.id !== id || handoff.failed || handoff.owner !== owner || handoff.expiresAt < this.now())
+      throw new SessionError("editor_view_conflict", "The view handoff request has expired.");
+    if (handoff.prepared) return;
+    this.assertCanEnqueue(sessionId, this.get(sessionId).revision);
+    handoff.prepared = true;
+  }
+  assertNotHandingOff(sessionId) {
+    if (this.#handoffs.get(sessionId)?.prepared)
+      throw new SessionError(
+        "command_in_flight",
+        "The editor is protecting its document for handoff."
+      );
+  }
+  checkpointHandoff(sessionId, owner) {
+    const handoff = this.#handoffs.get(sessionId);
+    if (handoff?.owner === owner && handoff.prepared) handoff.checkpoint = true;
+  }
+  completeHandoff(sessionId, owner, id) {
+    this.assertView(sessionId, owner);
+    const handoff = this.#handoffs.get(sessionId);
+    if (!handoff || handoff.id !== id || !handoff.prepared || !handoff.checkpoint)
+      throw new SessionError(
+        "document_restore_failed",
+        "A fresh checkpoint is required before handoff."
+      );
+    this.#activeViews.set(sessionId, handoff.candidate);
+    this.get(sessionId).connected = false;
+    this.#lastContact.set(sessionId, this.now());
+    this.#handoffs.delete(sessionId);
+    this.#finishPoll(sessionId, []);
+  }
+  abortHandoff(sessionId, owner, id) {
+    this.assertView(sessionId, owner);
+    const handoff = this.#handoffs.get(sessionId);
+    if (handoff?.id !== id || !handoff.prepared) return false;
+    handoff.prepared = false;
+    handoff.failed = true;
+    return true;
+  }
   create(format = "docx") {
     return this.restore(randomUUID(), format);
   }
@@ -31236,18 +31334,23 @@ var SessionStore = class {
         "This editor view does not own the editing session lease."
       );
     }
+    this.#lastContact.set(sessionId, this.now());
     return session;
   }
   connect(sessionId, context, viewId = LEGACY_VIEW_ID) {
     const session = this.get(sessionId);
     const activeViewId = this.#activeViews.get(sessionId);
     if (activeViewId && activeViewId !== viewId) {
-      throw new SessionError(
-        "editor_view_conflict",
-        "This editing session is already connected to another mounted editor view."
-      );
+      if (this.#handoffs.get(sessionId)?.prepared || this.now() - (this.#lastContact.get(sessionId) ?? 0) < 3e4 || session.pending.length > 0 || this.#activeCommands.has(sessionId)) {
+        throw new SessionError(
+          "editor_view_conflict",
+          "This editing session is already connected to another mounted editor view."
+        );
+      }
+      this.disconnect(sessionId, activeViewId);
     }
     this.#activeViews.set(sessionId, viewId);
+    this.#lastContact.set(sessionId, this.now());
     session.connected = true;
     Object.assign(session, context);
     return session;
@@ -31263,6 +31366,7 @@ var SessionStore = class {
     }
     session.connected = false;
     this.#activeViews.delete(sessionId);
+    this.#handoffs.delete(sessionId);
     this.#finishPoll(sessionId, []);
   }
   assertCanEnqueue(sessionId, baseRevision) {
@@ -31276,13 +31380,19 @@ var SessionStore = class {
         `Expected revision ${session.revision}, received ${baseRevision}. Refresh context and retry.`
       );
     }
-    if (session.pending.length > 0 || this.#activeCommands.has(sessionId)) {
+    if (session.pending.length > 0 || this.#activeCommands.has(sessionId) || this.#handoffs.get(sessionId)?.prepared) {
       throw new SessionError(
         "command_in_flight",
         "Wait for the active editor command to finish before submitting another mutation."
       );
     }
     return session;
+  }
+  assertCanReplaceDocument(sessionId, commandId) {
+    const active = this.#activeCommands.get(sessionId);
+    if (commandId && active?.commandId === commandId && active.operation === "pptx.document.create_blank")
+      return;
+    this.assertCanEnqueue(sessionId, this.get(sessionId).revision);
   }
   enqueue(sessionId, baseRevision, operation, args) {
     const session = this.assertCanEnqueue(sessionId, baseRevision);
@@ -31685,6 +31795,9 @@ var DocumentSaveStore = class {
   #uploads = /* @__PURE__ */ new Map();
   #bindings = /* @__PURE__ */ new Map();
   #reservedTargets = /* @__PURE__ */ new Set();
+  hasPending(sessionId) {
+    return [...this.#uploads.values()].some((upload) => upload.sessionId === sessionId);
+  }
   async bind(sessionId, format, path) {
     assertTargetPath(format, path);
     await mkdir(this.bindingDirectory, { recursive: true });
@@ -31701,6 +31814,13 @@ var DocumentSaveStore = class {
   }
   async boundPath(sessionId, format) {
     return (await this.#binding(sessionId, format))?.path ?? null;
+  }
+  async unbind(sessionId) {
+    for (const upload of this.#uploads.values()) {
+      if (upload.sessionId === sessionId) await this.#discard(upload);
+    }
+    await rm(this.#bindingPath(sessionId), { force: true });
+    this.#bindings.delete(sessionId);
   }
   async begin(sessionId, format, fileName, size, mode) {
     if (!Number.isInteger(size) || size < 0 || size > this.maxBytes) {
@@ -45432,7 +45552,11 @@ var operation_manifest_default = {
       id: "pptx.document.create_blank",
       inputSchema: {
         additionalProperties: false,
-        properties: {},
+        properties: {
+          confirmReplace: {
+            type: "boolean"
+          }
+        },
         required: [],
         type: "object"
       },
@@ -45464,7 +45588,7 @@ var operation_manifest_default = {
         type: "object"
       },
       risk: "high",
-      summary: "Replace the current session with a new blank presentation.",
+      summary: "Create a blank presentation. Replacing an opened, saved, restored, or edited document requires explicit user confirmation (confirmReplace: true); never use for a follow-up edit.",
       undoable: false,
       visibility: "agent"
     },
@@ -59650,7 +59774,7 @@ var release_readiness_default = {
     pdf: false
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "5a93c6ae57d34e5d268a9671c3d9af31f61e23ef55adf223ffe737343df9e09f"
+  sourceFingerprint: "3aeb80cd9f23fb80ea1f164d1be1359c694c4069d1d1aa55761d1fe327606c17"
 };
 
 // src/capabilities.ts
@@ -59899,6 +60023,14 @@ var RecoveryUploadStore = class {
   }
   recoveries;
   #uploads = /* @__PURE__ */ new Map();
+  hasPending(sessionId) {
+    return [...this.#uploads.values()].some((upload) => upload.sessionId === sessionId);
+  }
+  invalidate(sessionId) {
+    for (const [id, upload] of this.#uploads) {
+      if (upload.sessionId === sessionId) this.#uploads.delete(id);
+    }
+  }
   begin(sessionId, format, fileName, size) {
     const upload = {
       uploadId: randomUUID4(),
@@ -60001,6 +60133,9 @@ var TransactionJournal = class {
 };
 
 // src/server.ts
+function leaseView(viewId, mountId) {
+  return viewId && mountId ? JSON.stringify([viewId, mountId]) : viewId;
+}
 var RESOURCE_URI = "ui://tandemfolio/editor.html";
 var XLSX_RESOURCE_URI = "ui://tandemfolio/xlsx.html";
 var PPTX_RESOURCE_URI = "ui://tandemfolio/pptx.html";
@@ -60018,6 +60153,37 @@ var documentSaves = new DocumentSaveStore(
   join3(stateDirectory, "document-bindings")
 );
 var pendingRecoveries = /* @__PURE__ */ new Map();
+var persistenceTasks = /* @__PURE__ */ new Map();
+function persistInOrder(sessionId, work) {
+  const task = (persistenceTasks.get(sessionId) ?? Promise.resolve()).catch(() => void 0).then(work);
+  persistenceTasks.set(sessionId, task);
+  void task.catch(() => void 0).finally(() => {
+    if (persistenceTasks.get(sessionId) === task) persistenceTasks.delete(sessionId);
+  });
+  return task;
+}
+async function retireRecovery(session) {
+  recoveryUploads.invalidate(session.id);
+  await recoveryStore.clear(session.format, session.id);
+  pendingRecoveries.delete(session.id);
+}
+async function exactResumeSource(format, sessionId) {
+  const recovery = await recoveryStore.latest(format, sessionId);
+  if (recovery) return recovery;
+  const path = await documentSaves.boundPath(sessionId, format);
+  if (!path) return null;
+  try {
+    const metadata = await stat2(path);
+    if (!metadata.isFile() || metadata.size > documentSaves.maxBytes)
+      throw new Error("Invalid document size or type.");
+    return { sessionId, format, fileName: basename3(path), data: await readFile5(path) };
+  } catch (error51) {
+    throw new SessionError(
+      "document_restore_failed",
+      `Cannot restore ${path}: ${error51 instanceof Error ? error51.message : String(error51)}`
+    );
+  }
+}
 var configuredCommandTimeoutMs = Number(process.env.TANDEMFOLIO_COMMAND_TIMEOUT_MS);
 var COMMAND_TIMEOUT_MS = Number.isInteger(configuredCommandTimeoutMs) && configuredCommandTimeoutMs >= 1 && configuredCommandTimeoutMs <= 6e4 ? configuredCommandTimeoutMs : 15e3;
 function result(value) {
@@ -60088,10 +60254,7 @@ async function editorHtml(format = "docx") {
     new URL("../../../plugins/tandemfolio/assets/editor/index.html", import.meta.url)
   ] : format === "xlsx" ? [
     new URL("../assets/editors/xlsx/index.html", import.meta.url),
-    new URL(
-      "../../../plugins/tandemfolio/assets/editors/xlsx/index.html",
-      import.meta.url
-    )
+    new URL("../../../plugins/tandemfolio/assets/editors/xlsx/index.html", import.meta.url)
   ] : format === "pptx" ? [
     new URL("../assets/editors/pptx/index.html", import.meta.url),
     new URL(
@@ -60260,14 +60423,16 @@ server.registerTool(
         } catch (error51) {
           if (!(error51 instanceof SessionError && error51.code === "session_not_found")) throw error51;
         }
-        const recovery = await recoveryStore.latest(format, sessionId);
+        const recovery = await exactResumeSource(format, sessionId);
         if (!recovery) {
           throw new SessionError(
             "session_not_found",
-            `No live session or exact recovery exists for ${sessionId}.`
+            `No live session, exact recovery, or bound document exists for ${sessionId}.`
           );
         }
         const session2 = store.restore(sessionId, format);
+        session2.filePath = await documentSaves.boundPath(sessionId, format);
+        session2.fileName = recovery.fileName;
         pendingRecoveries.set(session2.id, recovery);
         return result({ ok: true, session: session2, recoveryAvailable: true, reused: false });
       }
@@ -60546,8 +60711,8 @@ server.registerTool(
       });
       const waitForExecution = async (command2, canonicalOperation) => {
         void store.waitForCommand(sessionId, command2.commandId, null).then(async (completion) => {
-          if (completion.output?.saved === true) {
-            await recoveryStore.clear(store.get(sessionId).format, sessionId);
+          if (completion.output?.saved === true && !store.get(sessionId).filePath) {
+            await persistInOrder(sessionId, () => retireRecovery(store.get(sessionId)));
           }
           activeTransaction.complete(executionResult(completion, canonicalOperation));
         }).catch((error51) => activeTransaction.fail(failure(error51)));
@@ -60653,7 +60818,10 @@ server.registerTool(
         ...assetRootId ? { assetRootId } : {}
       });
       const completion = await store.waitForCommand(sessionId, command.commandId);
-      await documentSaves.bind(sessionId, session.format, path);
+      await persistInOrder(sessionId, async () => {
+        await documentSaves.bind(sessionId, session.format, path);
+        await retireRecovery(session);
+      });
       session.filePath = path;
       return result({ ok: true, command, result: completion });
     } catch (error51) {
@@ -60671,7 +60839,13 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       fileName: external_exports.string().nullable().optional(),
+      format: external_exports.enum(["docx", "markdown", "xlsx", "pptx", "pdf"]).optional(),
+      coldStart: external_exports.boolean().optional(),
+      active: external_exports.boolean().optional(),
+      retryHandoff: external_exports.boolean().optional(),
+      activateView: external_exports.boolean().optional(),
       dirty: external_exports.boolean().optional(),
       selection: external_exports.record(external_exports.string(), external_exports.unknown()).nullable().optional(),
       startupTrace: external_exports.object({
@@ -60692,33 +60866,177 @@ server.registerTool(
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, fileName, dirty, selection, waitMs }) => {
+  async ({
+    sessionId,
+    viewId,
+    mountId,
+    format,
+    coldStart,
+    active,
+    retryHandoff,
+    activateView,
+    fileName,
+    dirty,
+    selection,
+    waitMs
+  }) => {
     try {
-      const sessionBeforePoll = store.get(sessionId);
-      const reconnecting = !sessionBeforePoll.connected;
+      let sessionBeforePoll;
+      try {
+        sessionBeforePoll = store.get(sessionId);
+      } catch (error51) {
+        if (!(error51 instanceof SessionError) || error51.code !== "session_not_found" || !format)
+          throw error51;
+        const source = await exactResumeSource(format, sessionId);
+        if (!source) throw error51;
+        sessionBeforePoll = store.restore(sessionId, format);
+        sessionBeforePoll.filePath = await documentSaves.boundPath(sessionId, format);
+        sessionBeforePoll.fileName = source.fileName;
+        if (coldStart !== false) pendingRecoveries.set(sessionId, source);
+      }
+      if (format && sessionBeforePoll.format !== format)
+        throw new SessionError(
+          "invalid_arguments",
+          "The editor format does not match this Session."
+        );
+      const reconnecting = !store.ownsView(sessionId, leaseView(viewId, mountId));
+      store.connect(sessionId, void 0, leaseView(viewId, mountId));
       const context = {
         ...fileName !== void 0 ? { fileName } : {},
         ...dirty !== void 0 ? { dirty } : {},
         ...selection !== void 0 ? { selection } : {}
       };
-      let commands = store.poll(sessionId, context, viewId);
-      const recovery = pendingRecoveries.get(sessionId) ?? (reconnecting ? await recoveryStore.latest(sessionBeforePoll.format, sessionId) : null);
+      let recovery;
+      try {
+        recovery = pendingRecoveries.get(sessionId) ?? (reconnecting && coldStart !== false ? await exactResumeSource(sessionBeforePoll.format, sessionId) : null);
+      } catch (error51) {
+        store.disconnect(sessionId, leaseView(viewId, mountId));
+        throw error51;
+      }
+      let commands = store.poll(
+        sessionId,
+        recovery ? void 0 : context,
+        leaseView(viewId, mountId)
+      );
       if (commands.length === 0 && recovery) {
         const staged = localFiles.stageBuffer(sessionId, recovery.fileName, recovery.data);
         const session = store.get(sessionId);
-        store.enqueue(sessionId, session.revision, stagedFileOperation(session.format), {
-          ...staged
-        });
-        commands = store.poll(sessionId, context, viewId);
+        const restoreCommand = store.enqueue(
+          sessionId,
+          session.revision,
+          stagedFileOperation(session.format),
+          {
+            ...staged,
+            ...session.format === "markdown" && session.filePath ? { assetRootId: localFiles.registerAssetRoot(sessionId, session.filePath) } : {}
+          }
+        );
+        session.fileName = recovery.fileName;
+        session.filePath = await documentSaves.boundPath(sessionId, session.format);
+        const completion = store.waitForCommand(sessionId, restoreCommand.commandId, null);
+        void completion.catch(() => {
+          if (store.ownsView(sessionId, leaseView(viewId, mountId)))
+            store.disconnect(sessionId, leaseView(viewId, mountId));
+        }).finally(() => localFiles.release(staged.blobId));
+        commands = store.poll(sessionId, void 0, leaseView(viewId, mountId));
         pendingRecoveries.delete(sessionId);
       }
       if (commands.length === 0 && waitMs > 0) {
-        commands = await store.waitForPoll(sessionId, context, waitMs, viewId);
+        commands = await store.waitForPoll(sessionId, context, waitMs, leaseView(viewId, mountId));
       }
       return result({
         ok: true,
-        commands
+        commands,
+        filePath: sessionBeforePoll.filePath,
+        handoffRequest: store.handoffRequest(sessionId, leaseView(viewId, mountId) ?? ""),
+        handoffRequestedByUser: store.handoffRequestedByUser(
+          sessionId,
+          leaseView(viewId, mountId) ?? ""
+        ),
+        ...recovery && commands[0] ? { restoreCommandId: commands[0].commandId } : {}
       });
+    } catch (error51) {
+      if (error51 instanceof SessionError && error51.code === "editor_view_conflict") {
+        const candidate = leaseView(viewId, mountId) ?? "";
+        const retry = active && viewId && mountId && store.requestHandoff(sessionId, candidate, retryHandoff, activateView);
+        return {
+          ...failure(error51),
+          structuredContent: {
+            ...failure(error51).structuredContent,
+            filePath: store.get(sessionId).filePath,
+            handoffFailed: store.handoffFailed(sessionId, candidate),
+            ...retry ? { retryAfterMs: 1e3 } : {}
+          }
+        };
+      }
+      return failure(error51);
+    }
+  }
+);
+server.registerTool(
+  "office_editor_handoff",
+  {
+    title: "Safely hand off a mounted editor view",
+    description: "Editor-only checkpoint-fenced ownership transfer for a replayed view.",
+    inputSchema: {
+      sessionId: external_exports.string().min(1),
+      viewId: external_exports.string().min(1),
+      mountId: external_exports.string().min(1),
+      handoffId: external_exports.string().min(1),
+      action: external_exports.enum(["prepare", "commit", "abort"])
+    },
+    _meta: { ui: { visibility: ["app"] } }
+  },
+  async ({ sessionId, viewId, mountId, handoffId, action }) => {
+    try {
+      const owner = leaseView(viewId, mountId);
+      await persistInOrder(sessionId, async () => {
+        const session = store.assertView(sessionId, owner);
+        if (action === "prepare") {
+          if (documentSaves.hasPending(sessionId) || recoveryUploads.hasPending(sessionId))
+            throw new SessionError(
+              "command_in_flight",
+              "Wait for pending document transfers before handoff."
+            );
+          store.prepareHandoff(sessionId, owner, handoffId);
+        } else if (action === "abort") {
+          if (store.abortHandoff(sessionId, owner, handoffId)) recoveryUploads.invalidate(sessionId);
+        } else {
+          const recovery = await recoveryStore.latest(session.format, sessionId);
+          if (!recovery)
+            throw new SessionError("document_restore_failed", "Handoff checkpoint is missing.");
+          store.completeHandoff(sessionId, owner, handoffId);
+          pendingRecoveries.set(sessionId, recovery);
+        }
+      });
+      return result({ ok: true });
+    } catch (error51) {
+      return failure(error51);
+    }
+  }
+);
+server.registerTool(
+  "office_editor_reset_document",
+  {
+    title: "Detach the previous document save target",
+    description: "Editor-only endpoint before a browser-selected document replaces the mounted contents.",
+    inputSchema: {
+      sessionId: external_exports.string().min(1),
+      viewId: external_exports.string().min(1),
+      mountId: external_exports.string().min(1).optional(),
+      commandId: external_exports.string().min(1).optional()
+    },
+    _meta: { ui: { visibility: ["app"] } }
+  },
+  async ({ sessionId, viewId, mountId, commandId }) => {
+    try {
+      const session = store.assertView(sessionId, leaseView(viewId, mountId));
+      store.assertCanReplaceDocument(sessionId, commandId);
+      await persistInOrder(sessionId, async () => {
+        await documentSaves.unbind(sessionId);
+        await retireRecovery(session);
+      });
+      session.filePath = null;
+      return result({ ok: true, filePath: null });
     } catch (error51) {
       return failure(error51);
     }
@@ -60732,16 +61050,21 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1),
+      mountId: external_exports.string().min(1).optional(),
       fileName: external_exports.string().min(1).max(240),
       size: external_exports.number().int().nonnegative().max(268435456),
       mode: external_exports.enum(["save", "save-as", "export-copy"]).default("save")
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, fileName, size, mode }) => {
+  async ({ sessionId, viewId, mountId, fileName, size, mode }) => {
     try {
-      const session = store.assertView(sessionId, viewId);
-      const begun = await documentSaves.begin(sessionId, session.format, fileName, size, mode);
+      const session = store.assertView(sessionId, leaseView(viewId, mountId));
+      const begun = await persistInOrder(sessionId, () => {
+        store.assertView(sessionId, leaseView(viewId, mountId));
+        store.assertNotHandingOff(sessionId);
+        return documentSaves.begin(sessionId, session.format, fileName, size, mode);
+      });
       return result({ ok: true, ...begun });
     } catch (error51) {
       return failure(error51);
@@ -60756,16 +61079,20 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1),
+      mountId: external_exports.string().min(1).optional(),
       uploadId: external_exports.string().min(1),
       offset: external_exports.number().int().nonnegative(),
       data: external_exports.string().max(262144)
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, uploadId, offset, data }) => {
+  async ({ sessionId, viewId, mountId, uploadId, offset, data }) => {
     try {
-      store.assertView(sessionId, viewId);
-      const nextOffset = await documentSaves.write(sessionId, uploadId, offset, data);
+      store.assertView(sessionId, leaseView(viewId, mountId));
+      const nextOffset = await persistInOrder(
+        sessionId,
+        () => documentSaves.write(sessionId, uploadId, offset, data)
+      );
       return result({ ok: true, nextOffset });
     } catch (error51) {
       return failure(error51);
@@ -60780,14 +61107,19 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1),
+      mountId: external_exports.string().min(1).optional(),
       uploadId: external_exports.string().min(1)
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, uploadId }) => {
+  async ({ sessionId, viewId, mountId, uploadId }) => {
     try {
-      const session = store.assertView(sessionId, viewId);
-      const committed = await documentSaves.commit(sessionId, uploadId);
+      const session = store.assertView(sessionId, leaseView(viewId, mountId));
+      const committed = await persistInOrder(sessionId, async () => {
+        const saved = await documentSaves.commit(sessionId, uploadId);
+        if (saved.bound) await retireRecovery(session);
+        return saved;
+      });
       if (committed.bound) session.filePath = committed.path;
       return result({ ok: true, uploadId, ...committed });
     } catch (error51) {
@@ -60803,14 +61135,15 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1),
+      mountId: external_exports.string().min(1).optional(),
       uploadId: external_exports.string().min(1)
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, uploadId }) => {
+  async ({ sessionId, viewId, mountId, uploadId }) => {
     try {
-      store.assertView(sessionId, viewId);
-      await documentSaves.abort(sessionId, uploadId);
+      store.assertView(sessionId, leaseView(viewId, mountId));
+      await persistInOrder(sessionId, () => documentSaves.abort(sessionId, uploadId));
       return result({ ok: true, uploadId });
     } catch (error51) {
       return failure(error51);
@@ -60825,15 +61158,19 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       fileName: external_exports.string().min(1),
       size: external_exports.number().int().nonnegative().max(268435456)
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, fileName, size }) => {
+  async ({ sessionId, viewId, mountId, fileName, size }) => {
     try {
-      const session = store.assertView(sessionId, viewId);
-      const uploadId = recoveryUploads.begin(sessionId, session.format, fileName, size);
+      const session = store.assertView(sessionId, leaseView(viewId, mountId));
+      const uploadId = await persistInOrder(
+        sessionId,
+        async () => recoveryUploads.begin(sessionId, session.format, fileName, size)
+      );
       return result({ ok: true, uploadId });
     } catch (error51) {
       return failure(error51);
@@ -60848,15 +61185,16 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       uploadId: external_exports.string().min(1),
       offset: external_exports.number().int().nonnegative(),
       data: external_exports.string()
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, uploadId, offset, data }) => {
+  async ({ sessionId, viewId, mountId, uploadId, offset, data }) => {
     try {
-      store.assertView(sessionId, viewId);
+      store.assertView(sessionId, leaseView(viewId, mountId));
       return result({
         ok: true,
         nextOffset: recoveryUploads.write(sessionId, uploadId, offset, data)
@@ -60874,14 +61212,19 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       uploadId: external_exports.string().min(1)
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, uploadId }) => {
+  async ({ sessionId, viewId, mountId, uploadId }) => {
     try {
-      store.assertView(sessionId, viewId);
-      await recoveryUploads.commit(sessionId, uploadId);
+      store.assertView(sessionId, leaseView(viewId, mountId));
+      await persistInOrder(sessionId, async () => {
+        store.assertView(sessionId, leaseView(viewId, mountId));
+        await recoveryUploads.commit(sessionId, uploadId);
+        store.checkpointHandoff(sessionId, leaseView(viewId, mountId) ?? "");
+      });
       return result({ ok: true, uploadId });
     } catch (error51) {
       return failure(error51);
@@ -60895,13 +61238,14 @@ server.registerTool(
     description: "Editor-only transport endpoint for marking a mounted session offline.",
     inputSchema: {
       sessionId: external_exports.string().min(1),
-      viewId: external_exports.string().min(1).optional()
+      viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional()
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId }) => {
+  async ({ sessionId, viewId, mountId }) => {
     try {
-      store.disconnect(sessionId, viewId);
+      store.disconnect(sessionId, leaseView(viewId, mountId));
       localFiles.releaseAssetRoots(sessionId);
       return result({ ok: true, sessionId });
     } catch (error51) {
@@ -60917,6 +61261,7 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       rootId: external_exports.string().min(1),
       path: external_exports.string().min(1).max(4096),
       offset: external_exports.number().int().nonnegative(),
@@ -60924,9 +61269,9 @@ server.registerTool(
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, rootId, path, offset, length }) => {
+  async ({ sessionId, viewId, mountId, rootId, path, offset, length }) => {
     try {
-      store.assertView(sessionId, viewId);
+      store.assertView(sessionId, leaseView(viewId, mountId));
       return result({
         ok: true,
         ...await localFiles.readLocalAsset(sessionId, rootId, path, offset, length)
@@ -60944,15 +61289,16 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       blobId: external_exports.string().min(1),
       offset: external_exports.number().int().nonnegative(),
       length: external_exports.number().int().positive().max(262144)
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, blobId, offset, length }) => {
+  async ({ sessionId, viewId, mountId, blobId, offset, length }) => {
     try {
-      store.assertView(sessionId, viewId);
+      store.assertView(sessionId, leaseView(viewId, mountId));
       return result({ ok: true, ...localFiles.read(sessionId, blobId, offset, length) });
     } catch (error51) {
       return failure(error51);
@@ -60987,6 +61333,7 @@ server.registerTool(
     inputSchema: {
       sessionId: external_exports.string().min(1),
       viewId: external_exports.string().min(1).optional(),
+      mountId: external_exports.string().min(1).optional(),
       commandId: external_exports.string().min(1),
       revision: external_exports.number().int().nonnegative().optional(),
       ok: external_exports.boolean().default(true),
@@ -61015,6 +61362,7 @@ server.registerTool(
   async ({
     sessionId,
     viewId,
+    mountId,
     commandId,
     revision,
     ok,
@@ -61027,7 +61375,7 @@ server.registerTool(
     selection
   }) => {
     try {
-      store.assertView(sessionId, viewId);
+      store.assertView(sessionId, leaseView(viewId, mountId));
       if (!ok) {
         const session = store.reject(
           sessionId,

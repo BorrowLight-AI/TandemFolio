@@ -198,6 +198,27 @@ state.commands.push = (...commands) => {
 
 bridge.oncalltool = async ({ name, arguments: arguments_ }) => {
   state.events.push(`tool:${name}`)
+  if (params.has('broker')) {
+    if (name === 'office_editor_poll') {
+      state.polls += 1
+      state.firstPollArguments ??= arguments_ ?? {}
+      state.lastPollArguments = arguments_ ?? {}
+    }
+    const result = await fetch(`/broker?id=${encodeURIComponent(params.get('broker')!)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name, arguments: arguments_ }),
+    }).then((response) => response.json())
+    if (name === 'office_editor_acknowledge') state.acknowledgements.push(arguments_ ?? {})
+    if (name === 'office_editor_commit_recovery' && result.structuredContent?.ok)
+      state.recoveryCommits += 1
+    return result
+  }
+  if (name === 'office_editor_poll' && params.has('pollError')) {
+    state.polls += 1
+    return { ...toolResult({ ok: false, error: params.get('pollError') }), isError: true }
+  }
+  if (name === 'office_editor_reset_document') return toolResult({ ok: true, filePath: null })
   if (name === 'office_editor_begin_document_save') {
     const uploadId = `visual-document-save-${++nextDocumentSaveUpload}`
     const fileName = String(arguments_?.fileName ?? '')
@@ -392,12 +413,13 @@ bridge.oninitialized = () => {
   state.initializedAt = performance.now()
   state.events.push('initialized')
   void (async () => {
-    await bridge.sendToolInput({ arguments: { sessionId: 'visual-session' } })
+    const sessionId = params.get('sessionId') ?? 'visual-session'
+    await bridge.sendToolInput({ arguments: { sessionId } })
     await bridge.sendToolResult(
       toolResult({
         ok: true,
-        sessionId: 'visual-session',
-        viewId: 'visual-view',
+        sessionId,
+        viewId: params.get('viewId') ?? 'visual-view',
         format,
         revision: 0,
       }),

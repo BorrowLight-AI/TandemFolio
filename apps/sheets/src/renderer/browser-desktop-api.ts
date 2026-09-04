@@ -1,11 +1,7 @@
 import { formatAddress, parseAddress, parseRange } from '../domain/cell-address'
 import { saveLiveEditorFile } from '@tandemfolio/host-bridge'
 import type { StructuralOp } from '../gateway/xlsx-structure'
-import {
-  openBrowserWorkbook,
-  type BrowserSheet,
-  type BrowserWorkbook,
-} from '../host/browser-workbook'
+import type { BrowserSheet, BrowserWorkbook } from '../host/browser-workbook'
 import { workbookPivotDefinitionSchema } from '../shared/desktop-api'
 import type {
   LocalImageRequest,
@@ -177,6 +173,9 @@ export class BrowserWorkbookDesktopApi {
     name: string,
     handle: FileSystemFileHandle | null = null,
   ): Promise<WorkbookFile> {
+    // The native blank worksheet does not need ZIP/XML parsing. Keep package I/O
+    // in the same renderer, but load it only when this asynchronous open is used.
+    const { openBrowserWorkbook } = await import('../host/browser-workbook')
     const workbook = await openBrowserWorkbook(data, name)
     const sessionId = crypto.randomUUID()
     const sheetNames = new Map<string, string>()
@@ -314,6 +313,13 @@ export class BrowserWorkbookDesktopApi {
   }
 
   async saveWorkbookEdits(request: WorkbookSaveRequest): Promise<WorkbookSaveResult> {
+    return this.#saveWorkbookEdits(request, 'document')
+  }
+
+  async #saveWorkbookEdits(
+    request: WorkbookSaveRequest,
+    destination: 'document' | 'recovery',
+  ): Promise<WorkbookSaveResult> {
     const session = this.#session(request.sessionId)
     const { workbook } = session
     // Match the retained gateway contract: structural operations replay
@@ -467,7 +473,7 @@ export class BrowserWorkbookDesktopApi {
       workbook.replaceDefinedNames(request.definedNamesState.names)
     }
     const bytes = await workbook.save()
-    if ('parent' in window && window.parent !== window) {
+    if (destination === 'document' && 'parent' in window && window.parent !== window) {
       const fileName = xlsxName(session.file.name)
       const data = bytes.buffer.slice(
         bytes.byteOffset,
@@ -509,11 +515,10 @@ export class BrowserWorkbookDesktopApi {
       memory.handle.name,
       memory.handle,
     )
-    const saved = await recoveryApi.saveWorkbookEdits({
-      ...request,
-      sessionId: opened.sessionId,
-      mode: 'save',
-    })
+    const saved = await recoveryApi.#saveWorkbookEdits(
+      { ...request, sessionId: opened.sessionId, mode: 'save' },
+      'recovery',
+    )
     if (saved.canceled) return { ok: false }
     return { ok: true, fileName: saved.file.name, data: memory.data() }
   }

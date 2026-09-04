@@ -1,4 +1,6 @@
 /**
+ * Modified by TandemFolio contributors: regress explicit clean saves and forced import checkpoints.
+ *
  * A dirty workbook gets a crash-recovery copy through the
  * same save pipeline, but recovery mode must never touch the opened file, prompt,
  * or clear the journal — the whole point is that unsaved work survives a crash.
@@ -93,6 +95,18 @@ describe('handleSave recovery mode', () => {
     expect(messages).toEqual([])
   })
 
+  it('can checkpoint a clean import without writing the formal file', async () => {
+    const data = new ArrayBuffer(4)
+    writeWorkbookRecovery.mockResolvedValue({ ok: true, fileName: 'import.xlsx', data })
+    const { ctx } = ctxWith({ dirty: false })
+    await expect(handleSave(ctx, 'recovery', true, true)).resolves.toEqual({
+      ok: true,
+      fileName: 'import.xlsx',
+      data,
+    })
+    expect(saveWorkbookEdits).not.toHaveBeenCalled()
+  })
+
   it('a failed copy is swallowed (best-effort, never surfaces)', async () => {
     writeWorkbookRecovery.mockRejectedValue(new Error('disk full'))
     const { ctx, messages } = ctxWith({ dirty: true })
@@ -102,6 +116,17 @@ describe('handleSave recovery mode', () => {
 })
 
 describe('handleSave explicit save result', () => {
+  it('persists a clean imported workbook on ordinary Save instead of silently doing nothing', async () => {
+    saveWorkbookEdits.mockResolvedValue({
+      canceled: false,
+      file: { name: 'import.xlsx', entryCount: 12 },
+      touchedEntries: [],
+    })
+    const { ctx } = ctxWith({ dirty: false })
+    await expect(handleSave(ctx, 'save')).resolves.toEqual({ ok: true, fileName: 'import.xlsx' })
+    expect(saveWorkbookEdits.mock.calls[0]![0].mode).toBe('save')
+  })
+
   it('returns the persisted file identity after save-as succeeds', async () => {
     saveWorkbookEdits.mockResolvedValue({
       canceled: false,
