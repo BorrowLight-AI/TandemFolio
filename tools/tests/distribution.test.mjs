@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -184,9 +184,14 @@ if (process.env.TEST_CODEX_FAIL === '1' && args.includes('marketplace')) process
       ['plugin', 'add', 'tandemfolio@tandemfolio-releases'],
     ],
   )
-  // macOS resolves /var to /private/var; compare filesystem identity, not spelling.
-  const { realpathSync } = await import('node:fs')
-  assert.equal(realpathSync(installed[1][3]), realpathSync(bundle))
+  // macOS may expose /var as /private/var, while Windows may expose the same NTFS directory
+  // through a long path or its DOS 8.3 alias. Compare filesystem identity, not path spelling.
+  const registeredDirectory = await stat(installed[1][3], { bigint: true })
+  const bundleDirectory = await stat(bundle, { bigint: true })
+  assert.deepEqual(
+    { dev: registeredDirectory.dev, ino: registeredDirectory.ino },
+    { dev: bundleDirectory.dev, ino: bundleDirectory.ino },
+  )
   await writeFile(log, '')
   execFileSync(command, [...args, process.platform === 'win32' ? '-Update' : '--update'], { env })
   assert.deepEqual(await commands(), [
