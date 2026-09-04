@@ -2,8 +2,8 @@
   "schemaVersion": 4,
   "approved": true,
   "ready": true,
-  "capturedAt": "2026-09-04T07:30:44.446Z",
-  "sourceFingerprint": "f9cb03f9e72181f2903d17b90858afad53eb297c335d8446f3f46a95f3a0909c",
+  "capturedAt": "2026-09-04T09:18:04.561Z",
+  "sourceFingerprint": "a297937dbcf306defd5463504feac8f10796424cec8bae463ca4d13aa5da5ee2",
   "upstream": {
     "repository": "https://github.com/genspark-ai/genoffice.git",
     "commit": "dc4d7e5927864498913b7ba42d0da06cc7cf628e"
@@ -59,116 +59,116 @@
       },
       "coldStartMs": {
         "measured": {
-          "min": 292.53,
-          "median": 294.861,
-          "p95": 298.855,
-          "max": 298.855,
+          "min": 286.583,
+          "median": 287.441,
+          "p95": 290.695,
+          "max": 290.695,
           "samples": 7
         },
-        "ceiling": 358.626
+        "ceiling": 348.834
       },
       "openDocumentMs": {
         "small": {
           "measured": {
-            "min": 63.7,
-            "median": 68.1,
-            "p95": 72.5,
-            "max": 72.5,
+            "min": 64.4,
+            "median": 69.5,
+            "p95": 84.3,
+            "max": 84.3,
             "samples": 7
           },
-          "ceiling": 87
+          "ceiling": 101.16
         },
         "medium": {
           "measured": {
-            "min": 113.1,
-            "median": 123.5,
-            "p95": 126.7,
-            "max": 126.7,
+            "min": 116.1,
+            "median": 122.4,
+            "p95": 124.2,
+            "max": 124.2,
             "samples": 7
           },
-          "ceiling": 152.04
+          "ceiling": 149.04
         },
         "large": {
           "measured": {
-            "min": 254.9,
-            "median": 266.8,
-            "p95": 269.2,
-            "max": 269.2,
+            "min": 256.6,
+            "median": 270.7,
+            "p95": 281.1,
+            "max": 281.1,
             "samples": 7
           },
-          "ceiling": 323.04
+          "ceiling": 337.32
         }
       },
       "interactionMs": {
         "measured": {
-          "min": 3.8,
-          "median": 4.2,
-          "p95": 5,
-          "max": 8.3,
+          "min": 4.1,
+          "median": 4.4,
+          "p95": 5.2,
+          "max": 8.8,
           "samples": 21
         },
-        "ceiling": 6
+        "ceiling": 6.24
       },
       "acknowledgement": {
         "pollWaitMs": {
           "measured": {
             "min": 0,
             "median": 0,
-            "p95": 0,
+            "p95": 0.1,
             "max": 0.1,
             "samples": 43
           },
-          "ceiling": 0
+          "ceiling": 0.12
         },
         "hydrateMs": {
           "measured": {
             "min": 0,
             "median": 0.7,
-            "p95": 1.3,
-            "max": 1.4,
+            "p95": 1.4,
+            "max": 1.7,
             "samples": 43
           },
-          "ceiling": 1.56
+          "ceiling": 1.68
         },
         "executeMs": {
           "measured": {
-            "min": 2.9,
-            "median": 62,
-            "p95": 263.7,
-            "max": 264.7,
+            "min": 3.2,
+            "median": 62.4,
+            "p95": 264.6,
+            "max": 267.9,
             "samples": 43
           },
-          "ceiling": 316.44
+          "ceiling": 317.52
         },
         "ackTransportMs": {
           "measured": {
             "min": 0.8,
             "median": 1.1,
-            "p95": 11,
-            "max": 11.9,
+            "p95": 11.7,
+            "max": 12,
             "samples": 43
           },
-          "ceiling": 13.2
+          "ceiling": 14.04
         },
         "totalMs": {
           "measured": {
-            "min": 3.8,
-            "median": 63.7,
-            "p95": 267,
-            "max": 269.2,
+            "min": 4.1,
+            "median": 64.4,
+            "p95": 272.3,
+            "max": 281.1,
             "samples": 43
           },
-          "ceiling": 320.4
+          "ceiling": 326.76
         }
       },
       "memory": {
         "peakJsHeapBytes": {
-          "measured": 87069493,
-          "ceiling": 104483392
+          "measured": 81150603,
+          "ceiling": 97380724
         },
         "peakRendererMemoryBytes": {
-          "measured": 361201664,
-          "ceiling": 433441997
+          "measured": 361070592,
+          "ceiling": 433284711
         }
       }
     },
@@ -201,41 +201,41 @@
       },
       "coldStartMs": {
         "measured": {
-          "min": 206.578,
-          "median": 216.571,
-          "p95": 221.245,
-          "max": 221.245,
+          "min": 212.465,
+          "median": 218.897,
+          "p95": 223.805,
+          "max": 223.805,
           "samples": 7
         },
-        "ceiling": 265.494
+        "ceiling": 268.566
       },
       "openDocumentMs": {
         "small": {
           "measured": {
             "min": 10.6,
-            "median": 10.8,
-            "p95": 11.3,
-            "max": 11.3,
+            "median": 10.9,
+            "p95": 12,
+            "max": 12,
             "samples": 7
           },
           "ceiling": 20
         },
         "medium": {
           "measured": {
-            "min": 55.4,
-            "median": 56.3,
-            "p95": 56.5,
-            "max": 56.5,
+            "min": 56.4,
+            "median": 57.2,
+            "p95": 57.5,
+            "max": 57.5,
             "samples": 7
           },
           "ceiling": 835.68
         },
         "large": {
           "measured": {
-            "min": 300.1,
-            "median": 302.1,
-            "p95": 309.1,
-            "max": 309.1,
+            "min": 303.6,
+            "median": 305.7,
+            "p95": 307.9,
+            "max": 307.9,
             "samples": 7
           },
           "ceiling": 5000
@@ -243,64 +243,64 @@
       },
       "interactionMs": {
         "measured": {
-          "min": 1.4,
+          "min": 1.6,
           "median": 1.9,
-          "p95": 2.3,
-          "max": 4.1,
+          "p95": 2.8,
+          "max": 4,
           "samples": 21
         },
-        "ceiling": 2.76
+        "ceiling": 3.36
       },
       "acknowledgement": {
         "pollWaitMs": {
           "measured": {
             "min": 0,
             "median": 0,
-            "p95": 0.1,
+            "p95": 0,
             "max": 0.1,
             "samples": 43
           },
-          "ceiling": 0.12
+          "ceiling": 0
         },
         "hydrateMs": {
           "measured": {
             "min": 0,
             "median": 0.6,
-            "p95": 86.8,
-            "max": 87.5,
+            "p95": 86.1,
+            "max": 86.7,
             "samples": 43
           },
-          "ceiling": 104.16
+          "ceiling": 103.32
         },
         "executeMs": {
           "measured": {
-            "min": 0.5,
-            "median": 8.9,
-            "p95": 108.6,
-            "max": 111.4,
+            "min": 0.6,
+            "median": 9,
+            "p95": 110.2,
+            "max": 110.4,
             "samples": 43
           },
-          "ceiling": 130.32
+          "ceiling": 132.24
         },
         "ackTransportMs": {
           "measured": {
             "min": 0.8,
-            "median": 1.1,
-            "p95": 109,
-            "max": 110.5,
+            "median": 1.2,
+            "p95": 110.1,
+            "max": 111,
             "samples": 43
           },
-          "ceiling": 130.8
+          "ceiling": 132.12
         },
         "totalMs": {
           "measured": {
-            "min": 1.4,
+            "min": 1.6,
             "median": 10.6,
-            "p95": 302.4,
-            "max": 309.1,
+            "p95": 306.2,
+            "max": 307.9,
             "samples": 43
           },
-          "ceiling": 362.88
+          "ceiling": 367.44
         }
       },
       "stagedLoadPhases": {
@@ -309,21 +309,21 @@
             "measured": {
               "min": 0,
               "median": 0,
-              "p95": 0.5,
-              "max": 0.5,
+              "p95": 0.9,
+              "max": 0.9,
               "samples": 7
             },
-            "ceiling": 0.6
+            "ceiling": 1.08
           },
           "parseMs": {
             "measured": {
-              "min": 4.1,
-              "median": 4.2,
-              "p95": 4.3,
-              "max": 4.3,
+              "min": 4.3,
+              "median": 4.4,
+              "p95": 4.5,
+              "max": 4.5,
               "samples": 7
             },
-            "ceiling": 5.16
+            "ceiling": 5.4
           },
           "tiptapStateInstallMs": {
             "measured": {
@@ -337,8 +337,8 @@
           },
           "reactCommitMs": {
             "measured": {
-              "min": 0.4,
-              "median": 0.5,
+              "min": 0.3,
+              "median": 0.4,
               "p95": 0.5,
               "max": 0.5,
               "samples": 7
@@ -359,28 +359,28 @@
           },
           "parseMs": {
             "measured": {
-              "min": 14.1,
-              "median": 14.3,
-              "p95": 14.5,
-              "max": 14.5,
+              "min": 14.4,
+              "median": 14.7,
+              "p95": 15.1,
+              "max": 15.1,
               "samples": 7
             },
-            "ceiling": 17.4
+            "ceiling": 18.12
           },
           "tiptapStateInstallMs": {
             "measured": {
-              "min": 12.4,
-              "median": 12.7,
-              "p95": 13.1,
-              "max": 13.1,
+              "min": 12.7,
+              "median": 13,
+              "p95": 13,
+              "max": 13,
               "samples": 7
             },
-            "ceiling": 15.72
+            "ceiling": 15.6
           },
           "reactCommitMs": {
             "measured": {
               "min": 0.6,
-              "median": 0.6,
+              "median": 0.7,
               "p95": 0.7,
               "max": 0.7,
               "samples": 7
@@ -391,8 +391,8 @@
         "large": {
           "decodeMs": {
             "measured": {
-              "min": 0.1,
-              "median": 0.2,
+              "min": 0,
+              "median": 0.1,
               "p95": 0.3,
               "max": 0.3,
               "samples": 7
@@ -401,18 +401,18 @@
           },
           "parseMs": {
             "measured": {
-              "min": 46.9,
-              "median": 47.6,
-              "p95": 48.8,
-              "max": 48.8,
+              "min": 47.4,
+              "median": 47.7,
+              "p95": 48,
+              "max": 48,
               "samples": 7
             },
-            "ceiling": 58.56
+            "ceiling": 57.6
           },
           "tiptapStateInstallMs": {
             "measured": {
-              "min": 57.6,
-              "median": 58.1,
+              "min": 59,
+              "median": 59.7,
               "p95": 60.3,
               "max": 60.3,
               "samples": 7
@@ -421,24 +421,24 @@
           },
           "reactCommitMs": {
             "measured": {
-              "min": 1.3,
+              "min": 1.2,
               "median": 1.4,
-              "p95": 1.5,
-              "max": 1.5,
+              "p95": 1.7,
+              "max": 1.7,
               "samples": 7
             },
-            "ceiling": 1.8
+            "ceiling": 2.04
           }
         }
       },
       "memory": {
         "peakJsHeapBytes": {
-          "measured": 58659070,
-          "ceiling": 70390884
+          "measured": 58652174,
+          "ceiling": 70382609
         },
         "peakRendererMemoryBytes": {
-          "measured": 392773632,
-          "ceiling": 471328359
+          "measured": 392183808,
+          "ceiling": 470620570
         }
       }
     },
@@ -471,10 +471,10 @@
       },
       "coldStartMs": {
         "measured": {
-          "min": 782.537,
-          "median": 798.494,
-          "p95": 821.449,
-          "max": 821.449,
+          "min": 801.922,
+          "median": 805.063,
+          "p95": 808.842,
+          "max": 808.842,
           "samples": 7
         },
         "ceiling": 1400
@@ -482,44 +482,44 @@
       "openDocumentMs": {
         "small": {
           "measured": {
-            "min": 35,
-            "median": 37.2,
-            "p95": 44.6,
-            "max": 44.6,
+            "min": 34.9,
+            "median": 41.5,
+            "p95": 48,
+            "max": 48,
             "samples": 7
           },
-          "ceiling": 53.52
+          "ceiling": 57.6
         },
         "medium": {
           "measured": {
-            "min": 112.5,
-            "median": 115.8,
-            "p95": 117.2,
-            "max": 117.2,
+            "min": 114.9,
+            "median": 116.8,
+            "p95": 118.3,
+            "max": 118.3,
             "samples": 7
           },
-          "ceiling": 140.64
+          "ceiling": 141.96
         },
         "large": {
           "measured": {
-            "min": 309.1,
-            "median": 321.9,
-            "p95": 333.6,
-            "max": 333.6,
+            "min": 312.8,
+            "median": 318,
+            "p95": 339.7,
+            "max": 339.7,
             "samples": 7
           },
-          "ceiling": 400.32
+          "ceiling": 407.64
         }
       },
       "interactionMs": {
         "measured": {
-          "min": 15.3,
-          "median": 31,
-          "p95": 32.7,
-          "max": 39.1,
+          "min": 16.2,
+          "median": 30.7,
+          "p95": 32.4,
+          "max": 33.2,
           "samples": 21
         },
-        "ceiling": 39.24
+        "ceiling": 38.88
       },
       "acknowledgement": {
         "pollWaitMs": {
@@ -535,126 +535,126 @@
         "hydrateMs": {
           "measured": {
             "min": 0,
-            "median": 0.8,
-            "p95": 11.6,
-            "max": 11.7,
+            "median": 0.7,
+            "p95": 11.5,
+            "max": 11.8,
             "samples": 43
           },
-          "ceiling": 13.92
+          "ceiling": 13.8
         },
         "executeMs": {
           "measured": {
-            "min": 13.7,
-            "median": 32.2,
-            "p95": 312,
-            "max": 317.2,
+            "min": 14.9,
+            "median": 31.8,
+            "p95": 303.2,
+            "max": 322.6,
             "samples": 43
           },
-          "ceiling": 374.4
+          "ceiling": 363.84
         },
         "ackTransportMs": {
           "measured": {
             "min": 1.3,
             "median": 1.7,
-            "p95": 25.3,
-            "max": 28,
+            "p95": 26.6,
+            "max": 26.9,
             "samples": 43
           },
-          "ceiling": 30.36
+          "ceiling": 31.92
         },
         "totalMs": {
           "measured": {
-            "min": 15.3,
-            "median": 35.5,
-            "p95": 328.4,
-            "max": 333.6,
+            "min": 16.2,
+            "median": 34.9,
+            "p95": 318,
+            "max": 339.7,
             "samples": 43
           },
-          "ceiling": 394.08
+          "ceiling": 381.6
         }
       },
       "coldStartPhases": {
         "bootstrapMs": {
           "measured": {
-            "min": 406.8,
-            "median": 417.8,
-            "p95": 422.6,
-            "max": 422.6,
+            "min": 416.6,
+            "median": 419.4,
+            "p95": 422.8,
+            "max": 422.8,
             "samples": 7
           },
           "ceiling": 500
         },
         "univerCreateMs": {
           "measured": {
-            "min": 8.5,
-            "median": 8.6,
-            "p95": 9.2,
-            "max": 9.2,
+            "min": 8.6,
+            "median": 8.9,
+            "p95": 9.4,
+            "max": 9.4,
             "samples": 7
           },
-          "ceiling": 11.04
+          "ceiling": 11.28
         },
         "worksheetInstallMs": {
           "measured": {
-            "min": 13.2,
-            "median": 13.4,
-            "p95": 14.2,
-            "max": 14.2,
+            "min": 13.5,
+            "median": 13.7,
+            "p95": 14.3,
+            "max": 14.3,
             "samples": 7
           },
-          "ceiling": 17.04
+          "ceiling": 17.16
         },
         "firstCommitMs": {
           "measured": {
-            "min": 57.8,
-            "median": 59,
-            "p95": 61.4,
-            "max": 61.4,
+            "min": 58.9,
+            "median": 59.4,
+            "p95": 59.7,
+            "max": 59.7,
             "samples": 7
           },
-          "ceiling": 73.68
+          "ceiling": 71.64
         }
       },
       "bootstrapPhases": {
         "resourceReceiveMs": {
           "measured": {
-            "min": 34.2,
-            "median": 40.1,
-            "p95": 42.3,
-            "max": 42.3,
+            "min": 39.4,
+            "median": 41,
+            "p95": 42,
+            "max": 42,
             "samples": 7
           },
-          "ceiling": 50.76
+          "ceiling": 50.4
         },
         "moduleGraphReadyMs": {
           "measured": {
-            "min": 344.8,
-            "median": 349.9,
-            "p95": 353.3,
-            "max": 353.3,
+            "min": 349.3,
+            "median": 349.5,
+            "p95": 354.8,
+            "max": 354.8,
             "samples": 7
           },
-          "ceiling": 423.96
+          "ceiling": 425.76
         },
         "reactMountMs": {
           "measured": {
-            "min": 27.4,
-            "median": 27.7,
-            "p95": 28.9,
-            "max": 28.9,
+            "min": 27.8,
+            "median": 28.1,
+            "p95": 28.4,
+            "max": 28.4,
             "samples": 7
           },
-          "ceiling": 34.68
+          "ceiling": 34.08
         }
       },
       "memory": {
         "peakJsHeapBytes": {
-          "measured": 261015104,
-          "ceiling": 313218125
+          "measured": 261040876,
+          "ceiling": 313249052
         },
         "peakRendererMemoryBytes": {
-          "measured": 545095680,
-          "ceiling": 654114816
+          "measured": 544669696,
+          "ceiling": 653603636
         }
       }
     },
@@ -687,55 +687,55 @@
       },
       "coldStartMs": {
         "measured": {
-          "min": 295.009,
-          "median": 298.657,
-          "p95": 313.329,
-          "max": 313.329,
+          "min": 306.097,
+          "median": 308.581,
+          "p95": 311.596,
+          "max": 311.596,
           "samples": 7
         },
-        "ceiling": 375.995
+        "ceiling": 373.915
       },
       "openDocumentMs": {
         "small": {
           "measured": {
-            "min": 9.9,
-            "median": 10,
-            "p95": 12.9,
-            "max": 12.9,
+            "min": 9.2,
+            "median": 9.7,
+            "p95": 12.2,
+            "max": 12.2,
             "samples": 7
           },
-          "ceiling": 15.48
+          "ceiling": 14.64
         },
         "medium": {
           "measured": {
-            "min": 28.9,
-            "median": 30.1,
-            "p95": 30.6,
-            "max": 30.6,
+            "min": 28.3,
+            "median": 28.7,
+            "p95": 29.9,
+            "max": 29.9,
             "samples": 7
           },
-          "ceiling": 36.72
+          "ceiling": 35.88
         },
         "large": {
           "measured": {
-            "min": 96.2,
-            "median": 97.5,
-            "p95": 99.3,
-            "max": 99.3,
+            "min": 94.2,
+            "median": 96,
+            "p95": 97.2,
+            "max": 97.2,
             "samples": 7
           },
-          "ceiling": 119.16
+          "ceiling": 116.64
         }
       },
       "interactionMs": {
         "measured": {
-          "min": 10.2,
-          "median": 17.2,
-          "p95": 22.9,
-          "max": 24.3,
+          "min": 10.9,
+          "median": 16.2,
+          "p95": 23,
+          "max": 23.9,
           "samples": 21
         },
-        "ceiling": 27.48
+        "ceiling": 27.6
       },
       "acknowledgement": {
         "pollWaitMs": {
@@ -751,52 +751,52 @@
         "hydrateMs": {
           "measured": {
             "min": 0,
-            "median": 0.9,
-            "p95": 6.7,
-            "max": 7.3,
+            "median": 1,
+            "p95": 5,
+            "max": 6.6,
             "samples": 43
           },
-          "ceiling": 8.04
+          "ceiling": 6
         },
         "executeMs": {
           "measured": {
             "min": 4.8,
-            "median": 17,
-            "p95": 75.8,
-            "max": 76.4,
+            "median": 15.6,
+            "p95": 74.3,
+            "max": 75.1,
             "samples": 43
           },
-          "ceiling": 90.96
+          "ceiling": 89.16
         },
         "ackTransportMs": {
           "measured": {
-            "min": 1,
-            "median": 3.6,
-            "p95": 16.6,
-            "max": 16.7,
+            "min": 1.1,
+            "median": 3.4,
+            "p95": 16.4,
+            "max": 16.8,
             "samples": 43
           },
-          "ceiling": 19.92
+          "ceiling": 19.68
         },
         "totalMs": {
           "measured": {
-            "min": 9.8,
-            "median": 18.4,
-            "p95": 98,
-            "max": 99.3,
+            "min": 9.2,
+            "median": 17.5,
+            "p95": 96.6,
+            "max": 97.2,
             "samples": 43
           },
-          "ceiling": 117.6
+          "ceiling": 115.92
         }
       },
       "memory": {
         "peakJsHeapBytes": {
-          "measured": 111498709,
-          "ceiling": 133798451
+          "measured": 108485921,
+          "ceiling": 130183106
         },
         "peakRendererMemoryBytes": {
-          "measured": 411058176,
-          "ceiling": 493269812
+          "measured": 406142976,
+          "ceiling": 487371572
         }
       }
     },
@@ -829,55 +829,55 @@
       },
       "coldStartMs": {
         "measured": {
-          "min": 382.997,
-          "median": 388.494,
-          "p95": 408.752,
-          "max": 408.752,
+          "min": 370.241,
+          "median": 373.129,
+          "p95": 389.664,
+          "max": 389.664,
           "samples": 7
         },
-        "ceiling": 490.502
+        "ceiling": 467.597
       },
       "openDocumentMs": {
         "small": {
           "measured": {
-            "min": 88.7,
-            "median": 108.3,
-            "p95": 108.9,
-            "max": 108.9,
+            "min": 87.4,
+            "median": 110.1,
+            "p95": 111.1,
+            "max": 111.1,
             "samples": 7
           },
-          "ceiling": 130.68
+          "ceiling": 133.32
         },
         "medium": {
           "measured": {
-            "min": 94.7,
-            "median": 100,
-            "p95": 111.3,
-            "max": 111.3,
+            "min": 97.2,
+            "median": 110.2,
+            "p95": 113.4,
+            "max": 113.4,
             "samples": 7
           },
-          "ceiling": 133.56
+          "ceiling": 136.08
         },
         "large": {
           "measured": {
-            "min": 113.7,
-            "median": 114.8,
-            "p95": 132.2,
-            "max": 132.2,
+            "min": 113,
+            "median": 113.8,
+            "p95": 140.4,
+            "max": 140.4,
             "samples": 7
           },
-          "ceiling": 158.64
+          "ceiling": 168.48
         }
       },
       "interactionMs": {
         "measured": {
-          "min": 32,
-          "median": 33.2,
-          "p95": 33.5,
-          "max": 33.5,
+          "min": 32.3,
+          "median": 33.4,
+          "p95": 33.7,
+          "max": 34.3,
           "samples": 21
         },
-        "ceiling": 40.2
+        "ceiling": 40.44
       },
       "acknowledgement": {
         "pollWaitMs": {
@@ -894,51 +894,51 @@
           "measured": {
             "min": 0,
             "median": 0.8,
-            "p95": 9.3,
-            "max": 9.4,
+            "p95": 9.5,
+            "max": 9.7,
             "samples": 43
           },
-          "ceiling": 11.16
+          "ceiling": 11.4
         },
         "executeMs": {
           "measured": {
-            "min": 30.4,
-            "median": 84.9,
-            "p95": 102.6,
-            "max": 117.5,
+            "min": 30.7,
+            "median": 85.1,
+            "p95": 114.5,
+            "max": 118.4,
             "samples": 43
           },
-          "ceiling": 123.12
+          "ceiling": 137.4
         },
         "ackTransportMs": {
           "measured": {
-            "min": 1.3,
-            "median": 1.8,
-            "p95": 7.9,
+            "min": 1.2,
+            "median": 1.7,
+            "p95": 11.9,
             "max": 12.7,
             "samples": 43
           },
-          "ceiling": 9.48
+          "ceiling": 14.28
         },
         "totalMs": {
           "measured": {
-            "min": 32,
-            "median": 88.7,
-            "p95": 114.8,
-            "max": 132.2,
+            "min": 32.3,
+            "median": 87.4,
+            "p95": 135.7,
+            "max": 140.4,
             "samples": 43
           },
-          "ceiling": 137.76
+          "ceiling": 162.84
         }
       },
       "memory": {
         "peakJsHeapBytes": {
-          "measured": 111857524,
-          "ceiling": 134229029
+          "measured": 111701600,
+          "ceiling": 134041920
         },
         "peakRendererMemoryBytes": {
-          "measured": 482197504,
-          "ceiling": 578637005
+          "measured": 479887360,
+          "ceiling": 575864832
         }
       }
     }

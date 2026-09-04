@@ -137,6 +137,9 @@ that clean version without changing the developer's source manifest.
 The workflow first fetches the configured read-only upstream history because the pinned community
 commit is intentionally not part of the product repository's `origin` history. It then runs the
 repository checks, approved source-current evidence gate, build, visual checks, and archive validation.
+The source-current gate fingerprints cross-platform-stable source and packaging inputs; generated
+editor bundles are validated after each platform build by visual, asset-budget, smoke, and archive
+checksum checks rather than being treated as portable source bytes.
 Windows and macOS then verify/extract the archive
 and run the real packaged MCP smoke, including local document saves. Only after all jobs
 pass does it create the GitHub Release with ZIP, tar.gz, and `SHA256SUMS`. SemVer prerelease

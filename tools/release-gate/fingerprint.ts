@@ -19,7 +19,6 @@ const SOURCE_ROOTS = [
   'release/upstream-visual-manifest.json',
   'plugins/tandemfolio/.codex-plugin/plugin.json',
   'plugins/tandemfolio/assets/editor/index.html',
-  'plugins/tandemfolio/assets/editors',
   'plugins/tandemfolio/assets/fonts',
 ] as const
 

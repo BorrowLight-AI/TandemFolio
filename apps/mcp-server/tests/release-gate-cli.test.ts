@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,10 +10,50 @@ import { computeReleaseSourceFingerprint } from '../../../tools/release-gate/fin
 const root = dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))))
 const tsx = join(root, 'node_modules', '.bin', 'tsx')
 const cli = join(root, 'tools', 'release-gate.ts')
-const visualBaselinePath = 'tests/visual/__screenshots__/host-widths.spec.ts/markdown-split-view.png'
+const visualBaselinePath =
+  'tests/visual/__screenshots__/host-widths.spec.ts/markdown-split-view.png'
 const visualBaselineSha256 = createHash('sha256')
   .update(readFileSync(join(root, visualBaselinePath)))
   .digest('hex')
+
+describe('release source fingerprint', () => {
+  it('stays stable when a platform rebuild regenerates packaged editor bundles', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'genoffice-release-fingerprint-'))
+    const generatedEditor = join(
+      directory,
+      'plugins/tandemfolio/assets/editors/xlsx/assets/index.js',
+    )
+    mkdirSync(dirname(generatedEditor), { recursive: true })
+    writeFileSync(join(directory, 'package.json'), JSON.stringify({ version: '0.1.0-beta.1' }))
+    writeFileSync(generatedEditor, 'macOS bundle')
+
+    try {
+      const before = computeReleaseSourceFingerprint(directory)
+      writeFileSync(generatedEditor, 'Linux bundle')
+
+      expect(computeReleaseSourceFingerprint(directory)).toBe(before)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  it('changes when format-owned renderer source changes', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'genoffice-release-fingerprint-'))
+    const rendererSource = join(directory, 'apps/docs/src/renderer/App.tsx')
+    mkdirSync(dirname(rendererSource), { recursive: true })
+    writeFileSync(join(directory, 'package.json'), JSON.stringify({ version: '0.1.0-beta.1' }))
+    writeFileSync(rendererSource, 'export const version = 1')
+
+    try {
+      const before = computeReleaseSourceFingerprint(directory)
+      writeFileSync(rendererSource, 'export const version = 2')
+
+      expect(computeReleaseSourceFingerprint(directory)).not.toBe(before)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+})
 
 function completeEvidence(overrides: Record<string, unknown> = {}) {
   const metric = {
