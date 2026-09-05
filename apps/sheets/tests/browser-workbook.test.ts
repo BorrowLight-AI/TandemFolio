@@ -885,6 +885,8 @@ describe('browser XLSX workbook', () => {
         headerRowCount: 1,
         showRowStripes: true,
         showColumnStripes: false,
+        name: 'Table1',
+        columns: ['Region', 'Amount'],
         styleName: 'TableStyleMedium4',
       },
     ])

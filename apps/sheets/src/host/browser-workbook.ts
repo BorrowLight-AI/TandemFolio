@@ -997,6 +997,14 @@ async function readSheetTables(
     const ref = elementAttribute(tableXml, 'table', 'ref')
     if (!ref) continue
     const headerRowCount = integerAttribute(tableXml, 'table', 'headerRowCount') ?? 1
+    const totalsRowCount = integerAttribute(tableXml, 'table', 'totalsRowCount') ?? 0
+    const name =
+      elementAttribute(tableXml, 'table', 'displayName') ??
+      elementAttribute(tableXml, 'table', 'name')
+    const columns = [...tableXml.matchAll(/<tableColumn\b([^>]*)\/?\s*>/g)].flatMap((entry) => {
+      const columnName = xmlAttribute(entry[1] ?? '', 'name')
+      return columnName === undefined ? [] : [decodeXml(columnName)]
+    })
     const styleName = elementAttribute(tableXml, 'tableStyleInfo', 'name')
     const showRowStripes = elementAttribute(tableXml, 'tableStyleInfo', 'showRowStripes')
     const showColumnStripes = elementAttribute(tableXml, 'tableStyleInfo', 'showColumnStripes')
@@ -1005,6 +1013,9 @@ async function readSheetTables(
       headerRowCount,
       showRowStripes: showRowStripes === '1' || showRowStripes === 'true',
       showColumnStripes: showColumnStripes === '1' || showColumnStripes === 'true',
+      ...(name ? { name: decodeXml(name) } : {}),
+      ...(columns.length > 0 ? { columns } : {}),
+      ...(totalsRowCount > 0 ? { totalsRowCount } : {}),
       ...(styleName ? { styleName: decodeXml(styleName) } : {}),
     })
   }

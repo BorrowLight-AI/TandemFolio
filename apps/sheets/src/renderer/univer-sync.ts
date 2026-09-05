@@ -94,6 +94,7 @@ import {
   layoutDataBar,
   type ThresholdReader,
 } from './cf-thresholds'
+import { resolveStructuredTableColumn } from './structured-table-reference'
 import {
   fileRangeToScreenRange,
   indexedThroughScreenRow,
@@ -3264,7 +3265,8 @@ function thresholdReader(state: LazyWorkbookState, ownSheetId: string): Threshol
           entry.name.toLocaleLowerCase() === name.toLocaleLowerCase() &&
           (entry.sheetIndex === undefined || state.file.sheets[entry.sheetIndex]?.id === ownSheetId),
       )?.formula ?? null,
-    tableColumn: () => null,
+    tableColumn: (tableName, columnName) =>
+      resolveStructuredTableColumn(state.file.sheets, tableName, columnName),
   }
 }
 

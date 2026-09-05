@@ -132,7 +132,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,584 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,587 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
