@@ -336,6 +336,7 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
             columnCount: Math.max(MINIMUM_SHEET_COLUMN_COUNT, sheet.columnCount, visualColumnCount),
             hidden: sheet.hidden ? BooleanNumber.TRUE : BooleanNumber.FALSE,
             showGridlines: sheet.showGridLines ? BooleanNumber.TRUE : BooleanNumber.FALSE,
+            ...(sheet.rightToLeft ? { rightToLeft: BooleanNumber.TRUE } : {}),
             ...(sheet.showHeadings === false
               ? {
                   rowHeader: { width: 46, hidden: BooleanNumber.TRUE },

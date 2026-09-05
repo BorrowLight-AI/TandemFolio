@@ -31,6 +31,7 @@ export interface SheetPageSetupState {
   readonly showGridlines?: boolean | undefined
   readonly showFormulas?: boolean | undefined
   readonly showHeadings?: boolean | undefined
+  readonly rightToLeft?: boolean | undefined
   readonly printArea?: string | null | undefined
   readonly printTitles?: string | null | undefined
   readonly frozenRows?: number | undefined

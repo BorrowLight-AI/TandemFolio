@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { numfmt } from '@univerjs/core'
+import { BooleanNumber, numfmt } from '@univerjs/core'
 import { shapePreviewPath } from '@genoffice/ui'
 
 import type { createUniver } from './create-univer'
@@ -514,7 +514,10 @@ function useIsSelected(visualId: string): boolean {
 }
 
 const RESIZE_CORNERS = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const
-type ResizeCorner = (typeof RESIZE_CORNERS)[number]
+export type ResizeCorner = (typeof RESIZE_CORNERS)[number]
+
+export const mirrorCornerX = (corner: ResizeCorner): ResizeCorner =>
+  (({ nw: 'ne', n: 'n', ne: 'nw', e: 'w', se: 'sw', s: 's', sw: 'se', w: 'e' }) as const)[corner]
 
 const cornerEast = (corner: ResizeCorner): boolean =>
   corner === 'ne' || corner === 'e' || corner === 'se'
@@ -644,7 +647,7 @@ function EditableShapeVisual({
 
   const commitDrag = (
     mode: 'move' | 'resize',
-    corner: ResizeCorner,
+    screenCorner: ResizeCorner,
     dxRaw: number,
     dyRaw: number,
   ): boolean => {
@@ -670,7 +673,9 @@ function EditableShapeVisual({
     let fromY = markerFrom(anchor.fromRow, anchor.fromRowOffset)
     let toX = markerFrom(anchor.toColumn, anchor.toColumnOffset)
     let toY = markerFrom(anchor.toRow, anchor.toRowOffset)
-    const dx = dxRaw / zoom
+    const rtl = config.rightToLeft === BooleanNumber.TRUE
+    const corner = rtl ? mirrorCornerX(screenCorner) : screenCorner
+    const dx = (rtl ? -dxRaw : dxRaw) / zoom
     const dy = dyRaw / zoom
     if (mode === 'move') {
       // Free placement: keep the frame size. The grid edge caps

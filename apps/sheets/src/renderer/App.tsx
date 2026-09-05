@@ -103,6 +103,9 @@ import { installCenterContinuousRender } from './center-continuous'
 import { installMergeBorderFix } from './merge-border-fix'
 import { installThickBorderFix } from './thick-border-fix'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
+import { installRichTextBidiFix } from './rich-text-bidi-fix'
+import { installRtlGridMirror } from './rtl-grid-mirror'
+import { installRtlTextDirectionFix } from './rtl-text-fix'
 import { solveGoalSeek } from './goal-seek'
 import { workbookStructureLocked } from './workbook-protection'
 import { applyWorkbookProtectedRanges } from './protected-range-actions'
@@ -1079,6 +1082,9 @@ export function App(): React.JSX.Element {
     installMergeBorderFix()
     installThickBorderFix()
     installCellClipAnchorFix()
+    installRtlTextDirectionFix()
+    installRtlGridMirror()
+    installRichTextBidiFix()
     installLoadAutoHeightGate()
     const clearSelectionKeydown = (event: KeyboardEvent): void => {
       if (!shouldInterceptClearSelection(event, editingCellRef.current)) return

@@ -96,6 +96,8 @@ const worksheetMetadataSchema = z
     showFormulas: z.boolean().optional(),
     /// sheetView/@showRowColHeaders — false hides both heading strips.
     showHeadings: z.boolean().optional(),
+    /// sheetView/@rightToLeft — places column A at the visual right edge.
+    rightToLeft: z.boolean().optional(),
     /// Exact file-declared print geometry and page-specific header/footer variants.
     printSettings: filePagePrintSettingsSchema.nullable().optional(),
     tables: z.array(

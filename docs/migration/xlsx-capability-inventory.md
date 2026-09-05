@@ -109,6 +109,11 @@ source font's serif or sans intent, uses per-script width correction where the s
 and appends monochrome symbol plus color-emoji fallbacks. Number-format overflow uses the same
 substitution state and calibrated digit widths, keeping wrap points, alignment, and `#####`
 decisions stable across hosts without changing the OOXML font declarations.
+Worksheets with `sheetView/@rightToLeft` now mount with column A on the visual right, mirrored
+headers, borders, selections, frozen panes, scroll/reveal math, autofill handles, drawing anchors,
+and resize directions while retaining logical row/column indexes. Plain and rich cell text apply
+Unicode bidi ordering, neutral punctuation context, Arabic/Hebrew paragraph direction, and stable
+numeric/Latin runs; the original run content and OOXML RTL flag remain authoritative on save.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -179,8 +184,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 143 passing files and one environment-conditional LibreOffice pivot
-suite; 1,696 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 146 passing files and one environment-conditional LibreOffice pivot
+suite; 1,766 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
