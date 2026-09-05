@@ -218,6 +218,83 @@ export function mergedSpanWidth(
   return total
 }
 
+export function hashFill(
+  columnWidthPx: number,
+  measure: (text: string) => number,
+): string | null {
+  const hashWidth = measure('#')
+  if (!(hashWidth > 0)) return null
+  return '#'.repeat(Math.max(1, Math.floor((columnWidthPx - CELL_INSET_PX) / hashWidth)))
+}
+
+export function overflowHashes(
+  display: string,
+  columnWidthPx: number,
+  measure: (text: string) => number,
+  scale = 1,
+  calibrated = scale !== 1,
+): string | null {
+  if (display === '') return null
+  const available = columnWidthPx - CELL_INSET_PX
+  const limit = calibrated ? available - measure('0') * scale : available * 1.05
+  if (measure(display) * scale <= limit) return null
+  return hashFill(columnWidthPx, measure)
+}
+
+const EXCEL_DIGIT_PER_PT: Record<string, number> = {
+  Calibri: 7 / 11,
+  Verdana: 8 / 10,
+  'Malgun Gothic': 7 / 11,
+  '맑은 고딕': 7 / 11,
+  'Aptos Narrow': 8 / 11,
+  'ＭＳ Ｐゴシック': 8 / 11,
+  'MS PGothic': 8 / 11,
+  宋体: 8 / 11,
+  SimSun: 8 / 11,
+  新細明體: 8 / 11,
+  PMingLiU: 8 / 11,
+}
+
+export function excelWidthScale(
+  family: string | undefined,
+  sizePt: number,
+  measureDigit: () => number,
+  substituteActive?: boolean,
+): number {
+  if (!family) return 1
+  const perPt = EXCEL_DIGIT_PER_PT[family]
+  if (perPt === undefined || (substituteActive === undefined && fontAvailable(family))) return 1
+  const digit = measureDigit()
+  if (!(digit > 0)) return 1
+  const scale = (perPt * sizePt) / digit
+  return substituteActive === true ? scale : Math.min(1, scale)
+}
+
+const fontAvailabilityCache = new Map<string, boolean>()
+
+function fontAvailable(family: string): boolean {
+  let known = fontAvailabilityCache.get(family)
+  if (known !== undefined) return known
+  known = false
+  try {
+    const context =
+      typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d')
+    if (context) {
+      const width = (font: string): number => {
+        context.font = `16px ${font}`
+        return context.measureText('01mWi').width
+      }
+      known =
+        width(`"${family}", monospace`) !== width('monospace') ||
+        width(`"${family}", serif`) !== width('serif')
+    }
+  } catch {
+    known = false
+  }
+  fontAvailabilityCache.set(family, known)
+  return known
+}
+
 const NBSP = /\u00a0/g
 
 /// Days between the 1900 and 1904 date-system epochs. numfmt is 1900-only,
@@ -241,6 +318,20 @@ export function isCalendarDatePattern(pattern: string): boolean {
     datePatternCache.set(pattern, isDate)
   }
   return isDate
+}
+
+const patternTypeCache = new Map<string, string>()
+
+function patternType(pattern: string): string {
+  let type = patternTypeCache.get(pattern)
+  if (type !== undefined) return type
+  try {
+    type = (numfmt.getFormatInfo(pattern) as { type?: string }).type ?? 'unknown'
+  } catch {
+    type = 'unknown'
+  }
+  patternTypeCache.set(pattern, type)
+  return type
 }
 
 /**
@@ -294,9 +385,27 @@ export function installNumberFormatFix(
     effect: InterceptorEffectEnum.Value,
     handler: (cell, location, next) => {
       if (!cell || cell.p != null) return next(cell)
-      if (cell.t === CellValueType.BOOLEAN || cell.t === CellValueType.FORCE_STRING) {
+      if (cell.t === CellValueType.BOOLEAN) {
+        const style = location.workbook.getStyles().getStyleByCell(cell)
+        if (
+          style?.tb !== WrapStrategy.WRAP &&
+          !style?.tr?.a &&
+          !style?.tr?.v &&
+          !location.worksheet.getMergedCell(location.row, location.col)
+        ) {
+          const fontString = getFontStyleString(style ?? undefined).fontString
+          const measure = (text: string): number => FontCache.getMeasureText(text, fontString).width
+          const hashes = overflowHashes(
+            cell.v === 0 || cell.v === false ? 'FALSE' : 'TRUE',
+            location.worksheet.getColumnWidth(location.col),
+            measure,
+            excelWidthScale(style?.ff ?? undefined, style?.fs ?? 11, () => measure('0')),
+          )
+          if (hashes !== null) return next({ ...cell, v: hashes, t: CellValueType.NUMBER })
+        }
         return next(cell)
       }
+      if (cell.t === CellValueType.FORCE_STRING) return next(cell)
       const raw = location.rawData?.v
       if (raw === undefined || raw === null || typeof raw === 'boolean') return next(cell)
       const style = location.workbook.getStyles().getStyleByCell(cell)
@@ -321,6 +430,29 @@ export function installNumberFormatFix(
         typeof raw === 'number' &&
         location.rawData?.f == null &&
         location.rawData?.si == null
+      const maybeHash = (outCell: typeof cell, patternUsed: unknown): typeof cell => {
+        if (typeof raw !== 'number' || typeof patternUsed !== 'string') return outCell
+        if (isDefaultFormat(patternUsed)) return outCell
+        const type = patternType(patternUsed)
+        if (type === 'text' || type === 'unknown') return outCell
+        if (style?.tb === WrapStrategy.WRAP || style?.tr?.a || style?.tr?.v) return outCell
+        const fontString = getFontStyleString(style ?? undefined).fontString
+        const measure = (text: string): number => FontCache.getMeasureText(text, fontString).width
+        const width =
+          mergedSpanWidth(location.worksheet, location.row, location.col) ??
+          location.worksheet.getColumnWidth(location.col)
+        const negativeDate =
+          raw < 0 && !date1904 && (type === 'date' || type === 'datetime' || type === 'time')
+        const hashes = negativeDate
+          ? hashFill(width, measure)
+          : overflowHashes(
+              String(outCell.v ?? ''),
+              width,
+              measure,
+              excelWidthScale(style?.ff ?? undefined, style?.fs ?? 11, () => measure('0')),
+            )
+        return hashes === null ? outCell : { ...outCell, v: hashes, t: CellValueType.NUMBER }
+      }
       if (
         typeof pattern === 'string' &&
         pattern.includes('*') &&
@@ -360,12 +492,17 @@ export function installNumberFormatFix(
         if (cache.size > 50_000) cache.clear()
         cache.set(key, text)
       }
-      if (text === null) return next(cell)
-      return next({
-        ...cell,
-        v: text,
-        t: typeof raw === 'string' ? CellValueType.STRING : CellValueType.NUMBER,
-      })
+      if (text === null) return next(maybeHash(cell, pattern))
+      return next(
+        maybeHash(
+          {
+            ...cell,
+            v: text,
+            t: typeof raw === 'string' ? CellValueType.STRING : CellValueType.NUMBER,
+          },
+          pattern,
+        ),
+      )
     },
   })
 }
