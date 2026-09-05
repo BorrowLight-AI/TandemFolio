@@ -16,6 +16,7 @@ import {
   matrixBounds,
   navigateToAnchor,
   preloadEntireWorkbook,
+  pushWorkbookUndo,
   queueFormulaRecalc,
   queueSparklineInstall,
   RECALC_MAX_FAILURES,
@@ -96,6 +97,8 @@ import '@univerjs/preset-sheets-table/lib/index.css'
 import { greenTheme } from '@univerjs/themes'
 import { createUniver } from './create-univer'
 import { BrowserWorkbookDesktopApi } from './browser-desktop-api'
+import { structuralDeleteFormulaErrorSync } from './structural-delete-guard'
+import { installCenterContinuousRender } from './center-continuous'
 
 import { columnIndex, columnLabel, parseRange } from '../domain/cell-address'
 import {
@@ -135,6 +138,7 @@ import {
   REORDER_RANGE_MUTATION,
   ROW_COLUMN_MUTATIONS,
   SET_FROZEN_MUTATION,
+  SET_RANGE_VALUES_COMMAND,
   SET_NUMFMT_MUTATION,
   SET_TAB_COLOR_MUTATION,
   TOGGLE_GRIDLINES_MUTATION,
@@ -143,6 +147,7 @@ import {
   SORT_COMMAND_PATTERN,
   STRUCTURAL_EDIT_COMMAND_PATTERN,
 } from './app-constants'
+import { collectCellFormulaTexts, quadraticFormulaError } from './formula-cost'
 import {
   getSourceRange as getSourceRangeImpl,
   handleCreatePivot as handleCreatePivotImpl,
@@ -210,8 +215,16 @@ import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
 import { installPopulatedDataValidationArrow } from './data-validation-arrow'
 import { installFormulaNullResultFix } from './formula-null-result'
+import { installCachedValueFallbackInterceptor } from './formula-cached-fallback'
+import { installIfsEmptySetFix } from './ifs-empty-set'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installRateFallback } from './rate-function'
+import {
+  applyCalculationMode,
+  calculateNow,
+  calculateSheet,
+  resetCalculationMode,
+} from './calc-options'
 import {
   handleRibbonCommand as handleRibbonCommandImpl,
   type RibbonCommandContext,
@@ -799,6 +812,7 @@ export function App(): React.JSX.Element {
   /// Zoom of the active sheet in percent, echoed by the status-bar slider.
   const [zoomPercent, setZoomPercent] = useState(100)
   const [selectionFormat, setSelectionFormat] = useState<SelectionFormat | null>(null)
+  const [calcManual, setCalcManual] = useState(false)
   /// A1 label of the active cell, echoed live by the Name Box. Updated from
   /// the same SelectionChanged refresh that keeps selectionFormat current.
   const [activeCellA1, setActiveCellA1] = useState('')
@@ -1037,6 +1051,7 @@ export function App(): React.JSX.Element {
         UniverSheetsTablePreset(),
       ],
     })
+    installCenterContinuousRender()
     const univerCreateMs = performance.now() - univerCreateStartedAt
     const worksheetInstallStartedAt = performance.now()
     loadSnapshotIntoUniver(runtime, initialSnapshot, 'new-workbook', 'Untitled')
@@ -1114,6 +1129,12 @@ export function App(): React.JSX.Element {
     // Formula bar shows harvested formula text on streamed workbooks whose
     // closure gave up; display-only, the engine never sees it.
     const formulaTextDisposable = installFormulaTextInterceptor(runtime, lazyWorkbookRef)
+    // Preserve the file's cached display value when the local formula engine
+    // cannot evaluate an otherwise valid Excel formula.
+    const cachedFormulaFallbackDisposable = installCachedValueFallbackInterceptor(
+      runtime,
+      lazyWorkbookRef,
+    )
     // Excel-parity number-format display: empty sections, text section,
     // _/* padding, General digit fitting.
     const numberFormatFixDisposable = installNumberFormatFix(runtime)
@@ -1137,6 +1158,8 @@ export function App(): React.JSX.Element {
     // Empty-value formula results (IFERROR/IF/CHOOSE over blank refs)
     // display as 0 like Excel.
     const nullResultDisposable = installFormulaNullResultFix(runtime)
+    // MINIFS/MAXIFS with no matching rows return numeric zero, matching Excel.
+    const ifsEmptySetDisposable = installIfsEmptySetFix(runtime)
     // Copy/cut load their selection into the lazy window first so streamed
     // workbooks don't serialize blanks for never-viewed rows.
     const copyMaterializeDisposable = installCopyMaterialize(runtime, lazyWorkbookRef, setMessage)
@@ -1746,6 +1769,32 @@ export function App(): React.JSX.Element {
       (event) => {
         const state = lazyWorkbookRef.current
         if (journalSuppression.active || !state) return
+        if (event.id === SET_RANGE_VALUES_COMMAND || event.id === SET_RANGE_VALUES_MUTATION) {
+          const options = event.options as { fromFormula?: boolean } | undefined
+          if (options?.fromFormula) return
+          const params = event.params as
+            { subUnitId?: string; value?: unknown; cellValue?: unknown } | undefined
+          const formulas = collectCellFormulaTexts(params?.value ?? params?.cellValue)
+          if (formulas.length > 0) {
+            const sheetId =
+              params?.subUnitId ??
+              runtime.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getSheetId()
+            const hostName = state.file.sheets.find((sheet) => sheet.id === sheetId)?.name ?? ''
+            const sheets = state.file.sheets.map((sheet) => ({
+              name: sheet.name,
+              rows: sheet.rowCount,
+              columns: sheet.columnCount,
+            }))
+            const failure = formulas
+              .map((formula) => quadraticFormulaError(formula, hostName, sheets))
+              .find((error) => error !== null)
+            if (failure) {
+              event.cancel = true
+              setMessage(failure)
+            }
+          }
+          return
+        }
         if (CF_RULE_COMMAND_PATTERN.test(event.id)) {
           // The Univer panel offers rules base OOXML cannot hold (x14-only
           // icon sets, date-occurring, equal/notEqual average, …); block them
@@ -1782,6 +1831,33 @@ export function App(): React.JSX.Element {
           if (sheet && sheet.pivotRanges.length > 0) {
             event.cancel = true
             setMessage(t('appPivotSheetNoStructural'))
+            return
+          }
+          if (sheet && /^sheet\.command\.remove-(row|col)/.test(event.id)) {
+            const workbook = runtime.univerAPI.getActiveWorkbook()
+            const range =
+              (event.params as { range?: IRange } | undefined)?.range ??
+              workbook?.getActiveRange()?.getRange()
+            if (workbook && range) {
+              const operation = event.id.includes('remove-row')
+                ? {
+                    op: 'delete_rows' as const,
+                    sheetId: sheet.id,
+                    row: range.startRow + 1,
+                    count: range.endRow - range.startRow + 1,
+                  }
+                : {
+                    op: 'delete_cols' as const,
+                    sheetId: sheet.id,
+                    column: columnLabel(range.startColumn),
+                    count: range.endColumn - range.startColumn + 1,
+                  }
+              const failure = structuralDeleteFormulaErrorSync(state, workbook, operation)
+              if (failure) {
+                event.cancel = true
+                setMessage(failure)
+              }
+            }
           }
           return
         }
@@ -1977,6 +2053,7 @@ export function App(): React.JSX.Element {
       tsvClipboardDisposable.dispose()
       formulaViewDisposable.dispose()
       formulaTextDisposable.dispose()
+      cachedFormulaFallbackDisposable.dispose()
       numberFormatFixDisposable.dispose()
       cellFilenameDisposable.dispose()
       rateFallbackDisposable.dispose()
@@ -1985,6 +2062,7 @@ export function App(): React.JSX.Element {
       selectionWrapGuardDisposable.dispose()
       multiRowAutofitDisposable.dispose()
       nullResultDisposable.dispose()
+      ifsEmptySetDisposable.dispose()
       copyMaterializeDisposable.dispose()
       dataValidationArrowDisposable.dispose()
       ruleDetailDisposable()
@@ -2119,6 +2197,33 @@ export function App(): React.JSX.Element {
   }
 
   function handleRibbonCommand(command: string): void {
+    const runtime = univerRef.current
+    if (command === 'calc-mode:auto' || command === 'calc-mode:manual') {
+      if (!runtime) return
+      const manual = command === 'calc-mode:manual'
+      const previous = calcManual
+      applyCalculationMode(runtime, manual, (step) =>
+        pushWorkbookUndo(runtime, {
+          undo() {
+            step.undo()
+            setCalcManual(previous)
+          },
+          redo() {
+            step.redo()
+            setCalcManual(manual)
+          },
+        }),
+      )
+      setCalcManual(manual)
+      if (!manual) calculateNow(runtime)
+      return
+    }
+    if (command === 'calculate-now' || command === 'calculate-sheet') {
+      if (!runtime) return
+      if (command === 'calculate-now') calculateNow(runtime)
+      else calculateSheet(runtime)
+      return
+    }
     handleRibbonCommandImpl(ribbonContext(), command)
   }
 
@@ -2188,6 +2293,8 @@ export function App(): React.JSX.Element {
           : visual,
       ),
     }
+    resetCalculationMode(univerRef.current)
+    setCalcManual(false)
     const previous = lazyWorkbookRef.current
     if (previous) {
       clearLazyState(previous)
@@ -2225,6 +2332,7 @@ export function App(): React.JSX.Element {
       flags: { preloadComplete: false },
       closure: { status: 'idle', pinned: new Map() },
       formulaText: new Map(),
+      cachedFormulaValues: new Map(),
       pivotDefinitions: new Map(),
       outline: new Map(),
       recalc: {
@@ -2605,6 +2713,7 @@ export function App(): React.JSX.Element {
         fullscreen={display.mode === 'fullscreen'}
         onToggleFullscreen={() => void toggleLiveEditorFullscreen()}
         pageLayout={activePageLayout}
+        calcManual={calcManual}
         selectionFormat={selectionFormat}
         statusMessage={message}
         onUndo={handleUndo}

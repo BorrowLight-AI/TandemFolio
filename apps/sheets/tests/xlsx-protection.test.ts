@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { applySheetProtection, SheetProtectionError } from '../src/gateway/xlsx-protection'
+import {
+  applyProtectedRanges,
+  applySheetProtection,
+  applyWorkbookProtection,
+  SheetProtectionError,
+} from '../src/gateway/xlsx-protection'
 
 const BARE = '<worksheet><sheetData/><autoFilter ref="A1:C4"/></worksheet>'
 
@@ -41,5 +46,41 @@ describe('applySheetProtection', () => {
   it('handles the paired-tag form', () => {
     const xml = '<worksheet><sheetData/><sheetProtection sheet="1"></sheetProtection></worksheet>'
     expect(applySheetProtection(xml, false)).toBe('<worksheet><sheetData/></worksheet>')
+  })
+})
+
+describe('applyWorkbookProtection', () => {
+  const workbook = '<workbook><bookViews/><sheets/></workbook>'
+
+  it('adds and removes an unpassworded structure lock', () => {
+    const locked = applyWorkbookProtection(workbook, true)
+    expect(locked).toContain('<workbookProtection lockStructure="1"/>')
+    expect(applyWorkbookProtection(locked, false)).toBe(workbook)
+  })
+
+  it('fails closed for password-protected structure', () => {
+    const locked = '<workbook><workbookProtection lockStructure="1" workbookPassword="ABCD"/><sheets/></workbook>'
+    expect(() => applyWorkbookProtection(locked, false)).toThrow(SheetProtectionError)
+  })
+})
+
+describe('applyProtectedRanges', () => {
+  it('writes escaped allow-edit ranges in schema order and removes them', () => {
+    const written = applyProtectedRanges(BARE, [{ name: 'Sales & Tax', sqref: 'A2:B9 D2' }])
+    expect(written).toContain(
+      '<protectedRanges><protectedRange sqref="A2:B9 D2" name="Sales &amp; Tax"/></protectedRanges><autoFilter',
+    )
+    expect(applyProtectedRanges(written, [])).toBe(BARE)
+  })
+
+  it('fails closed instead of replacing password or identity permissions', () => {
+    for (const item of [
+      '<protectedRanges><protectedRange name="x" sqref="A1" password="AB"/></protectedRanges>',
+      '<protectedRanges><protectedRange name="x" sqref="A1"><securityDescriptor/></protectedRange></protectedRanges>',
+    ]) {
+      expect(() => applyProtectedRanges(BARE.replace('<autoFilter', `${item}<autoFilter`), [])).toThrow(
+        SheetProtectionError,
+      )
+    }
   })
 })

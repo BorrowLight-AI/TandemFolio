@@ -16,6 +16,7 @@ import type {
   WorkbookStyleEdit,
   WorkbookVisualEdit,
 } from '../shared/desktop-api'
+import { withFutureFunctionMarkers } from './future-functions'
 import { applyChartEdit } from './xlsx-chart'
 import { applyVisualEdits } from './xlsx-drawing-edit'
 import {
@@ -37,6 +38,7 @@ import {
 } from './xlsx-pivot-add'
 import type { SheetFilterState } from './xlsx-filter'
 import { applyFilterState } from './xlsx-filter'
+import { normalizeOoxmlPartPrefix } from './xlsx-namespace'
 import type { SheetAllocation, SheetEditPlan, SheetElement } from './xlsx-sheets'
 import {
   addWorksheetOverride,
@@ -100,6 +102,7 @@ import {
   shiftDrawingAnchors,
   shiftTablePart,
   StructuralShiftError,
+  translateSharedFormula,
 } from './xlsx-structure'
 import { StylesheetEditor } from './xlsx-styles'
 
@@ -341,7 +344,7 @@ export async function createBufferEntrySource(buffer: Buffer): Promise<EntrySour
         .filter(([, file]) => !file.dir)
         .map(([path]) => path),
     has: async (path) => zip.file(path) !== null,
-    readText: (path) => readTextEntry(zip, path),
+    readText: async (path) => normalizeOoxmlPartPrefix(await readTextEntry(zip, path)),
   }
 }
 
@@ -795,7 +798,10 @@ export async function planCellEditsToXlsx(
     stylesheet = new StylesheetEditor(await pkg.readText(stylesPath))
   }
   for (const [sheetName, sheetEdits] of editsBySheet) {
-    let worksheetXml = worksheetXmls.get(sheetName) ?? ''
+    let worksheetXml = materializeEditedSharedFormulaGroups(
+      worksheetXmls.get(sheetName) ?? '',
+      sheetEdits,
+    )
     for (const edit of sheetEdits) {
       const address = toA1Address(edit.row, edit.column)
       let styleOverride: number | undefined
@@ -1823,6 +1829,98 @@ function expandWorksheetDimensionToCells(worksheetXml: string): string {
   return worksheetXml.replace(/(<worksheet\b[^>]*>)/, `$1<dimension ref="${reference}"/>`)
 }
 
+/// Rewriting a shared-formula master as a plain formula would orphan its
+/// untouched followers. Expand those followers before applying edits, while
+/// preserving their cached values and cell attributes.
+function materializeEditedSharedFormulaGroups(
+  worksheetXml: string,
+  edits: readonly CellEdit[],
+): string {
+  if (!worksheetXml.includes('t="shared"')) return worksheetXml
+  const rewritten = new Set(
+    edits.filter((edit) => edit.writeValue).map((edit) => toA1Address(edit.row, edit.column)),
+  )
+  if (rewritten.size === 0) return worksheetXml
+
+  interface SharedFragment {
+    start: number
+    end: number
+    address: string
+    row: number
+    column: number
+    si: string
+    isMaster: boolean
+    body: string
+  }
+  const fragments: SharedFragment[] = []
+  const sharedOpen = /<f\b[^>]*?\bt="shared"[^>]*?(\/?)>/g
+  let match: RegExpExecArray | null
+  while ((match = sharedOpen.exec(worksheetXml)) !== null) {
+    const openTag = match[0]
+    const si = /\bsi="([^"]+)"/.exec(openTag)?.[1]
+    if (si === undefined) continue
+    const openEnd = match.index + openTag.length
+    let end = openEnd
+    let body = ''
+    if (match[1] !== '/') {
+      const close = worksheetXml.indexOf('</f>', openEnd)
+      if (close === -1) continue
+      body = worksheetXml.slice(openEnd, close)
+      end = close + '</f>'.length
+    }
+    const cellOpen = worksheetXml.lastIndexOf('<c', match.index)
+    const address = /\br="([A-Z]{1,3}[0-9]+)"/.exec(
+      worksheetXml.slice(cellOpen, match.index),
+    )?.[1]
+    if (address === undefined) continue
+    const parsed = /^([A-Z]{1,3})([0-9]+)$/.exec(address)
+    if (!parsed) continue
+    fragments.push({
+      start: match.index,
+      end,
+      address,
+      row: Number(parsed[2]) - 1,
+      column: parseA1Column(address),
+      si,
+      isMaster: /\bref="/.test(openTag),
+      body,
+    })
+  }
+
+  const killedMasters = new Map<string, SharedFragment>()
+  for (const fragment of fragments) {
+    if (fragment.isMaster && fragment.body !== '' && rewritten.has(fragment.address)) {
+      killedMasters.set(fragment.si, fragment)
+    }
+  }
+  if (killedMasters.size === 0) return worksheetXml
+
+  const parts: string[] = []
+  let cursor = 0
+  for (const fragment of fragments) {
+    const master = killedMasters.get(fragment.si)
+    if (
+      master === undefined ||
+      fragment.isMaster ||
+      fragment.body !== '' ||
+      rewritten.has(fragment.address)
+    ) {
+      continue
+    }
+    const translated = translateSharedFormula(
+      decodeXmlText(master.body),
+      fragment.row - master.row,
+      fragment.column - master.column,
+    )
+    parts.push(worksheetXml.slice(cursor, fragment.start))
+    if (translated !== null) parts.push(`<f>${escapeXmlText(translated)}</f>`)
+    cursor = fragment.end
+  }
+  if (parts.length === 0) return worksheetXml
+  parts.push(worksheetXml.slice(cursor))
+  return parts.join('')
+}
+
 function serializeStyledCell(
   address: string,
   cell: CellState,
@@ -1831,7 +1929,7 @@ function serializeStyledCell(
 ): string {
   const style = styleIndex === undefined ? '' : ` s="${styleIndex}"`
   if (cell.formula) {
-    return `<c r="${address}"${style}><f>${escapeXmlText(cell.formula.replace(/^=/, ''))}</f></c>`
+    return `<c r="${address}"${style}><f>${escapeXmlText(withFutureFunctionMarkers(cell.formula.replace(/^=/, '')))}</f></c>`
   }
   if (cell.value === null) {
     // A cleared cell keeps its formatting only if it keeps a style index.
@@ -1906,7 +2004,7 @@ function lettersToColumn(letters: string): number {
 
 function serializeCell(address: string, cell: CellState): string {
   if (cell.formula) {
-    return `<c r="${address}"><f>${escapeXmlText(cell.formula.slice(1))}</f></c>`
+    return `<c r="${address}"><f>${escapeXmlText(withFutureFunctionMarkers(cell.formula.slice(1)))}</f></c>`
   }
   if (cell.value === null) return ''
   if (typeof cell.value === 'string') {

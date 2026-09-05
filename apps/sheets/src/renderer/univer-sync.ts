@@ -77,6 +77,7 @@ import {
 } from './formula-closure'
 import { t } from './i18n/locale'
 import { INDENT_STEP_PX } from './selection-format'
+import { CENTER_ACROSS_END_KEY } from './center-continuous'
 import {
   fileRangeToScreenRange,
   indexedThroughScreenRow,
@@ -1594,15 +1595,30 @@ async function recalcFormulaCellKeys(
 function storeFormulaText(
   state: LazyWorkbookState,
   sheetId: string,
-  cells: readonly { row: number; column: number; formula?: string | undefined }[],
+  cells: readonly {
+    row: number
+    column: number
+    formula?: string | undefined
+    value?: string | number | boolean | null | undefined
+  }[],
 ): void {
   let bySheet = state.formulaText.get(sheetId)
   if (!bySheet) {
     bySheet = new Map()
     state.formulaText.set(sheetId, bySheet)
   }
+  let cached = state.cachedFormulaValues.get(sheetId)
   for (const cell of cells) {
-    if (cell.formula) bySheet.set(`${cell.row}:${cell.column}`, cell.formula)
+    if (!cell.formula) continue
+    const key = `${cell.row}:${cell.column}`
+    bySheet.set(key, cell.formula)
+    if (cell.value !== null && cell.value !== undefined) {
+      if (!cached) {
+        cached = new Map()
+        state.cachedFormulaValues.set(sheetId, cached)
+      }
+      cached.set(key, cell.value)
+    }
   }
 }
 
@@ -2174,7 +2190,7 @@ function applyJournalOverlay(
   }
 }
 
-function patchWorksheetRangeInner(
+export function patchWorksheetRangeInner(
   worksheet: UniverWorksheet,
   previousRange: IRange | undefined,
   range: IRange,
@@ -2208,6 +2224,7 @@ function patchWorksheetRangeInner(
   const matrix: ICellData[][] = Array.from({ length: rows }, () =>
     Array.from({ length: columns }, () => ({})),
   )
+  const centerAcross = new Map<number, Map<number, boolean>>()
   for (const cell of cells) {
     if (
       cell.row < range.startRow ||
@@ -2220,6 +2237,14 @@ function patchWorksheetRangeInner(
     const displayValue = cell.value ?? cell.formula ?? ''
     const row = matrix[cell.row - range.startRow]
     const style = cell.styleIndex === undefined ? undefined : styles[cell.styleIndex]
+    if (style?.horizontalAlignment === 'centerContinuous') {
+      let run = centerAcross.get(cell.row)
+      if (!run) {
+        run = new Map()
+        centerAcross.set(cell.row, run)
+      }
+      run.set(cell.column, (cell.value !== null && cell.value !== undefined && cell.value !== '') || Boolean(cell.formula))
+    }
     // CSE array follower: its dead cached value would block the master's
     // spill with #SPILL!; keep the style, let the engine fill the content.
     if (useFormulas && arrayFollowers?.has(`${cell.row}:${cell.column}`)) {
@@ -2261,6 +2286,16 @@ function patchWorksheetRangeInner(
             }
           : {}),
       }
+    }
+  }
+  for (const [rowIndex, run] of centerAcross) {
+    for (const [columnIndex, hasContent] of run) {
+      if (!hasContent) continue
+      let end = columnIndex
+      while (run.get(end + 1) === false) end += 1
+      if (end === columnIndex) continue
+      const anchor = matrix[rowIndex - range.startRow]?.[columnIndex - range.startColumn]
+      if (anchor) anchor.custom = { ...anchor.custom, [CENTER_ACROSS_END_KEY]: end }
     }
   }
   applyTableBanding(matrix, range, tables)
@@ -2435,6 +2470,7 @@ export async function preloadEntireWorkbook(
       const screenRange = ops.length === 0 ? range : fileRangeToScreenRange(ops, range)
       if (screenRange === null) continue
       const screen = ops.length === 0 ? result : mapRangeResultToScreen(ops, result)
+      storeFormulaText(state, sheetId, screen.cells)
       collectArrayFollowers(arrayFollowers, screen.cells, ops)
       patchWorksheetRange(
         worksheet,
@@ -3218,7 +3254,14 @@ function toUniverStyle(style: WorkbookCellStyle): IStyleData {
     it: style.italic ? BooleanNumber.TRUE : BooleanNumber.FALSE,
     ...(style.underline ? { ul: { s: BooleanNumber.TRUE } } : {}),
     ...(style.strikethrough ? { st: { s: BooleanNumber.TRUE } } : {}),
-    ...(style.wrapText ? { tb: WrapStrategy.WRAP } : {}),
+    ...(style.wrapText || style.horizontalAlignment === 'centerContinuous'
+      ? {
+          tb:
+            style.horizontalAlignment === 'centerContinuous'
+              ? WrapStrategy.OVERFLOW
+              : WrapStrategy.WRAP,
+        }
+      : {}),
     ...(style.fontColor ? { cl: { rgb: style.fontColor } } : {}),
     ...(style.fillColor ? { bg: { rgb: style.fillColor } } : {}),
     ...(style.numberFormat ? { n: { pattern: style.numberFormat } } : {}),
@@ -3277,6 +3320,7 @@ function mapBorderStyle(style: string): BorderStyleTypes {
 function mapHorizontalAlignment(value: string | undefined): HorizontalAlign | undefined {
   if (value === 'left') return HorizontalAlign.LEFT
   if (value === 'center') return HorizontalAlign.CENTER
+  if (value === 'centerContinuous') return HorizontalAlign.CENTER
   if (value === 'right') return HorizontalAlign.RIGHT
   if (value === 'justify') return HorizontalAlign.JUSTIFIED
   if (value === 'distributed') return HorizontalAlign.DISTRIBUTED

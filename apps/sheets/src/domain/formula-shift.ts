@@ -85,6 +85,76 @@ export interface FormulaShiftResult {
   readonly hasRefError: boolean
 }
 
+const MAX_GRID_ROWS = 1_048_576
+const MAX_GRID_COLUMNS = 16_384
+
+function offsetRefPart(part: RefPart, rowDelta: number, columnDelta: number): RefPart | null {
+  const row = part.rowAbs === '$' ? part.row : part.row + rowDelta
+  const col = part.colAbs === '$' ? part.col : part.col + columnDelta
+  if (row < 0 || row >= MAX_GRID_ROWS || col < 0 || col >= MAX_GRID_COLUMNS) return null
+  return { ...part, row, col }
+}
+
+const COLUMN_SPAN_RE =
+  /(?<![A-Za-z0-9_.$!:])(?:(?:'([^']+)'|([A-Za-z0-9_.]+))!)?(\$?)([A-Z]{1,3}):(\$?)([A-Z]{1,3})(?![A-Za-z0-9($!:])/g
+
+/// Excel copy/fill semantics: relative references move by the copy offset,
+/// absolute components remain pinned, and references outside the grid become
+/// #REF!. String literals are left untouched.
+export function offsetFormulaRefs(formula: string, rowDelta: number, columnDelta: number): string {
+  if (rowDelta === 0 && columnDelta === 0) return formula
+  const segments = formula.split(/("(?:[^"]|"")*")/)
+  const rewritten = segments.map((segment, index) => {
+    if (index % 2 === 1) return segment
+    let out = segment.replace(
+      REF_RE,
+      (match, quoted, bare, aAbsC, aCol, aAbsR, aRow, bAbsC, bCol, bAbsR, bRow) => {
+        const prefix = quoted !== undefined ? `'${quoted}'!` : bare !== undefined ? `${bare}!` : ''
+        const first = offsetRefPart(
+          {
+            colAbs: aAbsC as string,
+            col: columnIndex(aCol as string),
+            rowAbs: aAbsR as string,
+            row: Number(aRow) - 1,
+          },
+          rowDelta,
+          columnDelta,
+        )
+        if (bCol === undefined) return first ? `${prefix}${formatRef(first)}` : `${prefix}#REF!`
+        const second = offsetRefPart(
+          {
+            colAbs: bAbsC as string,
+            col: columnIndex(bCol as string),
+            rowAbs: bAbsR as string,
+            row: Number(bRow) - 1,
+          },
+          rowDelta,
+          columnDelta,
+        )
+        if (!first || !second) return `${prefix}#REF!`
+        return `${prefix}${formatRef(first)}:${formatRef(second)}`
+      },
+    )
+    if (columnDelta !== 0) {
+      out = out.replace(COLUMN_SPAN_RE, (_match, quoted, bare, aAbs, aCol, bAbs, bCol) => {
+        const prefix = quoted !== undefined ? `'${quoted}'!` : bare !== undefined ? `${bare}!` : ''
+        const shift = (absolute: string, letters: string): string | null => {
+          if (absolute === '$') return `$${letters}`
+          const shifted = columnIndex(letters) + columnDelta
+          return shifted < 0 || shifted >= MAX_GRID_COLUMNS ? null : columnLabel(shifted)
+        }
+        const first = shift(aAbs as string, aCol as string)
+        const second = shift(bAbs as string, bCol as string)
+        return first === null || second === null
+          ? `${prefix}#REF!`
+          : `${prefix}${first}:${second}`
+      })
+    }
+    return out
+  })
+  return rewritten.join('')
+}
+
 /**
  * @param formulaSheetMatchesOp true when the cell holding this formula lives
  *        on the sheet the structural op targets (bare refs are rewritten)

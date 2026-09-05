@@ -59,6 +59,9 @@ export interface LazyWorkbookState {
   /// readWorkbookFormulas, so the formula bar can show formulas even when the
   /// closure gave up and the engine never sees them. Display-only.
   readonly formulaText: Map<string, Map<string, string>>
+  /// Original cached results for formula cells, used only when the local
+  /// engine cannot evaluate a valid Excel formula.
+  readonly cachedFormulaValues: Map<string, Map<string, string | number | boolean>>
   /// Parsed pivot definitions keyed by part path, loaded eagerly at open so
   /// pivot refresh stays synchronous.
   readonly pivotDefinitions: Map<string, WorkbookPivotDefinition>

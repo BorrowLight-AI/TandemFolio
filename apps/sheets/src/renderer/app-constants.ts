@@ -45,6 +45,7 @@ export const initialSnapshot: WorkbookSnapshot = {
 }
 
 export const FORMULA_MODE_MAX_CELLS = 50_000
+export const SET_RANGE_VALUES_COMMAND = 'sheet.command.set-range-values'
 export const SET_RANGE_VALUES_MUTATION = 'sheet.mutation.set-range-values'
 export const SET_NUMFMT_MUTATION = 'sheet.mutation.set.numfmt'
 // Freeze and gridline toggles journal from their mutations so Univer's own

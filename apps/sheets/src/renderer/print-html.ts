@@ -9,6 +9,7 @@ import { columnIndex, columnLabel } from '../domain/cell-address'
 import type { WorkbookExportPdfRequest } from '../shared/desktop-api'
 import type { HeaderFooterParts, PageSetupJournalState } from './edit-journal'
 import { getLang, t } from './i18n/locale'
+import { fitToPageScale } from './print-scale'
 
 export class PrintError extends Error {}
 
@@ -219,6 +220,19 @@ td.hf { padding: 6pt 0 0; }
       landscape,
       margins,
       rowHeaderPt + columnWidthsPt.reduce((total, width) => total + width, 0),
+      {
+        repeatedHeightPt:
+          (headings ? 15 : 0) +
+          (titles
+            ? Array.from(
+                { length: titles.end - titles.start + 1 },
+                (_, offset) => Math.max(worksheet.getRowHeight(titles.start + offset) * 0.75, 10),
+              ).reduce((total, height) => total + height, 0)
+            : 0),
+        rowHeightsPt: Array.from({ length: rows }, (_, offset) => area.startRow + offset)
+          .filter((row) => !titles || row < titles.start || row > titles.end)
+          .map((row) => Math.max(worksheet.getRowHeight(row) * 0.75, 10)),
+      },
     ),
   }
 }
@@ -276,21 +290,25 @@ function computeScale(
   landscape: boolean,
   margins: { left: number; right: number; top: number; bottom: number },
   contentWidthPt: number,
+  area: { repeatedHeightPt: number; rowHeightsPt: readonly number[] },
 ): number {
-  const fitPages = pageSetup.fitToPage === true ? (pageSetup.fitToWidth ?? 0) : 0
-  if (fitPages > 0) {
-    const paperWidthIn =
-      typeof pageSize === 'string'
-        ? landscape
-          ? paperHeightInches(pageSize)
-          : (PAPER_WIDTH_INCHES[pageSize] ?? 8.27)
-        : landscape
-          ? pageSize.height
-          : pageSize.width
-    const printableWidthPt = (paperWidthIn - margins.left - margins.right) * 72
-    return clamp((printableWidthPt * fitPages) / contentWidthPt, 0.1, 1)
+  if (pageSetup.fitToPage === true) {
+    const naturalWidth =
+      typeof pageSize === 'string' ? (PAPER_WIDTH_INCHES[pageSize] ?? 8.27) : pageSize.width
+    const naturalHeight =
+      typeof pageSize === 'string' ? paperHeightInches(pageSize) : pageSize.height
+    const paperWidthIn = landscape ? naturalHeight : naturalWidth
+    const paperHeightIn = landscape ? naturalWidth : naturalHeight
+    return fitToPageScale({
+      printableWidthPt: Math.max(0, paperWidthIn - margins.left - margins.right) * 72,
+      printableHeightPt: Math.max(0, paperHeightIn - margins.top - margins.bottom) * 72,
+      fitToWidth: pageSetup.fitToWidth ?? 0,
+      fitToHeight: pageSetup.fitToHeight ?? 0,
+      contentWidthPt,
+      areas: [area],
+    })
   }
-  if (pageSetup.fitToPage !== true && pageSetup.scale !== undefined) {
+  if (pageSetup.scale !== undefined) {
     return clamp(pageSetup.scale / 100, 0.1, 2)
   }
   return 1

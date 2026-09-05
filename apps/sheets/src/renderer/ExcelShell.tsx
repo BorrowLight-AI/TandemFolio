@@ -186,6 +186,7 @@ interface ExcelShellProps {
   /// Session page-layout settings of the active sheet, echoed by the Page
   /// Layout tab's controls (untouched fields show the app default).
   readonly pageLayout: PageLayoutEcho
+  readonly calcManual: boolean
 }
 
 export interface PageLayoutEcho {
@@ -243,6 +244,7 @@ export function ExcelShell({
   onAutoSaveChange,
   selectedChart,
   pageLayout,
+  calcManual,
 }: ExcelShellProps): React.JSX.Element {
   const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<RibbonTab>('Home')
@@ -379,6 +381,7 @@ export function ExcelShell({
           selectionFormat={selectionFormat}
           sheetProtected={onGetSheetProtection()}
           pageLayout={pageLayout}
+          calcManual={calcManual}
           selectedChart={selectedChart}
           onRefreshPivot={onRefreshPivot}
           onIsSelectionInPivot={onIsSelectionInPivot}
@@ -948,6 +951,7 @@ function Ribbon({
   selectionFormat,
   sheetProtected,
   pageLayout,
+  calcManual,
   selectedChart,
   onCommand,
   onRefreshPivot,
@@ -957,6 +961,7 @@ function Ribbon({
   readonly selectionFormat: SelectionFormat | null
   readonly sheetProtected: boolean | null
   readonly pageLayout: PageLayoutEcho
+  readonly calcManual: boolean
   readonly selectedChart: SelectedChartRibbon | null
   readonly onCommand: (command: string) => void
   readonly onRefreshPivot: () => string | null
@@ -1736,16 +1741,19 @@ function Ribbon({
           <RibbonReserved large label={t('appWatchWindow')} symbol="👓" />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupCalculation')}>
-          <RibbonReserved large menu label={t('appCalculationOptions')} symbol="🧮" />
+          {largeMenu(t('appCalculationOptions'), '🧮', t('appCalculationOptions'), [
+            { value: 'calc-mode:auto', label: `Auto${calcManual ? '' : ' ✓'}` },
+            { value: 'calc-mode:manual', label: `Manual${calcManual ? ' ✓' : ''}` },
+          ])}
           <div className="row-stack">
-            <span className="styles-row reserved" data-tip={t('appRecalcLiveTitle')}>
+            <button className="styles-row as-button" onClick={() => onCommand('calculate-now')}>
               <ToolSymbol symbol="⟳" />
               {t('appCalculateNow')}
-            </span>
-            <span className="styles-row reserved" data-tip={t('appRecalcLiveTitle')}>
+            </button>
+            <button className="styles-row as-button" onClick={() => onCommand('calculate-sheet')}>
               <ToolSymbol symbol="▦" />
               {t('appCalculateSheet')}
-            </span>
+            </button>
           </div>
         </RibbonGroup>
       </div>

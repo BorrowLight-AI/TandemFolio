@@ -68,6 +68,12 @@ import {
 } from '../filter-actions'
 import { journalSize, recordNoteChange, type HeaderFooterParts } from '../edit-journal'
 import { applyWorkbookFormulaView } from '../formula-view'
+import { quadraticFormulaError } from '../formula-cost'
+import {
+  applyCalculationMode,
+  calculateNow,
+  calculateSheet,
+} from '../calc-options'
 import {
   applyWorkbookFitToPages,
   applyWorkbookHeaderFooter,
@@ -112,6 +118,7 @@ import {
   type WorkbookTextToColumnsDelimiter,
 } from '../univer-sync'
 import { applyWorkbookTableAdd } from '../workbook-ops'
+import { structuralDeleteFormulaError } from '../structural-delete-guard'
 import {
   BORDER_COMMAND_TYPES,
   type ActiveWorkbook,
@@ -1167,6 +1174,22 @@ function normalizeXlsxComparisonOperand(
 }
 
 const handlers = {
+  'xlsx.calculation.set_mode': (arguments_, services) => {
+    const runtime = services.runtime()
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    const mode = arguments_.mode as 'automatic' | 'manual'
+    applyCalculationMode(runtime, mode === 'manual', (step) => pushWorkbookUndo(runtime, step))
+    if (mode === 'automatic') calculateNow(runtime)
+    return { ok: true, output: { mode } }
+  },
+  'xlsx.calculation.recalculate': (arguments_, services) => {
+    const runtime = services.runtime()
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    const scope = arguments_.scope as 'workbook' | 'sheet'
+    if (scope === 'workbook') calculateNow(runtime)
+    else calculateSheet(runtime)
+    return { ok: true, output: { scope } }
+  },
   'xlsx.cell.set_value': (arguments_, services) => {
     const sheet = arguments_.sheet as string
     const address = arguments_.address as string
@@ -1188,6 +1211,19 @@ const handlers = {
         error: 'invalid_arguments',
         message: 'xlsx.cell.set_formula requires one valid cell and a 1..8,192 character formula beginning with "=".',
       }
+    }
+    const state = services.state?.()
+    if (state?.file) {
+      const failure = quadraticFormulaError(
+        formula,
+        sheet,
+        state.file.sheets.map((candidate) => ({
+          name: candidate.name,
+          rows: candidate.rowCount,
+          columns: candidate.columnCount,
+        })),
+      )
+      if (failure) return { ok: false, error: 'execution_failed', message: failure }
     }
     applyWorkbookCellFormula(xlsxWorksheet(services.runtime(), sheet).getRange(address), formula)
     return {
@@ -1928,7 +1964,7 @@ const handlers = {
     }
     return { ok: true, output: { changed: 1, sheet, address } }
   },
-  'xlsx.column.delete': (arguments_, services) => {
+  'xlsx.column.delete': async (arguments_, services) => {
     const sheet = arguments_.sheet as string
     const column = arguments_.column as string
     const count = arguments_.count as number
@@ -1939,6 +1975,21 @@ const handlers = {
         error: 'invalid_arguments',
         message: 'xlsx.column.delete requires an A1 column label.',
       }
+    }
+    const workbook = xlsxWorkbook(services.runtime())
+    const state = services.state?.()
+    if (state?.file) {
+      const failure = await structuralDeleteFormulaError(
+        { file: state.file, editJournal: state.editJournal },
+        workbook,
+        {
+        op: 'delete_cols',
+        sheetId: xlsxWorksheet(services.runtime(), sheet).getSheetId(),
+        column: location.normalized,
+        count,
+        },
+      )
+      if (failure) return { ok: false, error: 'execution_failed', message: failure }
     }
     xlsxWorksheet(services.runtime(), sheet).deleteColumns(location.index, count)
     return { ok: true, output: { sheet, column: location.normalized, count } }
@@ -4605,10 +4656,25 @@ const handlers = {
     services.setPendingEdits?.(journalSize(state.editJournal))
     return { ok: true, output: { sheet, protected: nextProtected } }
   },
-  'xlsx.row.delete': (arguments_, services) => {
+  'xlsx.row.delete': async (arguments_, services) => {
     const sheet = arguments_.sheet as string
     const row = arguments_.row as number
     const count = arguments_.count as number
+    const workbook = xlsxWorkbook(services.runtime())
+    const state = services.state?.()
+    if (state?.file) {
+      const failure = await structuralDeleteFormulaError(
+        { file: state.file, editJournal: state.editJournal },
+        workbook,
+        {
+        op: 'delete_rows',
+        sheetId: xlsxWorksheet(services.runtime(), sheet).getSheetId(),
+        row,
+        count,
+        },
+      )
+      if (failure) return { ok: false, error: 'execution_failed', message: failure }
+    }
     xlsxWorksheet(services.runtime(), sheet).deleteRows(row - 1, count)
     return { ok: true, output: { sheet, row, count } }
   },
