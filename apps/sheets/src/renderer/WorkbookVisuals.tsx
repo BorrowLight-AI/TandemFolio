@@ -14,6 +14,8 @@ import {
 } from '../domain/chart-visual'
 import { parseAddress } from '../domain/cell-address'
 import { t } from './i18n/locale'
+import { VisualDeleteButton } from './VisualDeleteButton'
+import { shouldShowVisualDeleteButton } from './visual-delete-button'
 import type { WorkbookChartEdit, WorkbookFile, WorkbookVisualObject } from '../shared/desktop-api'
 
 type UniverRuntime = ReturnType<typeof createUniver>
@@ -884,19 +886,13 @@ function EditableShapeVisual({
       ) : (
         <ShapeVisual visual={textEditing ? { ...visual, text: '' } : visual} />
       )}
-      {!textEditing && (
-        <button
-          className="shape-delete-button"
-          data-tip={t('appDeleteVisualTitle')}
-          aria-label={t('appDeleteVisualTitle')}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation()
-            onEdit(visual.id, { remove: true })
-          }}
-        >
-          ✕
-        </button>
+      {shouldShowVisualDeleteButton({ selected: isSelected, textEditing }) && (
+        <VisualDeleteButton
+          hostRef={hostNodeRef}
+          worksheet={worksheet}
+          label={t('appDeleteVisualTitle')}
+          onDelete={() => onEdit(visual.id, { remove: true })}
+        />
       )}
       {textEditing && (
         <div

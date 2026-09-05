@@ -1848,10 +1848,6 @@ textarea:focus {
   z-index: 1;
 }
 
-.shape-editable.selected .shape-delete-button {
-  opacity: 1;
-}
-
 /* Selection handles: white dots on the frame, selected only. */
 .shape-editable .shape-handle {
   position: absolute;
@@ -1911,28 +1907,29 @@ textarea:focus {
   cursor: ew-resize;
 }
 
-.shape-editable .shape-delete-button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  z-index: 3;
+.shape-delete-button {
+  position: fixed;
+  z-index: 59;
+  display: grid;
+  place-items: center;
   width: 20px;
   height: 20px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
   background: var(--sheets-float-btn-bg);
   color: var(--text-muted);
   font-size: 11px;
   line-height: 1;
-  opacity: 0;
+  box-shadow: var(--sheets-shadow-menu);
   cursor: pointer;
 }
 
-.shape-editable:hover .shape-delete-button {
-  opacity: 1;
+.shape-delete-button:not([data-ready='true']) {
+  visibility: hidden;
 }
 
-.shape-editable .shape-delete-button:hover {
+.shape-delete-button:hover {
   color: var(--sheets-content-danger);
   background: var(--sheets-paper);
 }
