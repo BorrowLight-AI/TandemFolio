@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 160 passing files and one environment-conditional LibreOffice pivot
-suite; 1,861 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 162 passing files and one environment-conditional LibreOffice pivot
+suite; 1,895 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -216,6 +216,13 @@ history at renderer-owned closure steps, waits for asynchronous file-table decor
 decoration-only history before installing the carried suffix. Sheet-identity changes and two-phase
 structural saves intentionally start with a clean stack. File tables also retain their real column
 labels and cell-rendered table style instead of Univer's synthesized header/default theme.
+
+Large expression Conditional Formatting rules now fold position-invariant axes and follow the
+streamed row window, with conservative blockers for volatile, indirect, structured, or named
+expressions. The installed rule still owns its original ranges and save representation. Highlight
+rehydration additionally retains error/non-error operators, case-insensitive text predicates,
+`stopIfTrue`, dxf borders and number formats, nonnumeric comparison operands, solid/negative data
+bar settings, and formula/automatic thresholds.
 
 ## Executable browser evidence
 

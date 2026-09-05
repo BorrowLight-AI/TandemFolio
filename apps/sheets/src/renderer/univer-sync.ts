@@ -88,6 +88,7 @@ import { t } from './i18n/locale'
 import { mapProtectedRanges } from './protected-ranges'
 import { INDENT_STEP_PX } from './selection-format'
 import { CENTER_ACROSS_END_KEY } from './center-continuous'
+import { notifyCfStreamWindow } from './cf-formula-fold'
 import {
   THRESHOLD_RANGE_CELL_CAP,
   clampColorScaleStops,
@@ -1966,6 +1967,7 @@ async function loadRange(
         : Math.min(mapped.indexedThroughScreen, range.endRow)
     if (availableEndRow !== null && availableEndRow >= range.startRow) {
       const availableRange = { ...range, endRow: availableEndRow }
+      notifyCfStreamWindow(sheetId, availableRange.startRow, availableRange.endRow)
       recordHiddenFileRows(state, sheetId, mapped.screen.rows, availableRange)
       recordRowStyleKeys(state, sheetId, mapped.screen.rows)
       const alreadyLoaded = state.loadedRanges.get(sheetId)
@@ -4050,13 +4052,15 @@ export function buildConditionalRule(
   if (rule.ruleType === 'dataBar') {
     const [min, max] = rule.cfvos
     if (!min || !max) return null
+    const positive = rule.colors[0] ?? '#638EC6'
     return builder
       .setDataBar({
         min: toCfValue(min),
         max: toCfValue(max),
-        positiveColor: rule.colors[0] ?? '#638EC6',
-        nativeColor: rule.colors[1] ?? rule.colors[0] ?? '#FF0000',
+        positiveColor: positive,
+        nativeColor: rule.negativeColor ?? (rule.negativeSameAsPositive ? positive : '#FF0000'),
         isShowValue: rule.showValue,
+        isGradient: rule.gradient ?? true,
       })
       .setRanges(ranges)
       .build()
@@ -4091,6 +4095,12 @@ export function buildConditionalRule(
       .setRanges(ranges)
       .build()
   }
+  // Univer offsets formulas from the top-left-sorted first range, not the
+  // file's original sqref order.
+  const first = [...ranges].sort(
+    (a, b) => a.startRow - b.startRow || a.startColumn - b.startColumn,
+  )[0]
+  const anchor = first ? formatAddress(first.startRow, first.startColumn) : 'A1'
   const coveredCells = ranges.reduce(
     (sum, current) =>
       sum +
@@ -4098,51 +4108,98 @@ export function buildConditionalRule(
         (current.endColumn - current.startColumn + 1),
     0,
   )
-  const highlight = buildHighlightCondition(builder, rule, coveredCells)
+  const highlight = buildHighlightCondition(builder, rule, anchor, coveredCells)
   if (!highlight) return null
-  return applyDxfFormat(highlight, dxfStyles, rule.dxfIndex).setRanges(ranges).build()
+  const built = applyDxfFormat(highlight, dxfStyles, rule.dxfIndex).setRanges(ranges).build()
+  patchBuiltHighlightRule(
+    built.rule as BuiltHighlightRule,
+    rule.ruleType,
+    rule.dxfIndex === undefined ? undefined : dxfStyles[rule.dxfIndex],
+  )
+  if (rule.stopIfTrue === true) {
+    ;(built as { stopIfTrue?: boolean }).stopIfTrue = true
+  }
+  return built
+}
+
+export type BuiltHighlightRule = {
+  operator?: string
+  value?: string
+  style?: {
+    n?: { pattern: string }
+    bd?: Partial<Record<'t' | 'b' | 'l' | 'r', ReturnType<typeof toUniverBorder>>>
+    [key: string]: unknown
+  }
+}
+
+/// Patch fields supported by Univer's evaluator/paint model but omitted by
+/// its conditional-formatting facade builder.
+export function patchBuiltHighlightRule(
+  target: BuiltHighlightRule,
+  ruleType: string,
+  dxf: WorkbookCellStyle | undefined,
+): void {
+  if (ruleType === 'containsErrors' || ruleType === 'notContainsErrors') {
+    target.operator = ruleType
+    delete target.value
+  }
+  if (!dxf) return
+  if (dxf.numberFormat) {
+    target.style = { ...target.style, n: { pattern: dxf.numberFormat } }
+  }
+  const bd = {
+    ...(dxf.borderTop ? { t: toUniverBorder(dxf.borderTop) } : {}),
+    ...(dxf.borderBottom ? { b: toUniverBorder(dxf.borderBottom) } : {}),
+    ...(dxf.borderLeft ? { l: toUniverBorder(dxf.borderLeft) } : {}),
+    ...(dxf.borderRight ? { r: toUniverBorder(dxf.borderRight) } : {}),
+  }
+  if (Object.keys(bd).length > 0) target.style = { ...target.style, bd }
 }
 
 function toCfValue(cfvo: { kind: string; value?: string | undefined }): IValueConfig {
   switch (cfvo.kind) {
     case 'min':
+    case 'autoMin':
       return { type: CFValueType.min }
     case 'max':
+    case 'autoMax':
       return { type: CFValueType.max }
     case 'percent':
       return { type: CFValueType.percent, value: Number(cfvo.value ?? 0) }
     case 'percentile':
       return { type: CFValueType.percentile, value: Number(cfvo.value ?? 0) }
     case 'formula':
-      return { type: CFValueType.formula, value: cfvo.value ?? '0' }
-    default:
-      return { type: CFValueType.num, value: Number(cfvo.value ?? 0) }
+      return { type: CFValueType.formula, value: toCfFormula(cfvo.value ?? '0') }
+    default: {
+      const numeric = Number(cfvo.value ?? 0)
+      return Number.isFinite(numeric)
+        ? { type: CFValueType.num, value: numeric }
+        : { type: CFValueType.formula, value: toCfFormula(cfvo.value ?? '0') }
+    }
   }
+}
+
+function toCfFormula(body: string): string {
+  return body.startsWith('=') ? body : `=${body}`
 }
 
 function buildHighlightCondition(
   builder: ReturnType<UniverWorksheet['newConditionalFormattingRule']>,
   rule: WorkbookRangeResult['conditionalRules'][number],
-  coveredCells: number,
+  anchor: string,
+  coveredCells = 0,
 ): CfHighlightBuilder | null {
-  const firstRange = rule.ranges[0]
-  const anchor = firstRange ? formatAddress(firstRange.startRow, firstRange.startColumn) : 'A1'
-  const firstFormula = rule.formulas[0]
   const firstNumber = Number(rule.formulas[0])
   const secondNumber = Number(rule.formulas[1])
   switch (rule.ruleType) {
     case 'cellIs':
+      if (!Number.isFinite(firstNumber)) return buildCellIsNonNumeric(builder, rule, anchor)
       if (
-        !Number.isFinite(firstNumber) &&
-        (rule.operator === 'equal' || rule.operator === 'notEqual') &&
-        firstFormula !== undefined &&
-        /^"(?:[^"]|"")*"$/.test(firstFormula)
+        (rule.operator === 'between' || rule.operator === 'notBetween') &&
+        !Number.isFinite(secondNumber)
       ) {
-        return builder.whenFormulaSatisfied(
-          `=${anchor}${rule.operator === 'equal' ? '=' : '<>'}${firstFormula}`,
-        )
+        return null
       }
-      if (!Number.isFinite(firstNumber)) return null
       if (
         rule.operator !== undefined &&
         coveredCells <= 20_000 &&
@@ -4175,21 +4232,17 @@ function buildHighlightCondition(
           return null
       }
     case 'containsText':
-      return rule.text ? builder.whenTextContains(rule.text) : null
     case 'notContainsText':
-      return rule.text ? builder.whenTextDoesNotContain(rule.text) : null
     case 'beginsWith':
-      return rule.text ? builder.whenTextStartsWith(rule.text) : null
     case 'endsWith':
-      return rule.text ? builder.whenTextEndsWith(rule.text) : null
+      return buildTextCondition(builder, rule, anchor, coveredCells)
     case 'containsBlanks':
       return builder.whenCellEmpty()
     case 'notContainsBlanks':
       return builder.whenCellNotEmpty()
     case 'containsErrors':
-      return builder.whenFormulaSatisfied(`=ISERROR(${anchor})`)
     case 'notContainsErrors':
-      return builder.whenFormulaSatisfied(`=NOT(ISERROR(${anchor}))`)
+      return builder.whenTextContains('')
     case 'duplicateValues':
       return builder.setDuplicateValues()
     case 'uniqueValues':
@@ -4207,6 +4260,100 @@ function buildHighlightCondition(
     default:
       return null
   }
+}
+
+/// Excel text-operator matching is case-insensitive. Use equivalent formula
+/// predicates on bounded ranges; keep the cheaper native condition for huge
+/// coverage where formula registration cost dominates.
+function buildTextCondition(
+  builder: ReturnType<UniverWorksheet['newConditionalFormattingRule']>,
+  rule: WorkbookRangeResult['conditionalRules'][number],
+  anchor: string,
+  coveredCells: number,
+): CfHighlightBuilder | null {
+  const text = rule.text
+  if (!text) return null
+  if (coveredCells > 0 && coveredCells <= 20_000) {
+    const formula = synthesizeTextConditionFormula(rule.ruleType, text, anchor)
+    if (formula) return builder.whenFormulaSatisfied(toCfFormula(formula))
+  }
+  switch (rule.ruleType) {
+    case 'containsText':
+      return builder.whenTextContains(text)
+    case 'notContainsText':
+      return builder.whenTextDoesNotContain(text)
+    case 'beginsWith':
+      return builder.whenTextStartsWith(text)
+    case 'endsWith':
+      return builder.whenTextEndsWith(text)
+    default:
+      return null
+  }
+}
+
+function synthesizeTextConditionFormula(
+  ruleType: string,
+  text: string,
+  anchor: string,
+): string | null {
+  const quoted = `"${text.replace(/"/g, '""')}"`
+  switch (ruleType) {
+    case 'containsText':
+      return `NOT(ISERROR(SEARCH(${quoted},${anchor})))`
+    case 'notContainsText':
+      return `ISERROR(SEARCH(${quoted},${anchor}))`
+    case 'beginsWith':
+      return `LEFT(${anchor},LEN(${quoted}))=${quoted}`
+    case 'endsWith':
+      return `RIGHT(${anchor},LEN(${quoted}))=${quoted}`
+    default:
+      return null
+  }
+}
+
+function buildCellIsNonNumeric(
+  builder: ReturnType<UniverWorksheet['newConditionalFormattingRule']>,
+  rule: WorkbookRangeResult['conditionalRules'][number],
+  anchor: string,
+): CfHighlightBuilder | null {
+  const first = rule.formulas[0]
+  const second = rule.formulas[1]
+  if (!first) return null
+  const quoted = /^"([\s\S]*)"$/.exec(first)
+  switch (rule.operator) {
+    case 'equal':
+      return quoted
+        ? builder.whenTextEqualTo(quoted[1]!.replace(/""/g, '"'))
+        : builder.whenFormulaSatisfied(`=${anchor}=(${first})`)
+    case 'notEqual':
+      return builder.whenFormulaSatisfied(`=${anchor}<>${wrapCfOperand(first)}`)
+    case 'greaterThan':
+      return builder.whenFormulaSatisfied(`=${anchor}>${wrapCfOperand(first)}`)
+    case 'greaterThanOrEqual':
+      return builder.whenFormulaSatisfied(`=${anchor}>=${wrapCfOperand(first)}`)
+    case 'lessThan':
+      return builder.whenFormulaSatisfied(`=${anchor}<${wrapCfOperand(first)}`)
+    case 'lessThanOrEqual':
+      return builder.whenFormulaSatisfied(`=${anchor}<=${wrapCfOperand(first)}`)
+    case 'between':
+      return second
+        ? builder.whenFormulaSatisfied(
+            `=AND(${anchor}>=${wrapCfOperand(first)},${anchor}<=${wrapCfOperand(second)})`,
+          )
+        : null
+    case 'notBetween':
+      return second
+        ? builder.whenFormulaSatisfied(
+            `=NOT(AND(${anchor}>=${wrapCfOperand(first)},${anchor}<=${wrapCfOperand(second)}))`,
+          )
+        : null
+    default:
+      return null
+  }
+}
+
+function wrapCfOperand(operand: string): string {
+  return /^"[\s\S]*"$/.test(operand) ? operand : `(${operand})`
 }
 
 /** Whether Excel's blank-as-zero numeric comparison differs from Univer. */

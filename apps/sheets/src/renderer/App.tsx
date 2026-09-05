@@ -230,6 +230,7 @@ import { installMultiRowAutofit } from './autofit-multi-row'
 import { registerExcelShortcuts } from './excel-shortcuts'
 import { registerExcelJumpNav } from './excel-jump-nav'
 import { installCopyMaterialize } from './copy-materialize'
+import { installCfFormulaFold } from './cf-formula-fold'
 import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
 import { installActiveCellDataValidationChrome } from './data-validation-dropdown'
@@ -1209,6 +1210,9 @@ export function App(): React.JSX.Element {
       if (!sheet || sheet.rowCount <= 0 || sheet.columnCount <= 0) return null
       return { row: sheet.rowCount - 1, column: sheet.columnCount - 1 }
     })
+    // Large expression-CF ranges register only equivalent folded axes and
+    // the streamed row window, avoiding millions of engine formula trees.
+    const cfFormulaFoldDisposable = installCfFormulaFold(runtime)
     // Empty-value formula results (IFERROR/IF/CHOOSE over blank refs)
     // display as 0 like Excel.
     const nullResultDisposable = installFormulaNullResultFix(runtime)
@@ -2126,6 +2130,7 @@ export function App(): React.JSX.Element {
       sheetRenameFixDisposable.dispose()
       selectionWrapGuardDisposable.dispose()
       multiRowAutofitDisposable.dispose()
+      cfFormulaFoldDisposable.dispose()
       nullResultDisposable.dispose()
       ifsEmptySetDisposable.dispose()
       criteriaCompareCacheDisposable.dispose()

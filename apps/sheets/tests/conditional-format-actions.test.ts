@@ -57,15 +57,29 @@ describe('conditional-format context', () => {
     ])
   })
 
-  it('rehydrates text equality and error predicates as equivalent native formula rules', () => {
+  it('rehydrates text equality and error predicates with equivalent native rules', () => {
     const formulas: string[] = []
+    const builtRules: Record<string, unknown>[] = []
+    let rule: Record<string, unknown> = {}
     const builder = {
       whenFormulaSatisfied: (formula: string) => {
         formulas.push(formula)
+        rule = { subType: 'formula', value: formula }
+        return builder
+      },
+      whenTextEqualTo: (value: string) => {
+        rule = { subType: 'text', operator: 'equal', value }
+        return builder
+      },
+      whenTextContains: (value: string) => {
+        rule = { subType: 'text', operator: 'containsText', value }
         return builder
       },
       setRanges: () => builder,
-      build: () => ({ built: true }),
+      build: () => {
+        builtRules.push(rule)
+        return { built: true, rule }
+      },
     }
     const worksheet = { newConditionalFormattingRule: () => builder }
     const range = [{ startRow: 1, endRow: 3, startColumn: 2, endColumn: 2 }]
@@ -89,8 +103,14 @@ describe('conditional-format context', () => {
           percent: false,
           ...rule,
         } as never),
-      ).toEqual({ built: true })
+      ).toMatchObject({ built: true })
     }
-    expect(formulas).toEqual(['=C2="Ready"', '=C2<>"Draft"', '=ISERROR(C2)', '=NOT(ISERROR(C2))'])
+    expect(formulas).toEqual(['=C2<>"Draft"'])
+    expect(builtRules).toEqual([
+      { subType: 'text', operator: 'equal', value: 'Ready' },
+      { subType: 'formula', value: '=C2<>"Draft"' },
+      { subType: 'text', operator: 'containsErrors' },
+      { subType: 'text', operator: 'notContainsErrors' },
+    ])
   })
 })
