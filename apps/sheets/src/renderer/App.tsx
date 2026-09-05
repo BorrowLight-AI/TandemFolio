@@ -230,6 +230,7 @@ import { installMultiRowAutofit } from './autofit-multi-row'
 import { registerExcelShortcuts } from './excel-shortcuts'
 import { registerExcelJumpNav } from './excel-jump-nav'
 import { installCopyMaterialize } from './copy-materialize'
+import { installLazyFindBridge } from './lazy-find'
 import {
   installCrossHighlight,
   loadCrossHighlightPreference,
@@ -1246,6 +1247,9 @@ export function App(): React.JSX.Element {
     // Rule-management panels show what each rule actually does: list options /
     // source range, CF formula text, ⚠ on #REF! dead rules.
     const ruleDetailDisposable = installRuleDetail(runtime)
+    // Extend Univer's native Find session over rows that have not streamed
+    // into the mounted grid yet; replacement still writes through Univer.
+    const lazyFindDisposable = installLazyFindBridge({ runtime, lazyWorkbookRef, setMessage })
     const scrollDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.Scroll,
       (params) => {
@@ -2155,6 +2159,7 @@ export function App(): React.JSX.Element {
       copyMaterializeDisposable.dispose()
       dataValidationChromeDisposable.dispose()
       ruleDetailDisposable()
+      lazyFindDisposable.dispose()
       scrollDisposable.dispose()
       zoomDisposable.dispose()
       editStartDisposable.dispose()

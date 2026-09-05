@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 163 passing files and one environment-conditional LibreOffice pivot
-suite; 1,903 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 164 passing files and one environment-conditional LibreOffice pivot
+suite; 1,934 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -229,6 +229,14 @@ the active selection without changing workbook data or revision. The preference 
 dark/light theme changes repaint the existing extension, streamed worksheets attach lazily, and
 disposal removes every registered extension. The feature remains a renderer-owned reading aid and
 does not introduce AI search, a second document state, or a state-changing MCP command.
+
+Univer's native Find/Replace provider now extends across rows that have not streamed into the live
+cell matrix. It merges and deduplicates file-backed hits with loaded-window hits, observes session
+journal overwrites and filter-hidden rows, loads and focuses a distant match through the mounted
+worksheet, and writes replacement values/formulas through Univer so native history and save retain
+them. The scan is capped by actual extent at 400,000 cells in 18,000-cell browser-read batches and
+reports a localized incomplete-result message on budget, indexing, or read truncation. The existing
+typed `xlsx.range.replace_text` route remains the bounded Agent counterpart for replacement.
 
 ## Executable browser evidence
 
