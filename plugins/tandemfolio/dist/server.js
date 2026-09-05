@@ -35758,6 +35758,89 @@ var operation_manifest_default = {
       atomic: true,
       compatibilityAliases: [],
       context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "image",
+      format: "docx",
+      id: "docx.image.set_z_order",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          floatInline: {
+            type: "boolean"
+          },
+          imageBlockIndex: {
+            minimum: 0,
+            type: "integer"
+          },
+          zOrder: {
+            maximum: 2147483647,
+            minimum: -2147483648,
+            type: "integer"
+          }
+        },
+        required: [
+          "imageBlockIndex",
+          "zOrder",
+          "floatInline"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          changed: {
+            type: "boolean"
+          },
+          imageBlockIndex: {
+            minimum: 0,
+            type: "integer"
+          },
+          summary: {
+            type: "string"
+          },
+          wrap: {
+            enum: [
+              "square-left",
+              "square-right",
+              "topBottom",
+              "behind",
+              "front",
+              null
+            ],
+            type: [
+              "string",
+              "null"
+            ]
+          },
+          zOrder: {
+            maximum: 2147483647,
+            minimum: -2147483648,
+            type: "integer"
+          }
+        },
+        required: [
+          "summary",
+          "imageBlockIndex",
+          "zOrder",
+          "wrap",
+          "changed"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Set one indexed DOCX image stacking rank, optionally floating an inline image.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
         "document",
         "selection"
       ],
@@ -37430,11 +37513,16 @@ var operation_manifest_default = {
             items: {
               enum: [
                 "fillHex",
-                "borderHex"
+                "borderHex",
+                "textBold",
+                "textItalic",
+                "textUnderline",
+                "textColor",
+                "textAlign"
               ],
               type: "string"
             },
-            maxItems: 2,
+            maxItems: 7,
             minItems: 1,
             type: "array"
           },
@@ -37463,6 +37551,46 @@ var operation_manifest_default = {
                   "string",
                   "null"
                 ]
+              },
+              textAlign: {
+                enum: [
+                  "left",
+                  "center",
+                  "right",
+                  "justify",
+                  null
+                ],
+                type: [
+                  "string",
+                  "null"
+                ]
+              },
+              textBold: {
+                type: [
+                  "boolean",
+                  "null"
+                ]
+              },
+              textColor: {
+                maxLength: 6,
+                minLength: 6,
+                pattern: "^[0-9A-F]{6}$",
+                type: [
+                  "string",
+                  "null"
+                ]
+              },
+              textItalic: {
+                type: [
+                  "boolean",
+                  "null"
+                ]
+              },
+              textUnderline: {
+                type: [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             required: [],
@@ -37487,11 +37615,16 @@ var operation_manifest_default = {
             items: {
               enum: [
                 "fillHex",
-                "borderHex"
+                "borderHex",
+                "textBold",
+                "textItalic",
+                "textUnderline",
+                "textColor",
+                "textAlign"
               ],
               type: "string"
             },
-            maxItems: 2,
+            maxItems: 7,
             minItems: 1,
             type: "array"
           },
@@ -37523,7 +37656,7 @@ var operation_manifest_default = {
         type: "object"
       },
       risk: "medium",
-      summary: "Set masked final fill and outline fields on one retained DOCX drawing.",
+      summary: "Set masked fill, outline, and whole-object text fields on one retained DOCX drawing.",
       undoable: true,
       visibility: "agent"
     },
@@ -59765,16 +59898,16 @@ function resolveRegisteredOperation(format, requestedOperation, visibility = "ag
 // src/generated/release-readiness.json
 var release_readiness_default = {
   schemaVersion: 1,
-  ready: true,
+  ready: false,
   formats: {
-    docx: true,
-    markdown: true,
-    xlsx: true,
-    pptx: true,
-    pdf: true
+    docx: false,
+    markdown: false,
+    xlsx: false,
+    pptx: false,
+    pdf: false
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "a297937dbcf306defd5463504feac8f10796424cec8bae463ca4d13aa5da5ee2"
+  sourceFingerprint: "80cbb154dbe748da501f8d31c8976eba80a3b041880062657d7f63472ba79433"
 };
 
 // src/capabilities.ts

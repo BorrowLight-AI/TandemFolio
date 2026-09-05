@@ -111,6 +111,41 @@ describe('renderTableSpec rich cell content', () => {
     expect(latin).not.toContain('Traditional Arabic')
   })
 
+  it('renders both the text and the picture of a text+drawing run', () => {
+    const model: TableModel = {
+      rows: [
+        [
+          cell(
+            ['label'],
+            [
+              {
+                runs: [
+                  {
+                    text: 'label',
+                    bold: true,
+                    image: {
+                      dataUrl: 'data:image/png;base64,AA==',
+                      widthPx: 24,
+                      xml: '<w:drawing/>',
+                    },
+                  },
+                ],
+              },
+            ],
+          ),
+        ],
+      ],
+    }
+    const td = renderTable(model).querySelector('td')!
+    const span = td.querySelector('span')!
+    expect(span.textContent).toBe('label')
+    expect(span.getAttribute('style')).toMatch(/font-weight:\s*700/)
+    const img = td.querySelector('img.doc-inline-img')!
+    expect(img.getAttribute('src')).toBe('data:image/png;base64,AA==')
+    // text precedes the drawing (generate.ts / editable-path order)
+    expect(span.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('cell-level color/bold stay as td-level fallback', () => {
     const model: TableModel = {
       rows: [
@@ -143,8 +178,7 @@ function findSpecs(spec: unknown, tag: string): Spec[] {
 const paraStyles = (model: TableModel): string[] =>
   findSpecs(renderTableSpec(model), 'div').map((d) => d[1].style ?? '')
 
-const SINGLE_LH =
-  'line-height:round(up, calc(var(--doc-line-factor,1.2) * 1em), var(--doc-grid-pitch,0.0001px))'
+const SINGLE_LH = 'line-height:var(--doc-line-grid,var(--doc-line-factor,1.2))'
 
 describe('renderTableSpec paragraph line box', () => {
   it('gives each paragraph a run-size strut and its own single-spacing line height', () => {
@@ -202,15 +236,54 @@ describe('renderTableSpec paragraph line box', () => {
       ],
     })
     expect(style).toContain('line-height:10.0pt')
-    expect(style).toContain('margin-top:round(down, 4.0pt,')
-    expect(style).toContain('margin-bottom:round(down, 1.0pt,')
+    expect(style).toContain('margin-top:4.0pt')
+    expect(style).toContain('margin-bottom:1.0pt')
+  })
+
+  it('fully declared Latin run fonts drive the factor and the strut face', () => {
+    const [style] = paraStyles({
+      rows: [
+        [cell(['latin'], [{ runs: [{ text: 'latin', font: 'Calibri', fontAscii: 'Calibri' }] }])],
+      ],
+    })
+    expect(style).toContain('--doc-line-factor:1.22')
+    expect(style).toMatch(/font-family:'Calibri'/)
+  })
+
+  it('mixed declared/inherited Latin runs take max() and keep the inherited face', () => {
+    const [style] = paraStyles({
+      rows: [
+        [
+          cell(
+            ['ab'],
+            [{ runs: [{ text: 'a', font: 'Calibri', fontAscii: 'Calibri' }, { text: 'b' }] }],
+          ),
+        ],
+      ],
+    })
+    expect(style).toContain('--doc-line-factor:max(var(--doc-line-factor-latin,1.2), 1.22)')
+    expect(style).not.toContain('font-family')
+  })
+
+  it('eaSlotEmpty backfill is not a Latin font declaration', () => {
+    const [style] = paraStyles({
+      rows: [[cell(['x'], [{ runs: [{ text: 'x', font: 'SimSun', eaSlotEmpty: true }] }])]],
+    })
+    expect(style).toContain('--doc-line-factor:var(--doc-line-factor-latin,1.2)')
   })
 
   it('declared CJK run fonts drive the paragraph line factor', () => {
     const [style] = paraStyles({
       rows: [[cell(['宋体字'], [{ runs: [{ text: '宋体字', font: 'SimSun' }] }])]],
     })
-    expect(style).toContain('--doc-line-factor:1.7')
+    expect(style).toContain('--doc-line-factor:1.3029')
+  })
+
+  it('JP-variant Noto run fonts take the JA substitution factor', () => {
+    const [style] = paraStyles({
+      rows: [[cell(['日本語'], [{ runs: [{ text: '日本語', font: 'Noto Sans CJK JP' }] }])]],
+    })
+    expect(style).toContain('--doc-line-factor:1.3029')
   })
 
   it('plain-paras cells get script-based line factors per paragraph', () => {
@@ -219,5 +292,97 @@ describe('renderTableSpec paragraph line box', () => {
     expect(styles[0]).toContain('--doc-line-factor:var(--doc-line-factor-cjk,1.7)')
     expect(styles[1]).toContain('--doc-line-factor:var(--doc-line-factor-latin,1.2)')
     expect(styles[1]).toContain(SINGLE_LH)
+  })
+})
+
+// bidiVisual mirrors column order via dir="rtl" on the <table>; each cell
+// paragraph's base direction stays its own (w:bidi / strong-script inference),
+// so weak-only text like "50,0 %" must not reorder to "% 50,0".
+describe('bidiVisual cell paragraph direction', () => {
+  it('cell paragraphs get explicit ltr unless their own content is RTL', () => {
+    const model: TableModel = {
+      bidiVisual: true,
+      rows: [
+        [
+          cell(['50,0 %'], [{ runs: [{ text: '50,0 %' }] }]),
+          cell(['مرحبا'], [{ runs: [{ text: 'مرحبا' }] }]),
+        ],
+      ],
+    }
+    const dom = renderTable(model)
+    expect(dom.getAttribute('dir')).toBe('rtl')
+    const paras = dom.querySelectorAll('td > div')
+    expect((paras[0] as HTMLElement).style.direction).toBe('ltr')
+    expect((paras[1] as HTMLElement).style.direction).toBe('rtl')
+  })
+
+  it('an explicit w:bidi cell paragraph stays rtl even with weak-only text', () => {
+    const model: TableModel = {
+      rows: [[cell(['50,0 %'], [{ runs: [{ text: '50,0 %' }], bidi: true }])]],
+    }
+    const paras = renderTable(model).querySelectorAll('td > div')
+    expect((paras[0] as HTMLElement).style.direction).toBe('rtl')
+  })
+})
+
+// w:textDirection cells: Word wraps rotated text into the row height driven by
+// the horizontal cells / trHeight; the absolute .cell-vert wrapper keeps the
+// vertical line out of flow so it cannot stretch the row group.
+describe('vertical-text cells (w:textDirection)', () => {
+  it('wraps btLr content in an out-of-flow .cell-vert with sideways-lr', () => {
+    const model: TableModel = {
+      rows: [[{ paras: ['rotated'], textDirection: 'btLr' }, cell(['plain'])]],
+    }
+    const tds = renderTable(model).querySelectorAll('td')
+    expect(tds[0].getAttribute('style')).toMatch(/position:\s*relative/)
+    expect(tds[0].getAttribute('style') ?? '').not.toContain('writing-mode')
+    const wrap = tds[0].querySelector(':scope > .cell-vert') as HTMLElement
+    expect(wrap.getAttribute('style')).toMatch(/writing-mode:\s*sideways-lr/)
+    expect(wrap.textContent).toBe('rotated')
+    expect(tds[1].querySelector('.cell-vert')).toBeNull()
+  })
+
+  it('emits the structural markers the .cell-vert flow switch selects on', () => {
+    // the CSS :has() rule (styles.css) needs: cell-vert-host on rotated cells,
+    // data-grid-gap on spacers, and the tr height style on declared-height rows
+    const model: TableModel = {
+      rows: [
+        [{ paras: ['rotated'], textDirection: 'btLr' }, cell(['plain'])],
+        [
+          { paras: ['rotated'], textDirection: 'btLr' },
+          { paras: [''], gridGap: true },
+        ],
+      ],
+      rowHeightsTwips: [null as unknown as number, 600],
+    }
+    const trs = renderTable(model).querySelectorAll('tr')
+    const [vertTd, horizTd] = Array.from(trs[0].children)
+    expect(vertTd.className).toContain('cell-vert-host')
+    expect(vertTd.querySelector(':scope > .cell-vert')).not.toBeNull()
+    expect(horizTd.className).not.toContain('cell-vert-host')
+    expect(horizTd.hasAttribute('data-grid-gap')).toBe(false)
+    const gapTd = trs[1].children[1]
+    expect(gapTd.getAttribute('data-grid-gap')).toBe('1')
+    expect(trs[1].getAttribute('style')).toContain('height')
+    expect(trs[0].getAttribute('style')).toBeNull()
+  })
+
+  it('vAlign center rides the .cell-vert wrapper as grid alignment', () => {
+    const model: TableModel = {
+      rows: [[{ paras: ['rotated'], textDirection: 'btLr', vAlign: 'center' }, cell(['plain'])]],
+    }
+    const wrap = renderTable(model).querySelector('.cell-vert') as HTMLElement
+    expect(wrap.getAttribute('style')).toMatch(/align-content:\s*safe center/)
+  })
+
+  it('a tbRl cell in an exact-height row rides the .cell-clip box', () => {
+    const model: TableModel = {
+      rows: [[{ paras: ['rotated'], textDirection: 'tbRl' }]],
+      rowHeightsTwips: [600],
+      rowHeightRules: ['exact'],
+    }
+    const td = renderTable(model).querySelector('td')!
+    const clipEl = td.querySelector(':scope > .cell-clip') as HTMLElement
+    expect(clipEl.getAttribute('style')).toMatch(/writing-mode:\s*vertical-rl/)
   })
 })

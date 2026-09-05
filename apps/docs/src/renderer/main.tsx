@@ -5,6 +5,7 @@ import { installBrowserDesktop } from './host/browser-desktop'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import type { UiTheme } from '../shared/lite-api'
 import '@genoffice/ui/tokens.css'
+import '@genoffice/ui/dropdown.css'
 import './styles.css'
 
 function applyTheme(theme: UiTheme): void {

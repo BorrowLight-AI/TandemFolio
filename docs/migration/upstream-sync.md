@@ -2,6 +2,8 @@
 
 TandemFolio tracks the public GenOffice community repository through a read-only Git remote named `upstream`. The pinned source baseline remains `dc4d7e5927864498913b7ba42d0da06cc7cf628e`; fetching a newer candidate does not change the product baseline or admit any code into the build.
 
+Latest review: [2026-09-05 DOCX-native selective port and remaining cross-format backlog](upstream-review-2026-09-05.md).
+
 ## Why a remote instead of a submodule
 
 TandemFolio is already a source-preserving fork of the community tree. A second checkout or submodule would duplicate the source, invite accidental imports, and could place the prohibited enterprise `ee/` tree in the workspace.

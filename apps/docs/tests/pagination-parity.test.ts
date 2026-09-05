@@ -29,7 +29,11 @@ import {
   type BlockBox,
   type TableRowBox,
 } from '../src/renderer/pagination'
-import { computeLineMetrics } from '../src/renderer/line-metrics'
+import {
+  computeLineMetrics,
+  estimateFootnoteHeight,
+  resolveNoteStyle,
+} from '../src/renderer/line-metrics'
 import { loBaselineMetrics } from './helpers/lo-fonts'
 import type { ParsedDoc, DocGrid, ParaFormat, StyleDisplay } from '@genoffice/docx-engine'
 
@@ -47,9 +51,6 @@ const TWIPS_TO_PX = 96 / 1440
 
 /** Metrics instance: real LO-bundled font metrics when installed (aligned with the baseline layout engine), else heuristics */
 const metrics = loBaselineMetrics()
-
-/** Footnote separator line height (px) */
-const FOOTNOTE_SEPARATOR_H = 16
 
 // ─── Style chain helpers ────────────────────────────────────────────────────
 
@@ -463,21 +464,8 @@ function computeTableRows(
 }
 
 // ─── Footnote helpers ───────────────────────────────────────────────────────
-
-/** Estimate footnote text height (px): footnotes are typically 10pt, footnote area slightly narrower */
-function estimateFootnoteHeight(
-  footnoteText: string,
-  contentWidthPx: number,
-  docGrid: DocGrid | undefined,
-): number {
-  return computeLineMetrics({
-    runs: [{ text: footnoteText }],
-    availWidthPx: contentWidthPx - 40,
-    docGrid,
-    defaultFontSizePt: 10,
-    metrics,
-  }).totalHeight
-}
+// footnote heights come from the shared estimator (FootnoteText/Normal style
+// chain + rich run sizes), same as the app's reservation path
 
 // ─── Main logic ────────────────────────────────────────────────────────────
 
@@ -534,8 +522,8 @@ async function runParity(stem: string, baseline: BaselineEntry): Promise<ParityR
   const sectionDocGrids = sections.map((s) => s.settings.docGrid)
 
   // Footnote id → text
-  const footnoteById = new Map<string, string>()
-  for (const fn of parsed.footnotes) footnoteById.set(fn.id, fn.text)
+  const footnoteById = new Map<string, (typeof parsed.footnotes)[number]>()
+  for (const fn of parsed.footnotes) footnoteById.set(fn.id, fn)
 
   // Build the F2 BlockBox list block by block (line boxes + constraints + table rows + footnote placeholders)
   const blocks: BlockBox[] = []
@@ -614,16 +602,23 @@ async function runParity(stem: string, baseline: BaselineEntry): Promise<ParityR
     // ── Paragraph/image/passthrough ────────────────────────────────────────
     const paraData = computeParaLineData(block, contentWidthPx, docGrid, parsed)
 
-    // Footnote refs: footnote height is added to the paragraph's spaceAfterPx (reserving footnote space on that page)
+    // Footnote refs: footnote height is added to the paragraph's height (reserving footnote space on that page)
     let footnoteExtra = 0
     if (block.runs) {
       for (const run of block.runs) {
         if (run.noteRef?.kind === 'footnote') {
-          const fnText = footnoteById.get(run.noteRef.id) ?? ''
-          footnoteExtra += estimateFootnoteHeight(fnText, contentWidthPx, docGrid)
+          const fn = footnoteById.get(run.noteRef.id)
+          footnoteExtra += estimateFootnoteHeight(
+            fn?.text ?? '',
+            contentWidthPx,
+            docGrid,
+            metrics,
+            resolveNoteStyle(parsed, fn?.styleId, fn?.spacing),
+            fn?.richParas,
+          )
         }
       }
-      if (footnoteExtra > 0) footnoteExtra += FOOTNOTE_SEPARATOR_H // footnote separator line
+      // the once-per-page separator is charged by the pagination engine via footnoteExtraPx
     }
 
     const style = resolveStyle(block.styleId, block.format, parsed)
@@ -634,7 +629,8 @@ async function runParity(stem: string, baseline: BaselineEntry): Promise<ParityR
       height: Math.max(totalH, 1),
       lineBoxes: paraData.lineBoxes,
       spaceBeforePx: paraData.spaceBeforePx,
-      spaceAfterPx: paraData.spaceAfterPx + footnoteExtra,
+      spaceAfterPx: paraData.spaceAfterPx,
+      ...(footnoteExtra > 0 ? { footnoteExtraPx: footnoteExtra } : {}),
       keepNext: style.keepNext || undefined,
       keepLines: style.keepLines || undefined,
       widowControl: style.widowControl,

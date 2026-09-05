@@ -3422,6 +3422,7 @@ describe('office_execute', () => {
       'docx.image.set_offset_position',
       'docx.image.set_transform',
       'docx.image.set_wrap',
+      'docx.image.set_z_order',
       'docx.image.update',
       'docx.index.insert',
       'docx.index.mark',

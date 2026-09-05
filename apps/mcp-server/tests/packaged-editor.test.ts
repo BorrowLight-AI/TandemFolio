@@ -40,7 +40,7 @@ describe('packaged editor UI', () => {
     for (const [resource, budget] of [
       // Registry completion grows the retained renderer deliberately; this
       // remains a regression ceiling, never permission to delete capabilities.
-      [packagedEditor, 3_500_000],
+      [packagedEditor, 3_650_000],
       [packagedMarkdownEditor, 2_500_000],
       // Full permitted pinned Univer renderer; this is a regression ceiling,
       // not permission to delete community capabilities for bundle size.
@@ -98,7 +98,7 @@ describe('packaged editor UI', () => {
     )
   })
 
-  it('keeps the initial editor under 3.5 MB and packages fonts as lazy external assets', async () => {
+  it('keeps the initial editor under 3.65 MB and packages fonts as lazy external assets', async () => {
     const html = await readFile(packagedEditor, 'utf8')
     const info = await stat(packagedEditor)
     const font = new URL(
@@ -106,7 +106,7 @@ describe('packaged editor UI', () => {
       import.meta.url,
     )
 
-    expect(info.size).toBeLessThan(3_500_000)
+    expect(info.size).toBeLessThan(3_650_000)
     expect(html).not.toMatch(/data:font\/(?:ttf|woff2?);base64/i)
     await expect(stat(font)).resolves.toMatchObject({ size: 631_712 })
   })

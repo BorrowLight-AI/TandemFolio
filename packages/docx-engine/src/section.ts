@@ -42,6 +42,43 @@ function hasVisiblePageBorder(xml: string): boolean {
   })
 }
 
+/** Styling details of a visible w:pgBorders box (undefined when no visible side). */
+function pageBorderPropsOf(xml: string): SectionSettings['pageBorderProps'] {
+  const pgBorders = /<w:pgBorders[^>]*\/>|<w:pgBorders[\s\S]*?<\/w:pgBorders>/.exec(xml)?.[0]
+  if (!pgBorders || !hasVisiblePageBorder(xml)) return undefined
+  const display = /w:display="(firstPage|notFirstPage)"/.exec(pgBorders)?.[1] as
+    'firstPage' | 'notFirstPage' | undefined
+  const offsetFrom = /w:offsetFrom="(page|text)"/.exec(pgBorders)?.[1] as
+    'page' | 'text' | undefined
+  let spacePt = 0
+  let szEighths = 0
+  let color: string | undefined
+  const sides: NonNullable<SectionSettings['pageBorderProps']>['sides'] = {}
+  for (const side of pgBorders.match(/<w:(?:top|left|bottom|right)\b[^>]*\/?>/g) ?? []) {
+    const val = /w:val="([^"]*)"/.exec(side)?.[1]
+    if (!val || val === 'none' || val === 'nil') continue
+    const name = /<w:(top|left|bottom|right)\b/.exec(side)![1] as keyof typeof sides
+    const sideColor = /w:color="([0-9A-Fa-f]{6})"/.exec(side)?.[1]
+    sides[name] = {
+      val,
+      widthPt: intAttr(side, 'w:sz', 0) / 8,
+      spacePt: intAttr(side, 'w:space', 0),
+      ...(sideColor ? { color: sideColor } : {}),
+    }
+    spacePt = Math.max(spacePt, intAttr(side, 'w:space', 0))
+    szEighths = Math.max(szEighths, intAttr(side, 'w:sz', 0))
+    color ??= sideColor
+  }
+  return {
+    ...(display ? { display } : {}),
+    ...(offsetFrom ? { offsetFrom } : {}),
+    spacePt,
+    widthPt: szEighths / 8,
+    ...(color ? { color } : {}),
+    sides,
+  }
+}
+
 /** Page setup from one w:sectPr XML slice. */
 export function sectionSettingsFromXml(xml: string): SectionSettings {
   const pgSz = /<w:pgSz[^>]*\/?>/.exec(xml)?.[0] ?? ''
@@ -63,6 +100,14 @@ export function sectionSettingsFromXml(xml: string): SectionSettings {
     }
   }
 
+  // explicit unequal column widths (w:cols > w:col children)
+  const colsElement = /<w:cols[^>]*>[\s\S]*?<\/w:cols>/.exec(xml)?.[0]
+  const colWidths = (colsElement?.match(/<w:col [^>]*w:w="\d+"[^>]*\/>/g) ?? [])
+    .map((tag) => intAttr(tag, 'w:w', 0))
+    .filter((w) => w > 0)
+
+  const pageBorderProps = pageBorderPropsOf(xml)
+
   return {
     pageWidth: intAttr(pgSz, 'w:w', DEFAULT_SECTION.pageWidth),
     pageHeight: intAttr(pgSz, 'w:h', DEFAULT_SECTION.pageHeight),
@@ -75,8 +120,11 @@ export function sectionSettingsFromXml(xml: string): SectionSettings {
     footerDist: intAttr(pgMar, 'w:footer', 720),
     ...(vAlignOf(xml) ? { vAlign: vAlignOf(xml) } : {}),
     pageBorder: hasVisiblePageBorder(xml),
+    ...(pageBorderProps ? { pageBorderProps } : {}),
     columns: intAttr(/<w:cols[^>]*\/?>/.exec(xml)?.[0] ?? '', 'w:num', 1),
     colSpace: intAttr(/<w:cols[^>]*\/?>/.exec(xml)?.[0] ?? '', 'w:space', 720),
+    ...(colWidths.length >= 2 ? { colWidths } : {}),
+    ...(/<w:bidi\s*\/>/.test(xml) ? { bidi: true } : {}),
     ...(docGrid ? { docGrid } : {}),
     ...(textDirectionOf(xml) ? { textDirection: textDirectionOf(xml) } : {}),
   }
@@ -94,6 +142,16 @@ export function readSectionSettings(parsed: ParsedDoc): SectionSettings {
 }
 
 const SECT_PR_RE = /<w:sectPr[^>]*\/>|<w:sectPr[\s\S]*?<\/w:sectPr>/
+
+/** On/off flag element (w:titlePg, w:evenAndOddHeaders, …) present and not switched
+ *  off: matches self-closing and paired forms, w:val="0|false|off" counts as off. */
+export function xmlFlagOn(xml: string, tag: string): boolean {
+  for (const m of xml.matchAll(new RegExp(`<${tag}(?=[\\s/>])[^>]*>`, 'g'))) {
+    const val = /w:val="([^"]*)"/.exec(m[0])?.[1]
+    if (val === undefined || !/^(?:0|false|off)$/.test(val)) return true
+  }
+  return false
+}
 
 function hfRefs(
   xml: string,
@@ -120,13 +178,11 @@ function sectionFromSectPr(
   const pgNumFmt = /<w:pgNumType[^>]*w:fmt="([^"]+)"/.exec(sectPrXml)?.[1]
   return {
     settings: sectionSettingsFromXml(sectPrXml),
-    // nextColumn is rare; treat it as continuous (no forced page break)
-    startType:
-      type === 'nextColumn' ? 'continuous' : ((type as SectionInfo['startType']) ?? 'nextPage'),
+    startType: (type as SectionInfo['startType']) ?? 'nextPage',
     firstBlockIndex,
     lastBlockIndex,
     sectPrXml,
-    titlePg: /<w:titlePg\s*\/>/.test(sectPrXml),
+    titlePg: xmlFlagOn(sectPrXml, 'w:titlePg'),
     ...(pgNumStart !== undefined ? { pageNumberStart: parseInt(pgNumStart, 10) } : {}),
     ...(pgNumFmt !== undefined ? { pageNumberFmt: pgNumFmt } : {}),
     headerRefs: hfRefs(sectPrXml, 'header'),
@@ -199,6 +255,10 @@ export function applySectionSettings(sectPrXml: string, settings: SectionSetting
     tag = replaceMarAttr(tag, 'w:right', settings.marginRight)
     tag = replaceMarAttr(tag, 'w:bottom', settings.marginBottom)
     tag = replaceMarAttr(tag, 'w:left', settings.marginLeft)
+    if (settings.headerDist !== undefined)
+      tag = replaceMarAttr(tag, 'w:header', settings.headerDist)
+    if (settings.footerDist !== undefined)
+      tag = replaceMarAttr(tag, 'w:footer', settings.footerDist)
     xml = xml.replace(marMatch[0], tag)
   } else {
     const pgMar =
@@ -224,28 +284,69 @@ export function applySectionSettings(sectPrXml: string, settings: SectionSetting
   // columns (w:cols may be self-closing or carry explicit <w:col> children)
   const colsMatch = /<w:cols[^>]*\/>|<w:cols[^>]*>[\s\S]*?<\/w:cols>/.exec(xml)
   const numAttr = settings.columns > 1 ? ` w:num="${settings.columns}"` : ''
-  const spaceAttr = ` w:space="${settings.colSpace ?? 720}"`
-  if (colsMatch) {
+  const colsAnchor = (tag: string): string => {
+    const anchor = /(<w:pgBorders[\s\S]*?<\/w:pgBorders>|<w:pgMar[^>]*\/>)/.exec(xml)
+    if (anchor) return xml.replace(anchor[0], `${anchor[0]}${tag}`)
+    return xml.replace(/<\/w:sectPr>/, `${tag}</w:sectPr>`)
+  }
+  if (
+    settings.colWidths !== undefined &&
+    settings.columns > 1 &&
+    settings.colWidths.length === settings.columns
+  ) {
+    // explicit unequal widths: rebuild the element (opt-in via colWidths) —
+    // unless the document already carries exactly these values (round-trip)
+    const currentWidths = (colsMatch?.[0].match(/<w:col [^>]*w:w="\d+"[^>]*\/>/g) ?? []).map((t) =>
+      intAttr(t, 'w:w', 0),
+    )
+    const unchanged =
+      colsMatch !== null &&
+      intAttr(colsMatch[0], 'w:num', 1) === settings.columns &&
+      currentWidths.length === settings.colWidths.length &&
+      currentWidths.every((w, i) => w === settings.colWidths![i])
+    if (!unchanged) {
+      const space = settings.colSpace ?? 720
+      const children = settings.colWidths
+        .map((w, i) =>
+          i < settings.colWidths!.length - 1
+            ? `<w:col w:w="${w}" w:space="${space}"/>`
+            : `<w:col w:w="${w}"/>`,
+        )
+        .join('')
+      const tag = `<w:cols${numAttr} w:space="${space}" w:equalWidth="0">${children}</w:cols>`
+      xml = colsMatch ? xml.replace(colsMatch[0], tag) : colsAnchor(tag)
+    }
+  } else if (colsMatch) {
     const openTag = /^<w:cols[^>]*>/.exec(colsMatch[0])?.[0] ?? colsMatch[0]
     const selfClosing = colsMatch[0].endsWith('/>')
     const currentNum = / w:num="(\d+)"/.exec(openTag)?.[1] ?? '1'
-    const otherAttrs = openTag
-      .replace(/^<w:cols/, '')
-      .replace(/\/?>$/, '')
-      .replace(/ w:num="\d+"/, '')
-      .replace(/ w:space="-?\d+"/, '')
-    const tag = `<w:cols${numAttr}${spaceAttr}${otherAttrs}>`
     if (selfClosing || currentNum !== String(settings.columns)) {
       // explicit per-column widths only stay valid while the count is unchanged
-      xml = xml.replace(colsMatch[0], tag.replace(/>$/, '/>'))
-    } else {
-      xml = xml.replace(colsMatch[0], colsMatch[0].replace(openTag, tag))
+      let tag = openTag.replace(/ w:num="\d+"/, '').replace(/\/?>$/, '/>')
+      if (numAttr) tag = tag.replace(/^<w:cols/, `<w:cols${numAttr}`)
+      // honor an explicitly different column gap (720 = OOXML default); equal
+      // values leave the tag byte-identical for round-trip safety
+      if (settings.colSpace !== undefined && settings.colSpace !== intAttr(tag, 'w:space', 720)) {
+        tag = / w:space="\d+"/.test(tag)
+          ? tag.replace(/ w:space="\d+"/, ` w:space="${settings.colSpace}"`)
+          : tag.replace(/\/>$/, ` w:space="${settings.colSpace}"/>`)
+      }
+      xml = xml.replace(colsMatch[0], tag)
     }
-  } else if (numAttr || settings.colSpace !== undefined) {
-    const anchor = /(<w:pgBorders[\s\S]*?<\/w:pgBorders>|<w:pgMar[^>]*\/>)/.exec(xml)
-    const cols = `<w:cols${numAttr}${spaceAttr}/>`
-    if (anchor) xml = xml.replace(anchor[0], `${anchor[0]}${cols}`)
-    else xml = xml.replace(/<\/w:sectPr>/, `${cols}</w:sectPr>`)
+  } else if (numAttr) {
+    xml = colsAnchor(`<w:cols${numAttr} w:space="${settings.colSpace ?? 425}"/>`)
+  }
+
+  // section direction (w:bidi, after cols in CT_SectPr): undefined = keep the
+  // document's tag untouched; true/false = ensure present/absent
+  if (settings.bidi !== undefined) {
+    const hasBidi = /<w:bidi\s*\/>/.test(xml)
+    if (settings.bidi && !hasBidi) {
+      if (/<w:docGrid/.test(xml)) xml = xml.replace(/(<w:docGrid)/, '<w:bidi/>$1')
+      else xml = xml.replace(/<\/w:sectPr>/, '<w:bidi/></w:sectPr>')
+    } else if (!settings.bidi && hasBidi) {
+      xml = xml.replace(/<w:bidi\s*\/>/, '')
+    }
   }
   return xml
 }
@@ -257,7 +358,7 @@ export function applySectionSettings(sectPrXml: string, settings: SectionSetting
  */
 export function applySectionStartType(
   sectPrXml: string,
-  type: 'nextPage' | 'continuous' | 'evenPage' | 'oddPage',
+  type: 'nextPage' | 'continuous' | 'evenPage' | 'oddPage' | 'nextColumn',
 ): string {
   let xml = sectPrXml.replace(/<w:type[^>]*\/>/, '')
   if (type === 'nextPage') return xml

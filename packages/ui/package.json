@@ -7,6 +7,7 @@
   "description": "Shared renderer tokens and format-neutral visual primitives for the office apps",
   "exports": {
     ".": "./src/index.ts",
+    "./dropdown.css": "./src/dropdown.css",
     "./tokens.css": "./src/tokens.css",
     "./screentip.css": "./src/screentip.css"
   },

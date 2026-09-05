@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: selectively port community upstream fixes (2026-09-05).
 /**
  * Univer runtime synchronization helpers for the sheets renderer.
  *
@@ -1137,6 +1138,8 @@ export async function activateFormulaClosure(
   setMessage(t('appClosureActive', { count: closure.formulaCount.toLocaleString() }))
 }
 
+const SIDECAR_READ_BATCH_CELLS = 18_000
+
 interface MappedRangeRead {
   /// Result arrays translated into screen coordinates.
   readonly screen: Pick<WorkbookRangeResult, 'cells' | 'rows' | 'merges' | 'hyperlinks'>
@@ -1152,7 +1155,7 @@ interface MappedRangeRead {
 /// journal-owned (inserted this session — nothing streams into it). A
 /// request spanning deleted file rows can exceed the sidecar's per-read
 /// cell budget, so file reads are split into row batches.
-async function readSheetRangeMapped(
+export async function readSheetRangeMapped(
   state: LazyWorkbookState,
   sheetId: string,
   screenRange: IRange,
@@ -1160,13 +1163,44 @@ async function readSheetRangeMapped(
 ): Promise<MappedRangeRead | null> {
   const ops = state.editJournal.structuralOps.get(sheetId) ?? []
   if (ops.length === 0) {
-    const raw = await window.desktopApi.readWorkbookRange({
-      sessionId: state.file.sessionId,
-      sheetId,
-      range: screenRange,
-    })
+    const width = screenRange.endColumn - screenRange.startColumn + 1
+    const batchRows = Math.max(1, Math.floor(SIDECAR_READ_BATCH_CELLS / width))
+    const cells: WorkbookRangeResult['cells'] = []
+    const rows: WorkbookRangeResult['rows'] = []
+    const merges: WorkbookRangeResult['merges'] = []
+    const hyperlinks: WorkbookRangeResult['hyperlinks'] = []
+    let raw: WorkbookRangeResult | null = null
+    for (
+      let startRow = screenRange.startRow;
+      startRow <= screenRange.endRow;
+      startRow += batchRows
+    ) {
+      const endRow = Math.min(startRow + batchRows - 1, screenRange.endRow)
+      const batch = await window.desktopApi.readWorkbookRange({
+        sessionId: state.file.sessionId,
+        sheetId,
+        range: { ...screenRange, startRow, endRow },
+      })
+      cells.push(...batch.cells)
+      rows.push(...batch.rows)
+      merges.push(...batch.merges)
+      hyperlinks.push(...batch.hyperlinks)
+      raw = batch
+      // Later batches cannot have data before indexing reaches them; the
+      // regular retry poll picks the rest up.
+      if (batch.indexedThroughRow === null || batch.indexedThroughRow < endRow) break
+    }
+    if (!raw) {
+      // Degenerate empty range (endRow < startRow): let the sidecar answer,
+      // preserving the pre-batching behavior for out-of-contract input.
+      raw = await window.desktopApi.readWorkbookRange({
+        sessionId: state.file.sessionId,
+        sheetId,
+        range: screenRange,
+      })
+    }
     return {
-      screen: raw,
+      screen: { ...raw, cells, rows, merges, hyperlinks },
       raw,
       indexedThroughScreen: raw.indexedThroughRow,
       fileEndRow: screenRange.endRow,
@@ -1187,7 +1221,7 @@ async function readSheetRangeMapped(
     endColumn: Math.min(mappedRange.endColumn, sheet.columnCount - 1),
   }
   const width = fileRange.endColumn - fileRange.startColumn + 1
-  const batchRows = Math.max(1, Math.floor(18_000 / width))
+  const batchRows = Math.max(1, Math.floor(SIDECAR_READ_BATCH_CELLS / width))
   const cells: WorkbookRangeResult['cells'] = []
   const rows: WorkbookRangeResult['rows'] = []
   const merges: WorkbookRangeResult['merges'] = []

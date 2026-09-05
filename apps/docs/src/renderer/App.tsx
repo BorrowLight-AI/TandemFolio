@@ -13,6 +13,7 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import type { Editor } from '@tiptap/core'
 import { DOMParser as PmDOMParser } from '@tiptap/pm/model'
+import { NodeSelection } from '@tiptap/pm/state'
 import { markdownPasteHtml } from './editor/markdown-paste'
 import {
   type Block,
@@ -32,13 +33,14 @@ import {
 import { readSections } from '@genoffice/docx-engine'
 import type { OpenFileResult } from '../shared/lite-api'
 import { asianCharCount, countWords, nonAsianWordCount } from './word-count'
-import { toRoman } from './note-format'
 import { CommentsPanel } from './components/CommentsPanel'
 import { EquationModal } from './components/EquationModal'
 import { HeaderFooterArea } from './components/HeaderFooterArea'
+import { PageEndnotes, PageFootnotes } from './components/PageNoteAreas'
 import { PaginationPreview } from './components/PaginationPreview'
 import {
   appendEndnotesBlock,
+  appendFloatSpillBlock,
   assignSections,
   effectiveHfRefs,
   lineStartAnchor,
@@ -55,6 +57,15 @@ import {
   type PageNoteItem,
   pageAt,
   singleCutCell,
+  columnLayoutSpecs,
+  vAlignShiftSpecs,
+  sectionWidthSpecs,
+  sectionGridPitchPt,
+  sectionGridPitchSpecs,
+  docCharSpacePt,
+  sectionCharSpaceSpecs,
+  type ColumnBlockPlacement,
+  sectionBidi,
   sectionColGeom,
   sectionColumns,
   sectionFirstPages,
@@ -62,14 +73,37 @@ import {
   sectionPageBox,
   effectiveTopPx,
   effectiveBottomPx,
+  endnotesAnchorY,
   formatPageNumber,
   visiblePageCount,
   type SectionGeom,
   type SectionHfHeights,
   type PageSlice,
+  type SliceOutputs,
 } from './pagination'
-import { GAP_BAND, setPageGaps, type PageGapSpec } from './editor/pagination-gaps'
-import { hfHasVisibleContent, makeGapHfEl } from './editor/hf-dom'
+import {
+  GAP_BAND,
+  alignGapHfStrips,
+  alignTableGapFills,
+  clampCellBoxTops,
+  pageBorderStyleOf,
+  setFloatVShifts,
+  setOversizeClips,
+  setPageGaps,
+  setRowFills,
+  syncAnchorBands,
+  syncFloatShifts,
+  syncPageBorders,
+  type PageGapSpec,
+} from './editor/pagination-gaps'
+import { setColumnLayout } from './editor/column-layout'
+import { syncMarginAnnotations } from './editor/margin-annotations'
+import {
+  hfHasVisibleContent,
+  makeGapHfEl,
+  makeHfFloatImgEl,
+  type HfFloatBox,
+} from './editor/hf-dom'
 import {
   estimateFootnoteHeight,
   estimateHfHeight,
@@ -80,6 +114,8 @@ import { saveUntilPersisted } from './save-until-persisted'
 import { cachedByDoc } from './doc-cache'
 import { useShallowStable, useStableCallbacks } from './use-stable'
 import { FindPanel } from './components/FindPanel'
+import { ShortcutsDialog } from './components/ShortcutsDialog'
+import { WordCountDialog, type DocStats } from './components/WordCountDialog'
 import { Ribbon } from './components/Ribbon'
 import { computeFormatState } from './components/ribbon-format-state'
 import { IconRedo, IconUndo } from './components/icons'
@@ -87,14 +123,19 @@ import { EditorSaveIcon } from '@genoffice/ui'
 import { ToastHost } from './components/toast'
 import {
   LinkInsertModal,
+  applyParagraphStyle,
+  clearParagraphFormatting,
   insertImageFromDataUrl,
   insertImageViaDialog,
   insertPageBreakAt,
   insertTableAt,
+  setParaAttrs,
   type InkPenSettings,
   type RevisionDisplayMode,
   type ViewMode,
 } from './components/ribbon-tabs'
+import { applyCase, nextCaseMode, selectionText } from './editor/case-transform'
+import { stepHangingIndent, stepParagraphIndent } from './editor/indent'
 import { ComparePanel } from './components/ComparePanel'
 import {
   EditorContextMenu,
@@ -134,6 +175,7 @@ import { collectDocxComments } from './editor/comments'
 
 import {
   editorExtensions,
+  findFloatImageAt,
   resolvedCommentsPluginKey,
   revisionDisplayState,
 } from './editor/extensions'
@@ -223,7 +265,7 @@ import {
   type ReviewContext,
 } from './review-actions'
 
-const _IS_MAC = navigator.platform.toLowerCase().includes('mac')
+const IS_MAC = navigator.platform.toLowerCase().includes('mac')
 
 const twipsToPx = (twips: number) => (twips / 1440) * 96
 
@@ -273,7 +315,15 @@ const revisionCountOfDoc = cachedByDoc((d) => collectRevisions(d).length)
  */
 function posFromAnchor(view: Editor['view'], anchor: LineAnchor): number | undefined {
   try {
-    const pos = view.posAtDOM(anchor.node, anchor.charOffset)
+    const pos =
+      anchor.node instanceof Element
+        ? anchor.node.parentNode
+          ? view.posAtDOM(
+              anchor.node.parentNode,
+              Array.prototype.indexOf.call(anchor.node.parentNode.childNodes, anchor.node),
+            )
+          : -1
+        : view.posAtDOM(anchor.node, anchor.charOffset)
     return pos >= 0 ? pos : undefined
   } catch {
     return undefined
@@ -282,10 +332,32 @@ function posFromAnchor(view: Editor['view'], anchor: LineAnchor): number | undef
 
 /** Clean pasted Word/web HTML: mso conditional comments, <o:p>, and unwrapping <li><p>x</p></li> */
 function cleanPastedHtml(html: string): string {
-  return html
-    .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/g, '')
-    .replace(/<o:p>[\s\S]*?<\/o:p>/g, '')
-    .replace(/<li([^>]*)>\s*<p[^>]*>([\s\S]*?)<\/p>\s*<\/li>/g, '<li$1>$2</li>')
+  return unwrapSingleCellTable(
+    html
+      .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/g, '')
+      .replace(/<o:p>[\s\S]*?<\/o:p>/g, '')
+      .replace(/<li([^>]*)>\s*<p[^>]*>([\s\S]*?)<\/p>\s*<\/li>/g, '<li$1>$2</li>'),
+  )
+}
+
+export function unwrapSingleCellTable(html: string): string {
+  if (!/<table/i.test(html)) return html
+  try {
+    const doc = new window.DOMParser().parseFromString(html, 'text/html')
+    const body = doc.body
+    const tables = body.querySelectorAll('table')
+    if (tables.length !== 1) return html
+    const table = tables[0]!
+    if ((body.textContent ?? '').trim() !== (table.textContent ?? '').trim()) return html
+    if ([...body.querySelectorAll('img,svg,video,hr')].some((element) => !table.contains(element))) {
+      return html
+    }
+    const cells = table.querySelectorAll('td,th')
+    if (cells.length !== 1 || cells[0]!.querySelector('table')) return html
+    return cells[0]!.innerHTML
+  } catch {
+    return html
+  }
 }
 
 /** All runs a footnote/endnote reference may live in: paragraph runs, plus table
@@ -352,18 +424,6 @@ function makeGapNotesEl(
     wrap.appendChild(row)
   }
   return wrap
-}
-
-/** fields of Word's Word Count dialog */
-interface DocStats {
-  pages: number
-  words: number
-  asianChars: number
-  nonAsianWords: number
-  charsNoSpace: number
-  charsWithSpace: number
-  paragraphs: number
-  lines: number
 }
 
 function subscribeDocxEditorActivity(listener: () => void): () => void {
@@ -558,6 +618,12 @@ export function App() {
   const [showPagePreview, setShowPagePreview] = useState(false)
   const [splitHtml, setSplitHtml] = useState('')
   const [showFind, setShowFind] = useState(false)
+  const [findFocusReplace, setFindFocusReplace] = useState(0)
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const ribbonActionsRef = useRef<{
+    stepFontSize?: (direction: 1 | -1) => void
+    nudgeFontSize?: (direction: 1 | -1) => void
+  }>({})
   const [showComments, setShowComments] = useState(false)
   /** Style definitions pending write-back (key = styleId), saved via SaveOptions.styleUpserts */
   const [styleUpserts, setStyleUpserts] = useState<Record<string, StyleUpsert>>({})
@@ -581,6 +647,7 @@ export function App() {
   /** Footnote ids already shown in canvas page gaps (the end-of-document list skips them to avoid duplication) */
   const [gapNoteIds, setGapNoteIds] = useState<Set<string>>(new Set())
   const [endnotes, setEndnotes] = useState<NoteInfo[]>([])
+  const [endnotesAreaTop, setEndnotesAreaTop] = useState<number | null>(null)
   const [notesDirty, setNotesDirty] = useState(false)
   const managedNotesRef = useRef<Map<ManagedDocxNoteKey, ManagedDocxNoteState>>(new Map())
   const noteStateRef = useRef({ footnotes, endnotes })
@@ -604,6 +671,17 @@ export function App() {
     if (editor) editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revisionDisplay])
+  const delSectBreaks = useMemo(
+    () =>
+      revisionDisplay === 'original'
+        ? undefined
+        : new Set(
+            (doc?.parsed.blocks ?? [])
+              .filter((block) => block.paraMarkDel && block.docxIndex != null)
+              .map((block) => block.docxIndex as number),
+          ),
+    [doc, revisionDisplay],
+  )
   const [protection, setProtection] = useState<DocProtection | null>(null)
   const [protectionDirty, setProtectionDirty] = useState(false)
   const [compareResult, setCompareResult] = useState<{
@@ -1155,6 +1233,7 @@ export function App() {
         continuous: t('appBreakContinuous'),
         evenPage: t('appBreakEvenPage'),
         oddPage: t('appBreakOddPage'),
+        nextColumn: t('appBreakContinuous'),
       }
       if (doc.filePath) {
         pendingSectionSaveRef.current = true
@@ -1564,6 +1643,15 @@ export function App() {
 
   // typed w:docGrid line pitch (pt) when every section shares one; null = no snapping
   const gridPitchPt = useMemo(() => docGridPitchPt(sections), [sections])
+  const mixedGridPitchPt = useMemo(() => {
+    if (gridPitchPt != null) return null
+    for (const sectionInfo of sections) {
+      const pitch = sectionGridPitchPt(sectionInfo)
+      if (pitch != null) return pitch
+    }
+    return null
+  }, [sections, gridPitchPt])
+  const charSpacePt = useMemo(() => docCharSpacePt(sections), [sections])
 
   // single-section header/footer push-down: body top = max(marginTop, headerDist + header height)
   const singleHfPx = useMemo(() => {
@@ -1688,21 +1776,43 @@ export function App() {
     }))
   }, [endnotes, sections, section])
 
-  // canvas column-flow geometry (non-null when the cursor's section has equal-width columns —
-  // same follow-the-cursor rule as the canvas page box): shared by canvas CSS / measuring state / preview.
-  // equalWidth="0" (unequal local layout columns) is not modeled, matching the engine's scope
-  const colFlow = useMemo(() => {
-    const cur = sections[Math.min(activeSection, sections.length - 1)]
-    if (!cur || sectionColumns(cur) <= 1) return null
-    return sectionColGeom(cur)
-  }, [sections, activeSection])
+  const colMode = useMemo<'none' | 'uniform' | 'mixed'>(() => {
+    if (sections.length === 0 || !sections.some((entry) => sectionColumns(entry) > 1)) {
+      return 'none'
+    }
+    const first = sectionColGeom(sections[0])
+    const uniform =
+      !sections.some(sectionBidi) &&
+      !sections.some((entry, index) => index > 0 && entry.startType === 'nextColumn') &&
+      sections.every((entry) => {
+        const geometry = sectionColGeom(entry)
+        return (
+          geometry.cols === first.cols &&
+          geometry.cols > 1 &&
+          geometry.equalWidth &&
+          Math.abs(geometry.colWidthPx - first.colWidthPx) < 0.5 &&
+          Math.abs(geometry.gapPx - first.gapPx) < 0.5
+        )
+      })
+    return uniform ? 'uniform' : 'mixed'
+  }, [sections])
+
+  const colFlow = useMemo(
+    () => (colMode === 'uniform' ? sectionColGeom(sections[0]) : null),
+    [colMode, sections],
+  )
+
+  const hasVAlign = useMemo(
+    () => sections.some((entry) => entry.settings.vAlign === 'center' || entry.settings.vAlign === 'bottom'),
+    [sections],
+  )
 
   // single-flow measuring state for the columned canvas: temporarily drop CSS columns and
   // set the width to the column width so DOM measurement yields 1-D coordinates matching
   // the engine's column flow (synchronous layout round-trip, no visible flicker)
   const measureSingleFlow = useCallback(
     function run<T>(pm: HTMLElement, fn: () => T): T {
-      if (!colFlow || viewMode !== 'print') return fn()
+      if ((colMode === 'none' && !hasVAlign) || viewMode !== 'print') return fn()
       pm.classList.add('measuring-columns')
       try {
         return fn()
@@ -1710,17 +1820,17 @@ export function App() {
         pm.classList.remove('measuring-columns')
       }
     },
-    [colFlow, viewMode],
+    [colMode, hasVAlign, viewMode],
   )
 
   // column-flow geometry gate: when the canvas column CSS is inactive, measure as full-width single flow; the geometry must drop cols to match
   const colGeomsFor = useCallback(
     (geoms: SectionGeom[]): SectionGeom[] => {
-      if (colFlow && viewMode === 'print') return geoms
+      if (colMode !== 'none' && viewMode === 'print') return geoms
       for (const g of geoms) if (g.cols) g.cols = undefined
       return geoms
     },
-    [colFlow, viewMode],
+    [colMode, viewMode],
   )
 
   // real TOC page-number backfill: compute each heading's (docHeading) page from the current real page slicing.
@@ -1732,8 +1842,8 @@ export function App() {
     const factor = zoom / 100
     const { mBlocks, slices, secs } = measureSingleFlow(pm, () => {
       const origin = pm.getBoundingClientRect().top + effTopSingle * factor
-      const { blocks, totalHeight } = measureBlocks(pm, origin, factor)
-      const live = liveSections(sections, blocks)
+      const { blocks, totalHeight, sectBreaks } = measureBlocks(pm, origin, factor)
+      const live = liveSections(sections, blocks, sectBreaks, delSectBreaks)
       let s: PageSlice[]
       if (live.length > 0) {
         assignSections(blocks, live)
@@ -1778,6 +1888,7 @@ export function App() {
     hfHeightsOf,
     measureSingleFlow,
     colGeomsFor,
+    delSectBreaks,
   ])
 
   // status-bar page number: real page slicing (same algorithm as the pagination preview). Edits remeasure with debounce; scrolling only relocates
@@ -1794,6 +1905,8 @@ export function App() {
     const contentH = twipsToPx(section.pageHeight) - effTopSingle - effBottomSingle
     let slices: PageSlice[] = []
     let timer: number | null = null
+    let secWidthSig = ''
+    let charSpaceSig = ''
     const pmEl = () => document.querySelector('.editor-scroll .ProseMirror') as HTMLElement | null
     const locate = () => {
       const pm = pmEl()
@@ -1824,17 +1937,21 @@ export function App() {
       const tStart = performance.now()
       let tMeasure = 0
       let tSlice = 0
+      syncAnchorBands(pm, factor)
       // a columned canvas measures + slices in the single-flow measuring state (fillLineBoxes
       // also reads the DOM for line sampling, so it must share the state); display-state DOM
       // reads like gap positioning happen outside the measuring state
       const measured = measureSingleFlow(pm, () => {
         const t0 = performance.now()
         const origin = pm.getBoundingClientRect().top + mTopPx * factor
-        const { blocks, totalHeight } = measureBlocks(pm, origin, factor)
+        const { blocks, totalHeight, floats, sectBreaks } = measureBlocks(pm, origin, factor)
         tMeasure = performance.now() - t0
         // multi-section: assign blocks to sections by docxIndex; each section has its own content height / forced breaks.
         // liveSections: when a section-break block is deleted, that section merges into the next in real time (effective before saving)
-        const secList = sections.length > 0 ? liveSections(sections, blocks) : null
+        const secList =
+          sections.length > 0
+            ? liveSections(sections, blocks, sectBreaks, delSectBreaks)
+            : null
         if (secList) assignSections(blocks, secList)
         // the endnote area takes part in page slicing (placed together at the document end; overflows continue on later pages)
         const withEndnotes = appendEndnotesBlock(
@@ -1843,9 +1960,17 @@ export function App() {
           endnoteItems,
           FOOTNOTE_SEPARATOR_H,
         )
-        const flowH = withEndnotes?.totalHeight ?? totalHeight
+        const lastSection = secList?.[secList.length - 1]?.settings ?? section
+        const withFloatSpill = appendFloatSpillBlock(
+          blocks,
+          withEndnotes?.totalHeight ?? totalHeight,
+          floats,
+          lastSection ? twipsToPx(lastSection.marginBottom) : 0,
+        )
+        const flowH = withFloatSpill ?? withEndnotes?.totalHeight ?? totalHeight
         const hfHs = secList ? hfHeightsOf(secList) : null
         const t1 = performance.now()
+        const sliceOutputs: SliceOutputs = { rowFills: [], floatVShifts: [], oversizeClips: [] }
         const s = secList
           ? sliceWithLineSplit(
               blocks,
@@ -1853,6 +1978,7 @@ export function App() {
               flowH,
               factor,
               blockMetaOf,
+              sliceOutputs,
             )
           : sliceWithLineSplit(
               blocks,
@@ -1860,11 +1986,21 @@ export function App() {
               flowH,
               factor,
               blockMetaOf,
+              sliceOutputs,
             )
         tSlice = performance.now() - t1
-        return { blocks, secList, hfHs, s }
+        return {
+          blocks,
+          secList,
+          hfHs,
+          s,
+          floats,
+          rowFills: sliceOutputs.rowFills ?? [],
+          floatVShifts: sliceOutputs.floatVShifts ?? [],
+          oversizeClips: sliceOutputs.oversizeClips ?? [],
+        }
       })
-      const { blocks, secList, hfHs } = measured
+      const { blocks, secList, hfHs, floats, rowFills, floatVShifts, oversizeClips } = measured
       slices = measured.s
       // document-end footer shows the last page's displayed number, not the physical count
       if (slices.length > 0) {
@@ -1913,6 +2049,7 @@ export function App() {
       if (editor) {
         const gaps: PageGapSpec[] = []
         const gapIds = new Set<string>()
+        let firstPageFloats: { els: HTMLElement[]; key: string } | undefined
         if (viewMode === 'print' && !readMode) {
           const pmRect = pm.getBoundingClientRect()
           const pageNotes = pageFootnotesOf(blocks, slices)
@@ -1926,22 +2063,26 @@ export function App() {
           const pageHfOf = (
             pageIdx: number,
             kind: 'header' | 'footer',
-          ): { value: HeaderFooter | null; images?: HfImage[] } => {
+          ): { value: HeaderFooter | null; images?: HfImage[]; floats: HfImage[] } => {
             const pageNo = nums[pageIdx]
+            const splitImages = (images?: HfImage[] | null) => ({
+              images: images?.filter((image) => !image.floating),
+              floats: images?.filter((image) => image.floating) ?? [],
+            })
             if (!secList || secList.length <= 1) {
               if (titlePg && pageIdx === 0) {
                 return kind === 'header'
-                  ? { value: hfVariants.headerFirst, images: parsed.headerFirst?.images }
-                  : { value: hfVariants.footerFirst, images: parsed.footerFirst?.images }
+                  ? { value: hfVariants.headerFirst, ...splitImages(parsed.headerFirst?.images) }
+                  : { value: hfVariants.footerFirst, ...splitImages(parsed.footerFirst?.images) }
               }
               if (evenOddHf && pageNo % 2 === 0) {
                 return kind === 'header'
-                  ? { value: hfVariants.headerEven, images: parsed.headerEven?.images }
-                  : { value: hfVariants.footerEven, images: parsed.footerEven?.images }
+                  ? { value: hfVariants.headerEven, ...splitImages(parsed.headerEven?.images) }
+                  : { value: hfVariants.footerEven, ...splitImages(parsed.footerEven?.images) }
               }
               return kind === 'header'
-                ? { value: header, images: parsed.headerImages ?? undefined }
-                : { value: footer, images: parsed.footerImages ?? undefined }
+                ? { value: header, ...splitImages(parsed.headerImages) }
+                : { value: footer, ...splitImages(parsed.footerImages) }
             }
             const pageSlice = slices[pageIdx]
             const sec = secList[Math.min(pageSlice.section, secList.length - 1)]
@@ -1956,7 +2097,21 @@ export function App() {
             const rId = refs[kind][variant]
             return {
               value: ov ?? hfFromPart(rId ? parsed.hfParts?.[rId] : null),
-              images: rId ? parsed.hfParts?.[rId]?.images : undefined,
+              ...splitImages(rId ? parsed.hfParts?.[rId]?.images : undefined),
+            }
+          }
+          const floatBoxOf = (pageIdx: number): HfFloatBox => {
+            const settings = secList?.[slices[pageIdx].section]?.settings ?? section
+            const heights = hfHs?.[slices[pageIdx].section] ?? singleHfPx
+            return {
+              pageW: twipsToPx(settings.pageWidth),
+              pageH: twipsToPx(settings.pageHeight),
+              marginLeft: twipsToPx(settings.marginLeft),
+              marginRight: twipsToPx(settings.marginRight),
+              marginTop: effectiveTopPx(settings, heights.headerPx),
+              marginBottom: effectiveBottomPx(settings, heights.footerPx),
+              headerDist: twipsToPx(settings.headerDist ?? 720),
+              sectMarginTop: twipsToPx(settings.marginTop),
             }
           }
           const pageNoTextOf = (pageIdx: number) =>
@@ -1966,6 +2121,13 @@ export function App() {
             )
           const hfSig = (v: HeaderFooter | null | undefined) =>
             v ? `${v.text}·${v.pageNumber ? 1 : 0}·${v.paras?.length ?? 0}` : ''
+          const floatSig = (images: HfImage[]) =>
+            images
+              .map(
+                (image) =>
+                  `${image.dataUrl.length}:${hashStr(image.dataUrl.slice(0, 1024) + image.dataUrl.slice(-1024))}:${image.posXPx ?? image.posH ?? ''}:${image.posYPx ?? image.posV ?? ''}:${image.posHRel ?? ''}${image.posVRel ?? ''}:${image.widthPx ?? ''}x${image.heightPx ?? ''}${image.washout ? ':w' : ''}`,
+              )
+              .join('|')
           const visiblePages = visiblePageCount(slices)
           // stopgap until per-section canvas geometry: a landscape section's header/footer
           // strip must not overflow the (portrait) canvas paper it is drawn on
@@ -2018,13 +2180,16 @@ export function App() {
               el.style.width = `${Math.min(box.width, canvasPaperW) - 120}px`
               hfEls.push(el)
             }
+            for (const image of gapHeader.floats) {
+              hfEls.push(makeHfFloatImgEl(image, floatBoxOf(k + 1), 'gap'))
+            }
             const hfProps =
               hfEls.length > 0
                 ? {
                     hfEls,
                     // key must cover everything baked into the widgets (both pages'
                     // formatted numbers + total count), or stale PAGE/NUMPAGES survive reuse
-                    hfKey: `${pageNoTextOf(k)}·${pageNoTextOf(k + 1)}·${visiblePages}·${hfSig(gapFooter.value)}·${hfSig(gapHeader.value)}`,
+                    hfKey: `${pageNoTextOf(k)}·${pageNoTextOf(k + 1)}·${visiblePages}·${hfSig(gapFooter.value)}·${hfSig(gapHeader.value)}·f${floatSig(gapHeader.floats)}`,
                   }
                 : {}
             // previous page's footnotes: rendered into the top of the gap (page-bottom area), with the gap enlarged by the reserved height.
@@ -2183,6 +2348,16 @@ export function App() {
             })
             markShown()
           })
+          if (slices.length > 0) {
+            const floatingImages = pageHfOf(0, 'header').floats
+            if (floatingImages.length > 0) {
+              const box = floatBoxOf(0)
+              firstPageFloats = {
+                els: floatingImages.map((image) => makeHfFloatImgEl(image, box, 'lead')),
+                key: `${floatSig(floatingImages)}·${Math.round(box.pageW)}x${Math.round(box.pageH)}·${Math.round(box.marginTop)}·${Math.round(box.sectMarginTop)}`,
+              }
+            }
+          }
           // TOC page numbers: the file's cached PAGEREF results are stale (generators
           // write them against a layout that never matches; Word silently refreshes on
           // open, we never write back). Backfill the display from the live layout —
@@ -2211,8 +2386,109 @@ export function App() {
         }
         tGapsBuild = performance.now() - tGaps0
         const tSet0 = performance.now()
-        setPageGaps(editor.view, gaps)
+        const rowFillElements: Array<{ el: Element; targetPx: number }> = []
+        for (const fill of rowFills) {
+          const block = blocks.find(
+            (candidate) => candidate.tableRows && Math.abs(candidate.top - fill.blockTop) < 0.5,
+          )
+          if (!block?.el) continue
+          const rows = Array.from(block.el.querySelectorAll('tr')).filter(
+            (row) =>
+              !row.closest('.doc-nested-table') &&
+              !row.classList.contains('page-gap') &&
+              !row.classList.contains('page-repeat-header'),
+          )
+          const row = rows[fill.row]
+          if (row) rowFillElements.push({ el: row, targetPx: fill.targetPx })
+        }
+        setRowFills(editor.view, rowFillElements)
+        const oversizeElements: Array<{ el: HTMLElement; clipPx: number }> = []
+        for (const clip of oversizeClips) {
+          const block = blocks.find(
+            (candidate) =>
+              candidate.oversizeLineH !== undefined &&
+              Math.abs(candidate.top - clip.blockTop) < 0.5,
+          )
+          if (block?.el) oversizeElements.push({ el: block.el, clipPx: clip.clipPx })
+        }
+        setOversizeClips(editor.view, oversizeElements)
+        const floatVElements: Array<{ el: Element; dyPx: number }> = []
+        for (const shift of floatVShifts) {
+          const block = blocks.find(
+            (candidate) =>
+              candidate.pageRelVyPx !== undefined &&
+              Math.abs(candidate.top - shift.blockTop) < 0.5,
+          )
+          if (block?.el) floatVElements.push({ el: block.el, dyPx: shift.dyPx })
+        }
+        setFloatVShifts(editor.view, floatVElements)
+        setPageGaps(editor.view, gaps, firstPageFloats)
+        const colSpecs =
+          viewMode === 'print' && !readMode && colMode === 'mixed' && secList
+            ? columnLayoutSpecs(blocks, slices, secList)
+            : []
+        const vaSpecs =
+          viewMode === 'print' && !readMode && secList && hfHs
+            ? vAlignShiftSpecs(blocks, slices, secList, sectionGeoms(secList, hfHs))
+            : []
+        const secWSpecs =
+          viewMode === 'print' && !readMode && secList && hfHs
+            ? sectionWidthSpecs(blocks, secList, sectionGeoms(secList, hfHs))
+            : []
+        const gridSpecs =
+          viewMode === 'print' && !readMode && secList ? sectionGridPitchSpecs(blocks, secList) : []
+        const charSpecs =
+          viewMode === 'print' && !readMode && secList ? sectionCharSpaceSpecs(blocks, secList) : []
+        const specLists = [gridSpecs, charSpecs, secWSpecs, colSpecs, vaSpecs].filter(
+          (list) => list.length > 0,
+        )
+        let layoutSpecs = specLists.flat()
+        if (specLists.length > 1) {
+          const mergedSpecs = new Map<HTMLElement, ColumnBlockPlacement>()
+          for (const spec of layoutSpecs) {
+            const previous = mergedSpecs.get(spec.el)
+            mergedSpecs.set(
+              spec.el,
+              previous
+                ? {
+                    ...previous,
+                    ...spec,
+                    dx: previous.dx + spec.dx,
+                    dy: previous.dy + spec.dy,
+                  }
+                : spec,
+            )
+          }
+          layoutSpecs = [...mergedSpecs.values()]
+        }
+        setColumnLayout(editor.view, layoutSpecs)
+        alignTableGapFills(pm, factor)
+        if (secWSpecs.length > 0) {
+          const canvasSettings = secList?.[0]?.settings ?? section
+          alignGapHfStrips(pm, twipsToPx(canvasSettings.marginLeft), factor)
+        }
+        syncFloatShifts(pm, floats, pm.getBoundingClientRect().top + mTopPx * factor, factor)
+        clampCellBoxTops(pm, pm.getBoundingClientRect().top, factor)
+        const pageWrap = (pm.closest('.page-wrap') as HTMLElement) ?? pm
+        const borderSettings = secList?.[0]?.settings ?? section
+        syncPageBorders(pageWrap, pageBorderStyleOf(borderSettings), factor)
+        syncMarginAnnotations(pageWrap, pm, comments, factor, doc.parsed.blocks, editor.view)
         tSetGaps = performance.now() - tSet0
+        const widthSignature = secWSpecs
+          .map((spec) => `${Math.round(spec.widthPx ?? -1)}:${Math.round(spec.contentWPx ?? -1)}`)
+          .join(',')
+        if (widthSignature !== secWidthSig) {
+          secWidthSig = widthSignature
+          onUpdate()
+        }
+        const charSpaceSignature =
+          charSpecs.length === 0
+            ? ''
+            : `${charSpecs.length}:${[...new Set(charSpecs.map((spec) => spec.charSpacePt))].join(',')}`
+        if (charSpaceSignature !== charSpaceSig) {
+          charSpaceSig = charSpaceSignature
+          onUpdate()
+        }
         // the last page paints as a full sheet like the ones above it:
         // extend the canvas to that page's paper bottom, measured from the last gap
         const gapEls = pm.querySelectorAll('.page-gap')
@@ -2228,6 +2504,15 @@ export function App() {
         } else {
           pm.style.removeProperty('min-height')
         }
+        setEndnotesAreaTop(
+          endnoteItems.length > 0
+            ? endnotesAnchorY(
+                pm,
+                (pm.closest('.page-wrap') ?? pm).getBoundingClientRect().top,
+                factor,
+              )
+            : null,
+        )
         // for real-device verification/troubleshooting: current slices and block geometry (read-only snapshot, no functional dependency)
         ;(window as unknown as Record<string, unknown>).__pageDebug = {
           slices,
@@ -2276,6 +2561,7 @@ export function App() {
     editor,
     viewMode,
     readMode,
+    colMode,
     blockMetaOf,
     pageFootnotesOf,
     endnoteItems,
@@ -2292,6 +2578,7 @@ export function App() {
     titlePg,
     evenOddHf,
     sectionHfOverride,
+    delSectBreaks,
   ])
 
   // section at the cursor: the target the Layout tab acts on
@@ -2480,6 +2767,23 @@ export function App() {
         e.preventDefault()
         if (doc) setShowFind(true)
       }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === 'h') {
+        e.preventDefault()
+        if (doc) {
+          setShowFind(true)
+          setFindFocusReplace((nonce) => nonce + 1)
+        }
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.code === 'Slash' &&
+        doc
+      ) {
+        e.preventDefault()
+        setShowShortcuts(true)
+      }
       // Word dialog shortcuts: Font ⌘D / Paragraph ⌥⌘M / Hyperlink ⌘K
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === 'd' && doc && canEdit) {
         e.preventDefault()
@@ -2517,10 +2821,153 @@ export function App() {
         const target = getActiveSubEditor() ?? editor
         setSelectionAlign(target, ALIGN_KEYS[e.key])
       }
+      const spacingKeys: Record<string, number> = { Digit1: 1, Digit2: 2, Digit5: 1.5 }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.code in spacingKeys &&
+        editor &&
+        canEdit
+      ) {
+        e.preventDefault()
+        const attrs = { lineSpacing: spacingKeys[e.code], lineRule: null, lineRawTwips: null }
+        const subEditor = getActiveSubEditor()
+        if (subEditor) subEditor.chain().focus().updateAttributes('docParagraph', attrs).run()
+        else setParaAttrs(editor, attrs)
+      }
+      const styleKeys: Record<string, 'p' | 'h1' | 'h2' | 'h3'> = {
+        Digit0: 'p',
+        Digit1: 'h1',
+        Digit2: 'h2',
+        Digit3: 'h3',
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.altKey &&
+        !e.shiftKey &&
+        e.code in styleKeys &&
+        editor &&
+        canEdit
+      ) {
+        e.preventDefault()
+        if (!getActiveSubEditor()) applyParagraphStyle(editor, styleKeys[e.code])
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        !e.altKey &&
+        (e.code === 'Period' || e.code === 'Comma') &&
+        editor &&
+        canEdit
+      ) {
+        e.preventDefault()
+        ribbonActionsRef.current.stepFontSize?.(e.code === 'Period' ? 1 : -1)
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        (e.code === 'BracketRight' || e.code === 'BracketLeft') &&
+        editor &&
+        canEdit
+      ) {
+        e.preventDefault()
+        ribbonActionsRef.current.nudgeFontSize?.(e.code === 'BracketRight' ? 1 : -1)
+      }
+      const verticalAlign = e.shiftKey
+        ? e.code === 'Equal'
+          ? 'superscript'
+          : null
+        : e.code === 'Period'
+          ? 'superscript'
+          : e.code === 'Comma'
+            ? 'subscript'
+            : null
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && verticalAlign && editor && canEdit) {
+        e.preventDefault()
+        const target = getActiveSubEditor() ?? editor
+        const current = target.getAttributes('docTextStyle').vertAlign
+        target
+          .chain()
+          .focus()
+          .setMark('docTextStyle', { vertAlign: current === verticalAlign ? null : verticalAlign })
+          .run()
+      }
+      if (e.shiftKey && e.key === 'F3' && editor && canEdit) {
+        e.preventDefault()
+        const target = getActiveSubEditor() ?? editor
+        applyCase(target, nextCaseMode(selectionText(target)))
+      }
+      if (e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.code === 'Space' && canEdit) {
+        e.preventDefault()
+        ;(getActiveSubEditor() ?? editor)?.chain().focus().unsetAllMarks().run()
+      }
+      if (e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyM' && editor && canEdit) {
+        e.preventDefault()
+        if (!getActiveSubEditor()) stepParagraphIndent(editor, e.shiftKey ? -1 : 1)
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === 'KeyT' && editor && canEdit) {
+        e.preventDefault()
+        if (!getActiveSubEditor()) stepHangingIndent(editor, e.shiftKey ? -1 : 1)
+      }
+      if (e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.code === 'KeyQ' && canEdit) {
+        e.preventDefault()
+        if (editor && !getActiveSubEditor()) clearParagraphFormatting(editor)
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === 'Digit8' && doc) {
+        e.preventDefault()
+        setShowMarks((visible) => !visible)
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        !e.altKey &&
+        e.code === 'KeyE' &&
+        doc &&
+        canEdit
+      ) {
+        e.preventDefault()
+        setTrackChanges((enabled) => !enabled)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyG' && doc) {
+        e.preventDefault()
+        openStats()
+      }
+      if ((e.metaKey || e.ctrlKey) && e.altKey && e.code === 'KeyA' && doc && canEdit) {
+        e.preventDefault()
+        setShowComments(true)
+        startNewComment()
+      }
+      if ((e.metaKey || e.ctrlKey) && e.altKey && doc && canEdit) {
+        const endnoteCode = IS_MAC ? 'KeyE' : 'KeyD'
+        const kind = e.code === 'KeyF' ? 'footnote' : e.code === endnoteCode ? 'endnote' : null
+        if (kind) {
+          e.preventDefault()
+          insertNote(kind)
+        }
+      }
+      if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && doc && canEdit) {
+        const instruction = e.code === 'KeyD' ? 'DATE' : e.code === 'KeyT' ? 'TIME' : null
+        if (instruction) {
+          e.preventDefault()
+          insertField(instruction)
+        }
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [save, openFile, editor, doc, updateFields])
+  }, [
+    save,
+    openFile,
+    editor,
+    doc,
+    updateFields,
+    openStats,
+    startNewComment,
+    insertNote,
+    insertField,
+  ])
 
   // double-click an inline equation / click an equation block's edit button (ones with LaTeX source) → reopen the equation dialog for editing
   useEffect(() => {
@@ -2699,11 +3146,36 @@ export function App() {
       e.preventDefault()
       // Word behavior: right-clicking outside the selection moves the cursor there first (menu items act on the clicked block)
       if (editor) {
-        const hit = editor.view.posAtCoords({ left: e.clientX, top: e.clientY })
-        if (hit) {
-          const { from, to } = editor.state.selection
-          if (hit.pos < from || hit.pos > to) {
-            editor.commands.setTextSelection(hit.pos)
+        let protectedElement = (e.target as HTMLElement).closest(
+          ".doc-protected[data-doc-protected='image'], .doc-protected.doc-img-float",
+        ) as HTMLElement | null
+        if (!protectedElement) {
+          const under = findFloatImageAt(e.clientX, e.clientY)
+          if (under) protectedElement = under.closest('.doc-protected') as HTMLElement | null
+        }
+        let selectedNode = false
+        if (protectedElement) {
+          const nodeDOM = editor.view.nodeDOM.bind(editor.view)
+          let nodePosition = -1
+          editor.state.doc.descendants((node, position) => {
+            if (nodePosition !== -1) return false
+            if (node.type.name === 'docProtected' && nodeDOM(position) === protectedElement) {
+              nodePosition = position
+            }
+            return nodePosition === -1
+          })
+          if (nodePosition !== -1) {
+            editor.view.dispatch(
+              editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, nodePosition)),
+            )
+            selectedNode = true
+          }
+        }
+        if (!selectedNode) {
+          const hit = editor.view.posAtCoords({ left: e.clientX, top: e.clientY })
+          if (hit) {
+            const { from, to } = editor.state.selection
+            if (hit.pos < from || hit.pos > to) editor.commands.setTextSelection(hit.pos)
           }
         }
       }
@@ -3123,13 +3595,38 @@ export function App() {
 
   const wordCount = wordCountOfDoc(editor.state.doc)
 
-  const canvasSection = sections[activeSection]?.settings ?? section
+  const canvasSection = sections[0]?.settings ?? section
   const canvasBox = canvasSection ? sectionPageBox(canvasSection) : null
   const canvasTop = canvasSection ? effectiveTopPx(canvasSection, singleHfPx.headerPx) : 0
   const canvasBottom = canvasSection ? effectiveBottomPx(canvasSection, singleHfPx.footerPx) : 0
+  const paperWidth = canvasBox
+    ? Math.max(canvasBox.width, ...sections.map((entry) => twipsToPx(entry.settings.pageWidth)))
+    : 0
+  const lastSection = sections[sections.length - 1]?.settings ?? section
+  const lastBox = lastSection ? sectionPageBox(lastSection) : null
+  const edgeFooterStyle =
+    lastBox &&
+    canvasBox &&
+    (paperWidth - lastBox.width > 0.5 ||
+      Math.abs(lastBox.contentWidth - canvasBox.contentWidth) > 0.5)
+      ? {
+          width: `${lastBox.contentWidth}px`,
+          left: `${twipsToPx(lastSection!.marginLeft)}px`,
+          transform: 'none',
+          bottom: `${lastBox.footerDist}px`,
+        }
+      : undefined
+  const edgeHeaderStyle =
+    canvasBox && canvasSection && paperWidth - canvasBox.width > 0.5
+      ? {
+          width: `${canvasBox.contentWidth}px`,
+          left: `${twipsToPx(canvasSection.marginLeft)}px`,
+          transform: 'none',
+        }
+      : undefined
   const docZoomStyle = {
     zoom: zoom / 100,
-    '--page-w': canvasBox ? `${canvasBox.width}px` : undefined,
+    '--page-w': canvasBox ? `${paperWidth}px` : undefined,
     '--page-h': canvasBox ? `${canvasBox.height}px` : undefined,
     '--section-content-w': canvasBox ? `${canvasBox.contentWidth}px` : undefined,
     '--page-pad': canvasSection
@@ -3157,13 +3654,17 @@ export function App() {
       {doc && liveDocCjk != null && (
         <style>{`.doc-page { --doc-line-factor:${docLineFactor(doc.parsed, liveDocCjk)} }`}</style>
       )}
-      {doc && gridPitchPt != null && (
+      {doc && (gridPitchPt ?? mixedGridPitchPt) != null && (
         // typed w:docGrid: line-height round(up) expressions snap to this pitch
-        <style>{`.doc-page { --doc-grid-pitch:${gridPitchPt}pt }`}</style>
+        <style>{`.doc-page { --doc-grid-pitch:${gridPitchPt ?? mixedGridPitchPt}pt }`}</style>
+      )}
+      {doc && charSpacePt != null && (
+        // w:docGrid charSpace: every character advances natural width + this delta
+        <style>{`.doc-page { --doc-char-space:${Math.round(charSpacePt * 10000) / 10000}pt }`}</style>
       )}
       {doc && section && (
-        // over-wide tables may spill into the right margin (Word/LO), capped at the paper edge
-        <style>{`.doc-page { --doc-margin-right:${twipsToPx(section.marginRight)}px }`}</style>
+        // over-wide tables may spill into the margins (Word/LO), capped at the paper edge
+        <style>{`.doc-page { --doc-margin-left:${twipsToPx(section.marginLeft)}px; --doc-margin-right:${twipsToPx(section.marginRight)}px }`}</style>
       )}
       {/* Theme CSS comes from live state, so a Design ▸ Themes/Fonts/Colors pick shows
           on the page immediately instead of only in the saved file */}
@@ -3177,6 +3678,7 @@ export function App() {
 .editor-scroll .doc-page.measuring-columns { column-count: auto; width: ${colFlow.colWidthPx + twipsToPx(canvasSection?.marginLeft ?? section?.marginLeft ?? 0) + twipsToPx(canvasSection?.marginRight ?? section?.marginRight ?? 0)}px; }`}</style>
       )}
       <Ribbon
+        actionsRef={ribbonActionsRef}
         quickActions={quickActions}
         trailingActions={mcpDisplayAction}
         editor={editor}
@@ -3223,7 +3725,13 @@ export function App() {
       <div className="app-main">
         <div className="app-content">
           <div className={`workspace ${darkCanvas ? 'workspace-dark' : ''}`}>
-            {doc && showFind && <FindPanel editor={editor} onClose={() => setShowFind(false)} />}
+            {doc && showFind && (
+              <FindPanel
+                editor={editor}
+                focusReplaceNonce={findFocusReplace}
+                onClose={() => setShowFind(false)}
+              />
+            )}
             {doc && showNav && <NavPane editor={editor} doc={editor.state.doc} />}
             <div className="editor-area">
               {editorActive ? (
@@ -3317,62 +3825,22 @@ export function App() {
                               readOnly={isProtected || readMode}
                               onCommit={(next) => commitHf('header', next)}
                               pageTotal={pageInfo.total}
+                              style={edgeHeaderStyle}
                             />
                           )}
                           <EditorContent editor={editor} />
-                          {footnotes.some((n) => !gapNoteIds.has(n.id)) && (
-                            <div className="page-notes">
-                              {/* footnotes already shown per page in page gaps aren't repeated at the end (last page's footnotes still live here) */}
-                              {footnotes
-                                .filter((n) => !gapNoteIds.has(n.id))
-                                .map((n) => (
-                                  <div key={`f${n.id}`} className="page-note">
-                                    <sup>{footnotes.indexOf(n) + 1}</sup>
-                                    <span className="page-note-text">{n.text}</span>
-                                    <button
-                                      className="page-note-btn"
-                                      title={t('appEditFootnote')}
-                                      onClick={() => editNote('footnote', n.id)}
-                                    >
-                                      ✎
-                                    </button>
-                                    <button
-                                      className="page-note-btn"
-                                      title={t('appDeleteFootnote')}
-                                      onClick={() => deleteNote('footnote', n.id)}
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                ))}
-                            </div>
-                          )}
-                          {endnotes.length > 0 && (
-                            // endnotes live in their own document-end area, roman-numbered — never mixed into the footnote block
-                            <div className="page-notes page-endnotes">
-                              <div className="page-notes-label">{t('appEndnotesLabel')}</div>
-                              {endnotes.map((n, i) => (
-                                <div key={`e${n.id}`} className="page-note">
-                                  <sup>{toRoman(i + 1)}</sup>
-                                  <span className="page-note-text">{n.text}</span>
-                                  <button
-                                    className="page-note-btn"
-                                    title={t('appEditEndnote')}
-                                    onClick={() => editNote('endnote', n.id)}
-                                  >
-                                    ✎
-                                  </button>
-                                  <button
-                                    className="page-note-btn"
-                                    title={t('appDeleteEndnote')}
-                                    onClick={() => deleteNote('endnote', n.id)}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          <PageFootnotes
+                            notes={footnotes}
+                            skipIds={gapNoteIds}
+                            onEdit={(id) => editNote('footnote', id)}
+                            onDelete={(id) => deleteNote('footnote', id)}
+                          />
+                          <PageEndnotes
+                            notes={endnotes}
+                            top={endnotesAreaTop}
+                            onEdit={(id) => editNote('endnote', id)}
+                            onDelete={(id) => deleteNote('endnote', id)}
+                          />
                           {(multiHf ||
                             (hfViewTouched && effHfView !== 'default') ||
                             shownFooter?.text ||
@@ -3387,6 +3855,7 @@ export function App() {
                               onCommit={(next) => commitHf('footer', next)}
                               pageNo={lastPageNo?.text ?? pageInfo.total}
                               pageTotal={pageInfo.total}
+                              style={edgeFooterStyle}
                             />
                           )}
                           {(inkAnnotations.length > 0 || inkTool !== 'select') && !readMode && (
@@ -3580,8 +4049,9 @@ export function App() {
           section={section}
           sections={sections}
           hfParts={doc.parsed.hfParts ?? {}}
+          delSectBreaks={delSectBreaks}
           colFlow={viewMode === 'print' ? colFlow : null}
-          zoom={zoom}
+          colMode={viewMode === 'print' ? colMode : 'none'}
           hf={{
             header,
             footer,
@@ -3598,11 +4068,12 @@ export function App() {
             },
           }}
           watermark={watermark}
-          pageColor={pageColor}
           blockMetaOf={blockMetaOf}
           pageFootnotesOf={pageFootnotesOf}
           endnoteItems={endnoteItems}
           sectionHfOverride={sectionHfOverride}
+          comments={comments}
+          anchorBlocks={doc.parsed.blocks}
           clearPageGaps={() => {
             if (editor) setPageGaps(editor.view, [])
           }}
@@ -3611,57 +4082,8 @@ export function App() {
         />
       )}
 
-      {stats && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={(e) => e.target === e.currentTarget && setStats(null)}
-        >
-          <div className="modal">
-            <h2>{t('appWordCountTitle')}</h2>
-            <table className="stats-table">
-              <tbody>
-                <tr>
-                  <td>{t('appStatPages')}</td>
-                  <td>{stats.pages}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatWords')}</td>
-                  <td>{stats.words}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatAsianChars')}</td>
-                  <td>{stats.asianChars}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatNonAsianWords')}</td>
-                  <td>{stats.nonAsianWords}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatCharsNoSpaces')}</td>
-                  <td>{stats.charsNoSpace}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatCharsWithSpaces')}</td>
-                  <td>{stats.charsWithSpace}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatParagraphs')}</td>
-                  <td>{stats.paragraphs}</td>
-                </tr>
-                <tr>
-                  <td>{t('appStatLines')}</td>
-                  <td>{stats.lines}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="modal-actions">
-              <button className="btn-primary" onClick={() => setStats(null)}>
-                {t('appClose')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+      {stats && <WordCountDialog stats={stats} onClose={() => setStats(null)} />}
 
       {protectModal && (
         <div

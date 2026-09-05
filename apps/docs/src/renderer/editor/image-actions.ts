@@ -46,6 +46,12 @@ export interface SetDocxImageWrapInput {
   readonly wrap: RetainedDocxImageWrap
 }
 
+export interface SetDocxImageZOrderInput {
+  readonly imageBlockIndex: number
+  readonly zOrder: number
+  readonly floatInline: boolean
+}
+
 export interface SetDocxImageMarginPositionInput {
   readonly imageBlockIndex: number
   readonly horizontal: DocxImageHorizontalPosition
@@ -91,6 +97,16 @@ export type ReplaceDocxImageResult =
 
 export type SetDocxImageWrapResult =
   | { readonly ok: true; readonly imageBlockIndex: number; readonly changed: boolean }
+  | { readonly ok: false; readonly error: 'invalid_arguments'; readonly message: string }
+
+export type SetDocxImageZOrderResult =
+  | {
+      readonly ok: true
+      readonly imageBlockIndex: number
+      readonly zOrder: number
+      readonly wrap: RetainedDocxImageWrap
+      readonly changed: boolean
+    }
   | { readonly ok: false; readonly error: 'invalid_arguments'; readonly message: string }
 
 export type SetDocxImageMarginPositionResult =
@@ -401,6 +417,22 @@ export function setSelectedDocxImageWrap(editor: Editor, wrap: RetainedDocxImage
   return editor.chain().focus().updateAttributes('docProtected', patch).run()
 }
 
+export function setSelectedDocxImageZOrder(
+  editor: Editor,
+  zOrder: number,
+  floatInline: boolean,
+): boolean {
+  const attrs = editor.getAttributes('docProtected')
+  if (attrs.blockType !== 'image' || !Number.isInteger(zOrder)) return false
+  const floating = attrs.imageWrap === 'front' || attrs.imageWrap === 'behind'
+  const patch = {
+    imageZOrder: zOrder,
+    ...(floatInline && !floating ? { imageWrap: 'front' } : {}),
+  }
+  if (!attrsDiffer(attrs, patch)) return false
+  return editor.chain().focus().updateAttributes('docProtected', patch).run()
+}
+
 export function setSelectedDocxImageMarginPosition(
   editor: Editor,
   horizontal: DocxImageHorizontalPosition,
@@ -626,6 +658,50 @@ export function setDocxImageWrapAtBlock(
     )
   }
   return { ok: true, imageBlockIndex: input.imageBlockIndex, changed }
+}
+
+/** Set one exact image stacking rank in one native Undo transaction. */
+export function setDocxImageZOrderAtBlock(
+  editor: Editor,
+  input: SetDocxImageZOrderInput,
+): SetDocxImageZOrderResult {
+  const { doc } = editor.state
+  if (input.imageBlockIndex < 0 || input.imageBlockIndex >= doc.childCount) {
+    return {
+      ok: false,
+      error: 'invalid_arguments',
+      message: `DOCX image block ${input.imageBlockIndex} is invalid for ${doc.childCount} block(s).`,
+    }
+  }
+  const node = doc.child(input.imageBlockIndex)
+  if (node.type.name !== 'docProtected' || node.attrs.blockType !== 'image') {
+    return {
+      ok: false,
+      error: 'invalid_arguments',
+      message: `DOCX block ${input.imageBlockIndex} is not an image.`,
+    }
+  }
+  const floating = node.attrs.imageWrap === 'front' || node.attrs.imageWrap === 'behind'
+  const patch = {
+    imageZOrder: input.zOrder,
+    ...(input.floatInline && !floating ? { imageWrap: 'front' } : {}),
+  }
+  const changed = attrsDiffer(node.attrs, patch)
+  if (changed) {
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(positionAtBlock(editor, input.imageBlockIndex), undefined, {
+        ...node.attrs,
+        ...patch,
+      }),
+    )
+  }
+  return {
+    ok: true,
+    imageBlockIndex: input.imageBlockIndex,
+    zOrder: input.zOrder,
+    wrap: (patch.imageWrap ?? node.attrs.imageWrap ?? null) as RetainedDocxImageWrap,
+    changed,
+  }
 }
 
 export function stagedDocxImageMediaType(

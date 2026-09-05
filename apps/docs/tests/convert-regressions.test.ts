@@ -5,9 +5,12 @@ import {
   capTableRowHeights,
   inlineToRuns,
   pmDocToSavePlan,
+  pmNodeToGeneratedBlock,
   runsToInline,
   signatureOfBlock,
   signatureOfGenerated,
+  tableModelToPmNode,
+  textboxParaSignature,
   type PmNode,
 } from '../src/renderer/editor/convert'
 
@@ -56,9 +59,32 @@ describe('runsToInline image runs', () => {
           widthPx: 96,
           heightPx: null,
           xml: '<w:drawing/>',
+          wrap: null,
+          offsetXEmu: null,
+          offsetYEmu: null,
+          wrapDistTopEmu: null,
+          wrapDistBottomEmu: null,
+          wrapDistLeftEmu: null,
+          wrapDistRightEmu: null,
+          border: null,
+          lineCenterV: false,
         },
       },
     ])
+  })
+
+  it('round-trips a textbox image run without changing its signature', () => {
+    const para = {
+      runs: [
+        { text: 'tick ' },
+        { text: '', image: { dataUrl: 'data:image/png;base64,QUJD', xml: '<w:drawing/>' } },
+      ],
+    }
+    const roundtripped = { runs: inlineToRuns(runsToInline(para.runs)) }
+    expect(textboxParaSignature(roundtripped)).toBe(textboxParaSignature(para))
+    // deleting the image must surface as a change even when the text is intact
+    const dropped = { runs: [{ text: 'tick ' }] }
+    expect(textboxParaSignature(dropped)).not.toBe(textboxParaSignature(para))
   })
 
   it('emits only the image atom for a text-less drawing run', () => {
@@ -73,6 +99,15 @@ describe('runsToInline image runs', () => {
           widthPx: null,
           heightPx: null,
           xml: '<w:drawing/>',
+          wrap: null,
+          offsetXEmu: null,
+          offsetYEmu: null,
+          wrapDistTopEmu: null,
+          wrapDistBottomEmu: null,
+          wrapDistLeftEmu: null,
+          wrapDistRightEmu: null,
+          border: null,
+          lineCenterV: false,
         },
       },
     ])
@@ -244,6 +279,70 @@ describe('section row-height cap (declared trHeight taller than a page)', () => 
   })
 })
 
+describe('oversize floating tables (w:tblpPr) lose the float', () => {
+  const row = [{ paras: ['x'] }]
+
+  it('a table taller than a page flows instead of floating', () => {
+    const model: TableModel = { rows: Array.from({ length: 60 }, () => row), floatSide: 'left' }
+    expect(tableModelToPmNode(model).attrs!.tblFloat).toBeNull()
+  })
+
+  it('a small floating table keeps its side', () => {
+    const model: TableModel = { rows: [row, row], floatSide: 'right' }
+    expect(tableModelToPmNode(model).attrs!.tblFloat).toBe('right')
+  })
+
+  it('declared row heights count toward the overflow estimate', () => {
+    const model: TableModel = { rows: [row], rowHeightsTwips: [20000], floatSide: 'left' }
+    expect(tableModelToPmNode(model).attrs!.tblFloat).toBeNull()
+  })
+
+  it('a text-anchored float at least as wide as the text column flows inline', () => {
+    const model: TableModel = {
+      rows: [row, row],
+      colWidthsTwips: [6000, 6000],
+      floatSide: 'left',
+      floatPos: { xTwips: 300, yTwips: 0, horzAnchor: 'page', vertAnchor: 'text' },
+    }
+    const node = tableModelToPmNode(model, null, null, null, 10210, 10069, 11910)
+    expect(node.attrs!.tblFloat).toBeNull()
+    expect(node.attrs!.tblFloatSuppressed).toBe(true)
+  })
+
+  it('a page-anchored full-width float keeps floating', () => {
+    const model: TableModel = {
+      rows: [row, row],
+      colWidthsTwips: [6000, 6000],
+      floatSide: 'left',
+      floatPos: { xTwips: 300, yTwips: 400, horzAnchor: 'page', vertAnchor: 'page' },
+    }
+    const node = tableModelToPmNode(model, null, null, null, 10210, 10069, 11910)
+    expect(node.attrs!.tblFloat).toBe('left')
+  })
+
+  it('a full-width float positioned mid-page keeps its clamped-float rendering', () => {
+    const model: TableModel = {
+      rows: [row, row],
+      colWidthsTwips: [6000, 6000],
+      floatSide: 'left',
+      floatPos: { xTwips: 4000, yTwips: 200, horzAnchor: 'page', vertAnchor: 'text' },
+    }
+    const node = tableModelToPmNode(model, null, null, null, 10210, 10069, 11910)
+    expect(node.attrs!.tblFloat).toBe('left')
+  })
+
+  it('a narrow text-anchored float keeps floating', () => {
+    const model: TableModel = {
+      rows: [row, row],
+      colWidthsTwips: [3000],
+      floatSide: 'right',
+      floatPos: { xTwips: 300, yTwips: 0, horzAnchor: 'margin', vertAnchor: 'text' },
+    }
+    const node = tableModelToPmNode(model, null, null, null, 10210, 10069, 11910)
+    expect(node.attrs!.tblFloat).toBe('right')
+  })
+})
+
 describe('run character shading (w:shd) mark mapping', () => {
   it('round-trips run.shading through the docTextStyle mark alongside highlight', () => {
     const inline = runsToInline([{ text: 'badge', shading: 'FFC000', highlight: 'yellow' }])
@@ -253,6 +352,48 @@ describe('run character shading (w:shd) mark mapping', () => {
     const runs = inlineToRuns(inline)
     expect(runs[0].shading).toBe('FFC000')
     expect(runs[0].highlight).toBe('yellow')
+  })
+})
+
+describe('paragraph border color/width round trip', () => {
+  const raw =
+    '<w:p><w:pPr><w:pBdr>' +
+    '<w:bottom w:val="single" w:sz="18" w:space="1" w:color="4472C4"/>' +
+    '</w:pBdr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>'
+  const block: Block = {
+    id: 'b0',
+    type: 'paragraph',
+    docxIndex: 0,
+    originalXml: raw,
+    rawPPr:
+      '<w:pPr><w:pBdr><w:bottom w:val="single" w:sz="18" w:space="1" w:color="4472C4"/></w:pBdr></w:pPr>',
+    runs: [{ text: 'x' }],
+    format: { borders: 'b', borderLines: { b: { color: '4472C4', szPt: 2.25 } } },
+  }
+
+  it('borderLines survive PM attrs and do not dirty the block', () => {
+    const doc = blocksToPmDoc([block])
+    expect(doc.content?.[0].attrs?.borderLines).toBe(
+      JSON.stringify({ b: { color: '4472C4', szPt: 2.25 } }),
+    )
+    const plan = pmDocToSavePlan(doc, [block])
+    expect(plan.changedCount).toBe(0)
+    expect(plan.saveBlocks[0]).toEqual({ kind: 'original', docxIndex: 0 })
+  })
+
+  it('keeps borderLines in the regenerated format after an unrelated edit', () => {
+    const node = blocksToPmDoc([block]).content![0]
+    const doc: PmNode = {
+      type: 'doc',
+      content: [{ ...node, attrs: { ...node.attrs, align: 'center' } }],
+    }
+    const plan = pmDocToSavePlan(doc, [block])
+    const saved = plan.saveBlocks[0]
+    if (saved.kind !== 'generated') throw new Error(`expected generated, got ${saved.kind}`)
+    expect(saved.block.format?.borderLines).toEqual({ b: { color: '4472C4', szPt: 2.25 } })
+    expect(saved.block.rawPPr).toContain(
+      '<w:bottom w:val="single" w:sz="18" w:space="1" w:color="4472C4"/>',
+    )
   })
 })
 
@@ -284,5 +425,58 @@ describe('empty paragraph line size attr', () => {
     const saved = plan.saveBlocks[0]
     if (saved.kind !== 'generated') throw new Error(`expected generated, got ${saved.kind}`)
     expect(saved.block.format?.emptyRunSizeHalfPoints).toBe(2)
+  })
+})
+
+describe('paragraph direction inference (run w:rtl / RTL script, no w:bidi)', () => {
+  const paraBlock = (over: Partial<Block>): Block => ({
+    id: 'b0',
+    type: 'paragraph',
+    docxIndex: 0,
+    originalXml: '<w:p/>',
+    ...over,
+  })
+  const rtlBlock = paraBlock({
+    runs: [{ text: 'مرحبا بالعالم', rtl: true }],
+    format: { align: 'right' },
+  })
+
+  it('sets the render-only bidiInferred attr and keeps the visual alignment', () => {
+    const doc = blocksToPmDoc([rtlBlock])
+    expect(doc.content?.[0].attrs).toMatchObject({
+      bidi: false,
+      bidiInferred: true,
+      align: 'right',
+    })
+  })
+
+  it('infers from a first strong RTL character without run flags', () => {
+    const doc = blocksToPmDoc([paraBlock({ runs: [{ text: '123 שלום' }] })])
+    expect(doc.content?.[0].attrs?.bidiInferred).toBe(true)
+  })
+
+  it('lets run w:rtl decide only weak-only text', () => {
+    const weak = blocksToPmDoc([paraBlock({ runs: [{ text: '42 —', rtl: true }] })])
+    expect(weak.content?.[0].attrs?.bidiInferred).toBe(true)
+    // first strong char is Latin: an embedded rtl run must not flip the base direction
+    const mixed = blocksToPmDoc([
+      paraBlock({ runs: [{ text: 'He said ' }, { text: 'مرحبا', rtl: true }] }),
+    ])
+    expect(mixed.content?.[0].attrs?.bidiInferred).toBe(false)
+  })
+
+  it('does not infer for LTR text or explicitly bidi paragraphs', () => {
+    const ltr = blocksToPmDoc([paraBlock({ runs: [{ text: 'Hello' }] })])
+    expect(ltr.content?.[0].attrs?.bidiInferred).toBe(false)
+    const explicit = blocksToPmDoc([{ ...rtlBlock, format: { bidi: true, align: 'right' } }])
+    expect(explicit.content?.[0].attrs).toMatchObject({ bidi: true, bidiInferred: false })
+  })
+
+  it('never writes the inference back: block stays original, regenerated format has no bidi', () => {
+    const doc = blocksToPmDoc([rtlBlock])
+    const plan = pmDocToSavePlan(doc, [rtlBlock])
+    expect(plan.changedCount).toBe(0)
+    expect(plan.saveBlocks[0]).toEqual({ kind: 'original', docxIndex: 0 })
+    expect(pmNodeToGeneratedBlock(doc.content![0]).format?.bidi).toBeUndefined()
   })
 })

@@ -62,7 +62,9 @@ function shapeContent(
     widthPx: Math.round(widthEmu / EMU_PER_PX),
     heightPx: Math.round(heightEmu / EMU_PER_PX),
     prst: preset,
-    paras: [{ runs: [{ text: '' }] }],
+    vAlign: 'center',
+    textColor: 'FFFFFF',
+    paras: [{ runs: [{ text: '' }], align: 'center' }],
   }
   return {
     type: 'docProtected',

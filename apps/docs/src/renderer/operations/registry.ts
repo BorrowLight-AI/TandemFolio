@@ -159,6 +159,7 @@ import {
   setDocxImageOffsetPositionAtBlock,
   setDocxImageTransformAtBlock,
   setDocxImageWrapAtBlock,
+  setDocxImageZOrderAtBlock,
   stagedDocxImageMediaType,
   type InsertDocxImageInput,
   type ReplaceDocxImageInput,
@@ -167,6 +168,7 @@ import {
   type SetDocxImageOffsetPositionInput,
   type SetDocxImageTransformInput,
   type SetDocxImageWrapInput,
+  type SetDocxImageZOrderInput,
 } from '../editor/image-actions'
 import {
   insertSectionBreakAfterBlock,
@@ -1961,6 +1963,21 @@ const handlers = {
         summary: `Set DOCX image wrap at block ${result.imageBlockIndex}`,
         imageBlockIndex: result.imageBlockIndex,
         wrap: input.wrap,
+        changed: result.changed,
+      },
+    }
+  },
+  'docx.image.set_z_order': (editor, arguments_) => {
+    const input = arguments_ as unknown as SetDocxImageZOrderInput
+    const result = setDocxImageZOrderAtBlock(editor, input)
+    if (!result.ok) return result
+    return {
+      ok: true,
+      output: {
+        summary: `Set DOCX image stacking order at block ${result.imageBlockIndex}`,
+        imageBlockIndex: result.imageBlockIndex,
+        zOrder: result.zOrder,
+        wrap: result.wrap,
         changed: result.changed,
       },
     }

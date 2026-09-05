@@ -3,7 +3,7 @@ import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react'
 import { Editor } from '@tiptap/core'
-import { TextSelection } from '@tiptap/pm/state'
+import { NodeSelection, TextSelection } from '@tiptap/pm/state'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import {
   EditorContextMenu,
@@ -28,10 +28,43 @@ function createEditor(paraAttrs: Record<string, unknown> = {}): Editor {
   })
 }
 
+function createTableEditor(): Editor {
+  return new Editor({
+    element: document.createElement('div'),
+    extensions: editorExtensions,
+    content: {
+      type: 'doc',
+      content: [
+        {
+          type: 'docTable',
+          attrs: { docxIndex: null },
+          content: [
+            {
+              type: 'docTableRow',
+              content: [
+                {
+                  type: 'docTableCell',
+                  content: [{ type: 'docParagraph', content: [{ type: 'text', text: 'cell' }] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  })
+}
+
 function select(editor: Editor, from: number, to: number) {
   editor.view.dispatch(
     editor.state.tr.setSelection(TextSelection.create(editor.state.doc, from, to)),
   )
+}
+
+function pickDropdown(container: Element, dropdown: HTMLButtonElement, value: string) {
+  act(() => dropdown.click())
+  const item = container.querySelector<HTMLButtonElement>(`.gs-dd-item[data-value="${value}"]`)!
+  act(() => item.click())
 }
 
 function render(element: React.ReactElement): { container: HTMLElement; unmount: () => void } {
@@ -104,6 +137,59 @@ describe('EditorContextMenu', () => {
     unmount()
     editor.destroy()
   })
+
+  it('offers native insert/delete/select/merge/split commands inside a table', () => {
+    const editor = createTableEditor()
+    editor.view.dispatch(
+      editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(3))),
+    )
+    const { container, unmount } = render(createElement(EditorContextMenu, menuProps(editor)))
+    const labels = [...container.querySelectorAll('.ctx-label')].map((node) => node.textContent)
+    expect(labels).toContain('插入')
+    expect(labels).toContain('删除')
+    expect(labels).toContain('选择')
+    expect(labels).toContain('合并单元格')
+    expect(labels).toContain('拆分单元格')
+    unmount()
+    editor.destroy()
+  })
+
+  it('arranges a selected image through native history and floats an inline image', () => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'docProtected',
+            attrs: {
+              docxIndex: 0,
+              blockType: 'image',
+              imageDataUrl: 'data:image/gif;base64,R0lGODdh',
+              imageWrap: null,
+              imageZOrder: null,
+            },
+          },
+        ],
+      },
+    })
+    editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, 0)))
+    const { container, unmount } = render(createElement(EditorContextMenu, menuProps(editor)))
+    const arrange = [...container.querySelectorAll<HTMLButtonElement>('.ctx-item')].find(
+      (button) => button.querySelector('.ctx-label')?.textContent === '排列',
+    )!
+    act(() => arrange.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
+    const front = [...container.querySelectorAll<HTMLButtonElement>('.ctx-item')].find(
+      (button) => button.querySelector('.ctx-label')?.textContent === '置于顶层',
+    )!
+    act(() => front.click())
+    expect(editor.state.doc.child(0).attrs).toMatchObject({ imageWrap: 'front', imageZOrder: 1 })
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.state.doc.child(0).attrs).toMatchObject({ imageWrap: null, imageZOrder: null })
+    unmount()
+    editor.destroy()
+  })
 })
 
 describe('FontDialog', () => {
@@ -111,12 +197,8 @@ describe('FontDialog', () => {
     const editor = createEditor()
     select(editor, 1, 10)
     const { container, unmount } = render(createElement(FontDialog, { editor, onClose: noop }))
-    const selects = container.querySelectorAll('select')
-    act(() => {
-      // Font style → bold
-      selects[1].value = 'bold'
-      selects[1].dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    const dropdowns = container.querySelectorAll<HTMLButtonElement>('.gs-dd-btn')
+    pickDropdown(container, dropdowns[1]!, 'bold')
     const ok = [...container.querySelectorAll('button')].find((b) => b.textContent === '确定')!
     act(() => ok.click())
     expect(editor.isActive('bold')).toBe(true)
@@ -131,11 +213,7 @@ describe('ParagraphDialog', () => {
     const editor = createEditor()
     select(editor, 2, 2)
     const { container, unmount } = render(createElement(ParagraphDialog, { editor, onClose: noop }))
-    const selects = container.querySelectorAll('select')
-    act(() => {
-      selects[0].value = 'center'
-      selects[0].dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    pickDropdown(container, container.querySelector<HTMLButtonElement>('.gs-dd-btn')!, 'center')
     const ok = [...container.querySelectorAll('button')].find((b) => b.textContent === '确定')!
     act(() => ok.click())
     expect(editor.getAttributes('docParagraph').align).toBe('center')
@@ -147,12 +225,9 @@ describe('ParagraphDialog', () => {
     const editor = createEditor({ align: 'right' })
     select(editor, 2, 2)
     const { container, unmount } = render(createElement(ParagraphDialog, { editor, onClose: noop }))
-    const alignSelect = container.querySelector('select')!
-    expect(alignSelect.value).toBe('right')
-    act(() => {
-      alignSelect.value = 'left'
-      alignSelect.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    const alignDropdown = container.querySelector<HTMLButtonElement>('.gs-dd-btn')!
+    expect(alignDropdown.dataset.value).toBe('right')
+    pickDropdown(container, alignDropdown, 'left')
     const ok = [...container.querySelectorAll('button')].find((b) => b.textContent === '确定')!
     act(() => ok.click())
     // visual left is the start side in LTR → stored as null
@@ -165,13 +240,10 @@ describe('ParagraphDialog', () => {
     const editor = createEditor({ bidi: true })
     select(editor, 2, 2)
     const { container, unmount } = render(createElement(ParagraphDialog, { editor, onClose: noop }))
-    const alignSelect = container.querySelector('select')!
+    const alignDropdown = container.querySelector<HTMLButtonElement>('.gs-dd-btn')!
     // unset align in an RTL paragraph renders right, so the dialog shows Right
-    expect(alignSelect.value).toBe('right')
-    act(() => {
-      alignSelect.value = 'left'
-      alignSelect.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    expect(alignDropdown.dataset.value).toBe('right')
+    pickDropdown(container, alignDropdown, 'left')
     const ok = [...container.querySelectorAll('button')].find((b) => b.textContent === '确定')!
     act(() => ok.click())
     // visual left is the end side in RTL → stored explicitly
@@ -184,12 +256,9 @@ describe('ParagraphDialog', () => {
     const editor = createEditor({ bidi: true, align: 'left' })
     select(editor, 2, 2)
     const { container, unmount } = render(createElement(ParagraphDialog, { editor, onClose: noop }))
-    const alignSelect = container.querySelector('select')!
-    expect(alignSelect.value).toBe('left')
-    act(() => {
-      alignSelect.value = 'right'
-      alignSelect.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    const alignDropdown = container.querySelector<HTMLButtonElement>('.gs-dd-btn')!
+    expect(alignDropdown.dataset.value).toBe('left')
+    pickDropdown(container, alignDropdown, 'right')
     const ok = [...container.querySelectorAll('button')].find((b) => b.textContent === '确定')!
     act(() => ok.click())
     expect(editor.getAttributes('docParagraph').align).toBeNull()

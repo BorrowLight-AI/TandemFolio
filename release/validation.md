@@ -1,6 +1,13 @@
 # Release evidence verification — 2026-09-04
 
-## Outcome: local release evidence approved
+## Current status: recapture required after 2026-09-05 upstream ports
+
+The selectively ported DOCX-native candidate plus three cross-format fixes changed the source fingerprint. The
+2026-09-04 approval below is historical and cannot authorize this source tree.
+See [upstream review](../docs/migration/upstream-review-2026-09-05.md) for changes
+and functional validation. No release ceiling or fail-closed check was changed.
+
+## Historical outcome: local release evidence approved
 
 The source-current five-format capture after the XLSX identity-entry change records
 `approved: true` and `ready: true`. XLSX bootstrap p95 is **432.5 ms < 500 ms**

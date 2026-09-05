@@ -15,6 +15,7 @@ import {
   blocksToPmDoc,
   pmDocToSavePlan,
   pmTableToModel,
+  tableModelToPmNode,
   type PmNode,
 } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
@@ -60,6 +61,30 @@ async function openTable(): Promise<{
 }
 
 describe('native editable tables', () => {
+  it('renders imported table spacing and table shading', () => {
+    const table = tableModelToPmNode({
+      rows: [[{ paras: ['A'] }]],
+      colWidthsTwips: [3000],
+      cellSpacingTwips: 142,
+      fill: 'FFC000',
+    })
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: { type: 'doc', content: [table] } as never,
+    })
+    const element = editor.view.dom.querySelector('table.doc-table') as HTMLElement
+
+    expect(element.style.borderCollapse).toBe('separate')
+    expect(element.style.borderSpacing).toBe('18.9px')
+    expect(element.style.backgroundColor).toBe('rgb(255, 192, 0)')
+    expect(pmTableToModel(editor.getJSON().content![0] as unknown as PmNode)).toMatchObject({
+      cellSpacingTwips: 142,
+      fill: 'FFC000',
+    })
+    editor.destroy()
+  })
+
   it('redistributes requested column widths within the section content box', () => {
     expect(fitColumnWidths([200, 200, 200], new Map([[0, 500]]), 600)).toEqual([500, 50, 50])
     const many = fitColumnWidths(new Array(20).fill(100), new Map([[0, 1000]]), 600)
@@ -87,15 +112,22 @@ describe('native editable tables', () => {
           font: 'Calibri',
           fontAscii: 'Calibri',
           csFont: null,
+          cs: null,
+          rtl: null,
           charSpacingTwips: null,
           charScaleEm: null,
           highlight: null,
           shading: null,
           vertAlign: null,
           em: null,
+          boldOff: null,
+          italicOff: null,
+          caps: null,
+          vanish: null,
           styleId: null,
           rawRPr:
             '<w:rPr><w:rFonts w:ascii="Calibri" w:eastAsia="Calibri"/><w:b/><w:color w:val="1F4E78"/></w:rPr>',
+          themeRFonts: null,
         },
       },
     ])
@@ -189,6 +221,23 @@ describe('native editable tables', () => {
     editor.destroy()
   })
 
+  it('persists a table alignment change (tblAlign → w:jc) through save and reload', async () => {
+    const { editor, parsed } = await openTable()
+    const table = editor.state.doc.firstChild!
+    // the Table Layout ribbon sets tblAlign via updateAttributes('docTable', …)
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(0, undefined, { ...table.attrs, tblAlign: 'center' }),
+    )
+
+    const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+    expect(plan.changedCount).toBe(1)
+    const reparsed = await parseDocx(await saveDocx(parsed, plan.saveBlocks))
+    expect(reparsed.blocks[0].table?.align).toBe('center')
+    expect(reparsed.blocks[0].originalXml).toContain('<w:jc w:val="center"/>')
+    expect(reparsed.blocks[0].originalXml).toContain('<w:tblStyle w:val="TableGrid"/>')
+    editor.destroy()
+  })
+
   it('round-trips clamped Ribbon and drag-resized column grids', async () => {
     const { editor, parsed } = await openTable()
     const firstCell = cellPositions(editor)[0]
@@ -227,9 +276,138 @@ describe('native editable tables', () => {
       Record<string, string>,
       [string, Record<string, string>, ...Array<[string, Record<string, string>]>],
     ]
-    expect(spec[1].style).toContain('width:min(1200px,calc(100% + var(--doc-margin-right,0px)))')
+    expect(spec[1].style).toContain(
+      'width:min(1200px,calc(var(--doc-content-w,100%) + var(--doc-margin-right,0px)))',
+    )
     const cols = spec[2].slice(2) as Array<[string, Record<string, string>]>
     expect(cols.map((col) => col[1].style)).toEqual(['width:50.00%', 'width:50.00%'])
+    editor.destroy()
+  })
+
+  it('fixed-layout tables hold the declared width instead of narrowing to the paper', async () => {
+    const { editor } = await openTable()
+    const table = editor.state.doc.firstChild!
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(0, undefined, {
+        ...table.attrs,
+        widthPx: 1200,
+        tblFixedLayout: true,
+      }),
+    )
+    const spec = editor.schema.nodes.docTable.spec.toDOM!(editor.state.doc.firstChild!) as [
+      string,
+      Record<string, string>,
+    ]
+    expect(spec[1].style).toContain('width:1200px')
+    expect(spec[1].style).toContain('max-width:none')
+    expect(spec[1].style).not.toContain('min(')
+
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(0, undefined, {
+        ...editor.state.doc.firstChild!.attrs,
+        tblAlign: 'center',
+      }),
+    )
+    const centered = editor.schema.nodes.docTable.spec.toDOM!(editor.state.doc.firstChild!) as [
+      string,
+      Record<string, string>,
+    ]
+    expect(centered[1].style).toContain('margin-left:calc((var(--doc-content-w,100%) - 1200px)/2)')
+    editor.destroy()
+  })
+
+  it('resolves a pct table width against its own section column', async () => {
+    // w:tblW type="pct" is a share of the section's TEXT COLUMN. The canvas pads by
+    // the first section's margins, so a bare 100% made every table of a document
+    // with a full-bleed cover section (w:pgMar w:left="0") span the whole paper and
+    // hang off its right edge once the section's own left inset is applied.
+    const { editor } = await openTable()
+    const table = editor.state.doc.firstChild!
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(0, undefined, {
+        ...table.attrs,
+        tblAutoFit: 'fixed',
+        widthPx: null,
+        widthPct: 100,
+      }),
+    )
+    const spec = editor.schema.nodes.docTable.spec.toDOM!(editor.state.doc.firstChild!) as [
+      string,
+      Record<string, string>,
+    ]
+    expect(spec[1].style).toContain('width:calc(var(--doc-content-w,100%) * 1)')
+    expect(spec[1].style).not.toContain('width:100%')
+    editor.destroy()
+  })
+
+  it('resolves an AutoFit-to-Window table against its own section column', async () => {
+    // the imported shape the bug came in on: <w:tblLayout w:type="autofit"/> +
+    // <w:tblW w:w="5000" w:type="pct"/> parses as AutoFit to Window
+    const pctTable =
+      '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/>' +
+      '<w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="autofit"/></w:tblPr>' +
+      '<w:tblGrid><w:gridCol w:w="4000"/><w:gridCol w:w="4000"/></w:tblGrid>' +
+      '<w:tr><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:p><w:r><w:t>B</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
+    const source = await buildDocx({ bodyXml: pctTable })
+    const parsed = await parseDocx(source)
+    expect(parsed.blocks[0].table?.autoFit).toBe('window')
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: blocksToPmDoc(parsed.blocks) as never,
+    })
+    const spec = editor.schema.nodes.docTable.spec.toDOM!(editor.state.doc.firstChild!) as [
+      string,
+      Record<string, string>,
+    ]
+    expect(spec[1].style).toContain('width:var(--doc-content-w,100%)')
+    expect(spec[1].style).not.toContain('width:100%')
+    editor.destroy()
+  })
+
+  it('takes a positive table indent out of the right-margin spill allowance', async () => {
+    const { editor } = await openTable()
+    const table = editor.state.doc.firstChild!
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(0, undefined, {
+        ...table.attrs,
+        widthPx: 1200,
+        indentTwips: 1450,
+      }),
+    )
+    const spec = editor.schema.nodes.docTable.spec.toDOM!(editor.state.doc.firstChild!) as [
+      string,
+      Record<string, string>,
+    ]
+    expect(spec[1].style).toContain(
+      'width:min(1200px,calc(var(--doc-content-w,100%) + var(--doc-margin-right,0px) - 96.7px))',
+    )
+    expect(spec[1].style).toContain('margin-left:96.7px')
+    editor.destroy()
+  })
+
+  it('a floating table (w:tblpPr) drops alignment/indent margins for the float gaps', async () => {
+    const { editor } = await openTable()
+    const table = editor.state.doc.firstChild!
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(0, undefined, {
+        ...table.attrs,
+        widthPx: 400,
+        tblFloat: 'right',
+        tblAlign: 'center',
+        indentTwips: 1450,
+      }),
+    )
+    const spec = editor.schema.nodes.docTable.spec.toDOM!(editor.state.doc.firstChild!) as [
+      string,
+      Record<string, string>,
+    ]
+    expect(spec[1].class).toContain('doc-table-float-right')
+    expect(spec[1].style ?? '').not.toContain('margin-left:')
+    expect(spec[1].style ?? '').not.toContain('margin-right:')
+    // the indent must not shrink the float width either
+    expect(spec[1].style ?? '').not.toContain('96.7px')
     editor.destroy()
   })
 
@@ -362,6 +540,42 @@ describe('native editable tables', () => {
     expect(clip.style.height).toBe('60.5px')
     expect(rows[1].querySelector('.cell-clip')).toBeNull()
     editor.destroy()
+  })
+
+  it('advances declared-height rows by the horizontal gridline width like Word', async () => {
+    const bordered =
+      '<w:tbl><w:tblPr><w:tblBorders>' +
+      '<w:top w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/>' +
+      '<w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/>' +
+      '</w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+      '<w:tr><w:trPr><w:trHeight w:val="814"/></w:trPr>' +
+      '<w:tc><w:p><w:r><w:t>X</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
+    const parsed = await parseDocx(await buildDocx({ bodyXml: bordered }))
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: blocksToPmDoc(parsed.blocks) as never,
+    })
+    const table = editor.view.dom.querySelector('table.doc-table') as HTMLElement
+    // sz=4 eighths = 0.5pt gridline = 0.67px at 96dpi
+    expect(table.style.getPropertyValue('--doc-row-eat')).toBe('0.67px')
+    const tr = table.querySelector('tr') as HTMLElement
+    expect(tr.getAttribute('style')).toContain('calc(54.3px + var(--doc-row-eat,0px))')
+    editor.destroy()
+
+    const borderless =
+      '<w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+      '<w:tr><w:trPr><w:trHeight w:val="814"/></w:trPr>' +
+      '<w:tc><w:p><w:r><w:t>X</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
+    const parsed2 = await parseDocx(await buildDocx({ bodyXml: borderless }))
+    const editor2 = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: blocksToPmDoc(parsed2.blocks) as never,
+    })
+    const table2 = editor2.view.dom.querySelector('table.doc-table') as HTMLElement
+    expect(table2.style.getPropertyValue('--doc-row-eat')).toBe('')
+    editor2.destroy()
   })
 
   it('still wraps an exact row whose padding consumes the whole height (clip height 0)', async () => {

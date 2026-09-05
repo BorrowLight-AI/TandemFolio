@@ -2289,6 +2289,19 @@ describe('DOCX operation registry', () => {
                 maxLength: 6,
                 pattern: '^[0-9A-F]{6}$',
               },
+              textBold: { type: ['boolean', 'null'] },
+              textItalic: { type: ['boolean', 'null'] },
+              textUnderline: { type: ['boolean', 'null'] },
+              textColor: {
+                type: ['string', 'null'],
+                minLength: 6,
+                maxLength: 6,
+                pattern: '^[0-9A-F]{6}$',
+              },
+              textAlign: {
+                type: ['string', 'null'],
+                enum: ['left', 'center', 'right', 'justify', null],
+              },
             },
             required: [],
             additionalProperties: false,
@@ -2296,8 +2309,11 @@ describe('DOCX operation registry', () => {
           fields: {
             type: 'array',
             minItems: 1,
-            maxItems: 2,
-            items: { type: 'string', enum: ['fillHex', 'borderHex'] },
+            maxItems: 7,
+            items: {
+              type: 'string',
+              enum: ['fillHex', 'borderHex', 'textBold', 'textItalic', 'textUnderline', 'textColor', 'textAlign'],
+            },
           },
         },
         required: ['objectBlockIndex', 'style', 'fields'],
@@ -2398,6 +2414,44 @@ describe('DOCX operation registry', () => {
       ok: false,
       error: 'invalid_arguments',
       message: 'Stroke-only DOCX lines do not support fillHex.',
+    })
+  })
+
+  it('sets whole-shape text formatting through the typed route and restores it with Undo', async () => {
+    const editor = createEditor('Anchor')
+    await executeDocxOperation(
+      editor,
+      {
+        operation: 'docx.shape.insert',
+        arguments: {
+          afterBlockIndex: 0,
+          preset: 'rect',
+          widthEmu: 1_800_000,
+          heightEmu: 1_080_000,
+        },
+      },
+      services,
+    )
+    await expect(
+      executeDocxOperation(
+        editor,
+        {
+          operation: 'docx.object.set_style',
+          arguments: {
+            objectBlockIndex: 1,
+            style: { textBold: true, textColor: 'FF0000', textAlign: 'right' },
+            fields: ['textBold', 'textColor', 'textAlign'],
+          },
+        },
+        services,
+      ),
+    ).resolves.toMatchObject({ handled: true, ok: true, output: { changed: true } })
+    const box = editor.state.doc.child(1).attrs.textboxes[0]
+    expect(box.paras[0]).toMatchObject({ align: 'right', runs: [{ bold: true, color: 'FF0000' }] })
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.state.doc.child(1).attrs.textboxes[0].paras[0]).toMatchObject({
+      align: 'center',
+      runs: [{ text: '' }],
     })
   })
 
@@ -3495,6 +3549,72 @@ describe('DOCX operation registry', () => {
       imageOffsetXEmu: null,
       imageOffsetYEmu: null,
     })
+  })
+
+  it('declares and executes a bounded DOCX image stacking-order command with Undo', async () => {
+    const descriptor = docxOperationCatalog.operations.find(
+      (operation) => operation.id === 'docx.image.set_z_order',
+    )
+    expect(descriptor).toMatchObject({
+      family: 'image',
+      visibility: 'agent',
+      inputSchema: {
+        properties: {
+          imageBlockIndex: { type: 'integer', minimum: 0 },
+          zOrder: { type: 'integer', minimum: -2_147_483_648, maximum: 2_147_483_647 },
+          floatInline: { type: 'boolean' },
+        },
+        required: ['imageBlockIndex', 'zOrder', 'floatInline'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        required: ['summary', 'imageBlockIndex', 'zOrder', 'wrap', 'changed'],
+        additionalProperties: false,
+      },
+      mutates: true,
+      undoable: true,
+      atomic: true,
+    })
+
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'docProtected',
+            attrs: {
+              docxIndex: 4,
+              blockType: 'image',
+              imageDataUrl: 'data:image/gif;base64,R0lGODdh',
+              imageWrap: null,
+              imageZOrder: null,
+            },
+          },
+        ],
+      },
+    })
+    editors.push(editor)
+
+    await expect(
+      executeDocxOperation(
+        editor,
+        {
+          operation: 'docx.image.set_z_order',
+          arguments: { imageBlockIndex: 0, zOrder: 3, floatInline: true },
+        },
+        services,
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      operationId: 'docx.image.set_z_order',
+      ok: true,
+      output: { imageBlockIndex: 0, zOrder: 3, wrap: 'front', changed: true },
+    })
+    expect(editor.state.doc.child(0).attrs).toMatchObject({ imageWrap: 'front', imageZOrder: 3 })
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.state.doc.child(0).attrs).toMatchObject({ imageWrap: null, imageZOrder: null })
   })
 
   it('declares a bounded exact-index DOCX margin-position contract', () => {

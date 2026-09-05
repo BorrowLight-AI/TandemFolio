@@ -7,7 +7,14 @@ import { isStraightLineKind } from './shape-svg'
 export type DocxResizableObjectKind = 'shape' | 'line' | 'textbox' | 'chart'
 export type DocxPositionableObjectKind = Exclude<DocxResizableObjectKind, 'chart'> | 'diagram'
 export type DocxStyleableObjectKind = Exclude<DocxPositionableObjectKind, 'chart'>
-export type DocxObjectStyleField = 'fillHex' | 'borderHex'
+export type DocxObjectStyleField =
+  | 'fillHex'
+  | 'borderHex'
+  | 'textBold'
+  | 'textItalic'
+  | 'textUnderline'
+  | 'textColor'
+  | 'textAlign'
 export type DocxRemovableObjectKind = DocxStyleableObjectKind | 'chart' | 'equation'
 
 export interface SetDocxObjectSizeInput {
@@ -52,6 +59,11 @@ export interface SetDocxObjectStyleInput {
   readonly style: Readonly<{
     fillHex?: string | null
     borderHex?: string | null
+    textBold?: boolean | null
+    textItalic?: boolean | null
+    textUnderline?: boolean | null
+    textColor?: string | null
+    textAlign?: 'left' | 'center' | 'right' | 'justify' | null
   }>
   readonly fields: readonly DocxObjectStyleField[]
 }
@@ -387,12 +399,12 @@ export function setDocxObjectStyleAtPosition(
   if (!Array.isArray(boxes) || boxes.length === 0) {
     return invalidStyle('The DOCX object target has no styleable shape or textbox content.')
   }
-  if (!Array.isArray(input.fields) || input.fields.length < 1 || input.fields.length > 2) {
-    return invalidStyle('DOCX object style fields must contain one or two masked fields.')
+  if (!Array.isArray(input.fields) || input.fields.length < 1 || input.fields.length > 7) {
+    return invalidStyle('DOCX object style fields must contain one through seven masked fields.')
   }
   const fields = new Set<DocxObjectStyleField>()
   for (const field of input.fields) {
-    if (field !== 'fillHex' && field !== 'borderHex') {
+    if (!['fillHex', 'borderHex', 'textBold', 'textItalic', 'textUnderline', 'textColor', 'textAlign'].includes(field)) {
       return invalidStyle(`Unsupported DOCX object style field: ${String(field)}.`)
     }
     if (fields.has(field)) {
@@ -409,8 +421,16 @@ export function setDocxObjectStyleAtPosition(
   }
   for (const field of fields) {
     const value = input.style[field]
-    if (value !== null && (typeof value !== 'string' || !/^[0-9A-F]{6}$/.test(value))) {
-      return invalidStyle(`DOCX object ${field} must be null or a six-digit uppercase hex color.`)
+    if (field === 'fillHex' || field === 'borderHex' || field === 'textColor') {
+      if (value !== null && (typeof value !== 'string' || !/^[0-9A-F]{6}$/.test(value))) {
+        return invalidStyle(`DOCX object ${field} must be null or a six-digit uppercase hex color.`)
+      }
+    } else if (field === 'textAlign') {
+      if (value !== null && !['left', 'center', 'right', 'justify'].includes(String(value))) {
+        return invalidStyle('DOCX object textAlign must be null, left, center, right, or justify.')
+      }
+    } else if (value !== null && typeof value !== 'boolean') {
+      return invalidStyle(`DOCX object ${field} must be null or boolean.`)
     }
   }
 
@@ -437,6 +457,42 @@ export function setDocxObjectStyleAtPosition(
     changed ||= border === null ? box.borderColor !== undefined : box.borderColor !== border
     if (border === null) delete next.borderColor
     else next.borderColor = border
+  }
+  const textFields = ['textBold', 'textItalic', 'textUnderline', 'textColor', 'textAlign'] as const
+  if (textFields.some((field) => fields.has(field))) {
+    if (box.readOnly) return invalidStyle('The selected DOCX drawing has no editable text.')
+    const flagByField = {
+      textBold: 'bold',
+      textItalic: 'italic',
+      textUnderline: 'underline',
+    } as const
+    next.paras = box.paras.map((para) => {
+      let nextPara = para
+      if (fields.has('textAlign')) {
+        const align = input.style.textAlign ?? undefined
+        if (para.align !== align) changed = true
+        nextPara = { ...nextPara, align }
+      }
+      const runs = para.runs.map((run) => {
+        let nextRun = run
+        for (const field of ['textBold', 'textItalic', 'textUnderline'] as const) {
+          if (!fields.has(field)) continue
+          const key = flagByField[field]
+          const value = input.style[field] === true ? true : undefined
+          if (run[key] !== value) changed = true
+          nextRun = { ...nextRun, [key]: value }
+          if (value === undefined) delete nextRun[key]
+        }
+        if (fields.has('textColor')) {
+          const color = input.style.textColor ?? undefined
+          if (run.color !== color) changed = true
+          nextRun = { ...nextRun, color }
+          if (color === undefined) delete nextRun.color
+        }
+        return nextRun
+      })
+      return runs === para.runs ? nextPara : { ...nextPara, runs }
+    })
   }
   if (changed) {
     dispatch(

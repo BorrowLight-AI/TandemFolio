@@ -1,9 +1,10 @@
 # DOCX community renderer capability inventory
 
-- Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
+- Extraction baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
+- Selectively reviewed DOCX source: `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`
 - Renderer authority: the mounted TipTap/ProseMirror community editor in `apps/docs/src/renderer`
-- Current registry: 102 operations (98 Agent-visible, four internal staged operations)
-- Capability status: retained state-changing command parity complete; R6-01 shared release gate passed; `ready === true`
+- Current registry: 103 operations (99 Agent-visible, four internal staged operations)
+- Capability status: retained state-changing command parity complete; functional tests pass; prior R6 evidence is historical and the source-current release gate remains fail-closed.
 
 This inventory is the R2-132 command-parity baseline. It treats visible buttons that resolve to the
 same native transaction as one semantic family, and separates document mutations from transient UI,
@@ -34,7 +35,7 @@ native Undo, recovery, and save/reopen behavior must match the retained UI route
 | Comments                   | `docx.comment.add`, `docx.comment.reply`, `docx.comment.set_resolved`, `docx.comment.delete`                                                                                                                                                                                                                                                                | The complete add/reply/resolve/delete lifecycle shares Undo-owned snapshots and exact anchor transactions; family closed.                                                                |
 | Lists                      | `docx.list.apply`, `docx.list.remove`, `docx.list.set_level`, `docx.list.apply_preset`, `docx.list.restart`, `docx.list.continue`                                                                                                                                                                                                                           | Conversion, absolute level, bounded definitions, stable restart, and explicit-source continuation share the retained numbering state and transaction seam.                               |
 | Tables                     | `docx.table.insert`, `docx.table.delete`, `docx.table.insert_rows`, `docx.table.delete_rows`, `docx.table.insert_columns`, `docx.table.delete_columns`, `docx.table.merge_cells`, `docx.table.split_cell`, `docx.table.set_cell_format`, `docx.table.set_cell_borders`, `docx.table.set_style`, `docx.table.set_row_height`, `docx.table.set_column_widths` | Lifecycle, structural edits, cell format/style, and complete row/column sizing share native table state and Undo; family closed.                                                         |
-| Images                     | `docx.image.insert`, internal `docx.image.insert_staged`, `docx.image.remove`, `docx.image.replace`, internal `docx.image.replace_staged`, `docx.image.set_crop`, `docx.image.set_wrap`, `docx.image.set_margin_position`, `docx.image.set_offset_position`, `docx.image.set_transform`, `docx.image.update`                                                | Complete lifecycle, bytes/cutout, crop/reset, wrap/inline, position, transform, and dimensions/alignment share native image nodes, Undo, and save projection; family closed.             |
+| Images                     | `docx.image.insert`, internal `docx.image.insert_staged`, `docx.image.remove`, `docx.image.replace`, internal `docx.image.replace_staged`, `docx.image.set_crop`, `docx.image.set_wrap`, `docx.image.set_margin_position`, `docx.image.set_offset_position`, `docx.image.set_transform`, `docx.image.set_z_order`, `docx.image.update`                         | Complete lifecycle, bytes/cutout, crop/reset, wrap/inline, position, transform, stacking rank, and dimensions/alignment share native image nodes, Undo, and save projection; family closed. |
 | Shapes/lines               | `docx.shape.insert`, `docx.line.insert`, `docx.textbox.set_content`                                                                                                                                                                                                                                                                                         | All 104 filled presets and five stroke-only kinds share insertion; textbox-backed shapes use the bounded rich-content route plus native Undo/save projection.                            |
 | Textboxes                  | `docx.textbox.insert`, `docx.textbox.set_content`                                                                                                                                                                                                                                                                                                           | Stable insertion and exact nested rich-content replacement share the mounted textbox model, native Undo, and save projection.                                                            |
 | Charts                     | `docx.chart.insert`, `docx.chart.update`                                                                                                                                                                                                                                                                                                                    | Bounded insertion and same-shape content updates share the retained chart UI, native Undo, and original/generated save projection; aggregate object size/remove close the lifecycle.     |
@@ -54,9 +55,10 @@ native Undo, recovery, and save/reopen behavior must match the retained UI route
 
 ## Retained state-changing families still to migrate
 
-None. R2-220 closes the inventory established by R2-132. DOCX remained `ready === false` until
-R6-01 passed the shared visual, performance, source, round-trip, packaging, and release
-documentation gates; approved evidence now generates `ready === true`.
+None. R2-220 closed the inventory established by R2-132, and the 2026-09-05 upstream port adds the
+typed image stacking route required by the retained Arrange gesture. The prior R6-01 approval is
+historical after these source changes; the source-current gate now generates `ready === false`
+until a new five-format capture is approved.
 
 ## Non-document or external gestures
 

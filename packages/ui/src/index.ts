@@ -1,5 +1,12 @@
 export { installScreenTips } from './screentip'
 export {
+  installPopoverDismiss,
+  useDismissablePopover,
+  type PopoverDismissOptions,
+} from './popover-dismiss'
+export { Dropdown, type DropdownOption } from './dropdown'
+export { isSymbolFontFamily } from './symbol-fonts'
+export {
   EditorFileIcon,
   EditorFullscreenIcon,
   EditorSaveIcon,

@@ -16,7 +16,9 @@ freely redistributable with the app. Licenses: Carlito and Liberation are
 "Carlito GO" (`Carlito-*.ttf`) is a derivative of Carlito 1.103: a build-time patch
 (`tools/patch-carlito-vi.py`) rebuilds Vietnamese precomposed glyphs whose above mark
 (circumflex/breve) was dropped (Ậ/Ệ/Ộ in Regular/Bold); advance widths are unchanged.
-Renamed per OFL 1.1 §2 — "Carlito" is a Reserved Font Name.
+Renamed per OFL 1.1 §2 — "Carlito" is a Reserved Font Name. The files live in
+`packages/ui/src/fonts/` (shared with sheets and slides, which alias Calibri/Aptos
+to the same faces) and are referenced here as `@genoffice/ui/fonts/Carlito-*.ttf`.
 
 Purpose: when a Word font declared by the document is missing on this machine, the
 browser's silent fallback (Helvetica etc.) changes glyph widths, so line-break points
@@ -49,10 +51,11 @@ chain order; advances are 1.0em everywhere, so line breaking is unchanged.
 
 ## Korean fallback
 
-| Font                              | Role                                             |
-| --------------------------------- | ------------------------------------------------ |
-| GenOffice Serif KR (subset woff2) | Batang-metric stand-in for Korean serif families |
-| GenOffice Sans KR (subset woff2)  | fallback for Korean sans families (Malgun etc.)  |
+| Font                                 | Role                                                        |
+| ------------------------------------ | ----------------------------------------------------------- |
+| GenOffice Serif KR (subset woff2)    | Batang-metric stand-in for Korean serif families            |
+| GenOffice Sans KR (subset woff2)     | fallback for Korean sans families (Malgun etc.)             |
+| GenOffice Che Latin KR (ASCII woff2) | half-width Latin for BatangChe/GulimChe/DotumChe/GungsuhChe |
 
 Source: Noto Serif/Sans CJK KR Regular from [notofonts/noto-cjk](https://github.com/notofonts/noto-cjk)
 (SIL OFL 1.1), subset with fonttools to the 2,350 KS X 1001 syllables + jamo
@@ -65,9 +68,75 @@ would shift line breaks ~8% vs Word), serif digits → 0.596em and space →
 measured Malgun Gothic advances (space 0.352em, digits 0.551em; Noto's 0.224em
 space alone drifted Korean sans line breaks ~3%/line —
 `tools/normalize-kr-sans-hmtx.py`, asserted by `tests/kr-font-metrics.test.ts`).
-Renamed because OFL reserves the "Noto" name
-for unmodified builds. Conjoining jamo keep native advances (shaping). Word
+The printable Latin outlines are also horizontally transformed to the measured
+ink widths and side bearings of Batang/Malgun
+(`tools/normalize-kr-latin-metrics.py`,
+`tools/scale-kr-sans-latin-ink.py`).
+
+`GenOfficeCheLatinKR.woff2` is an ASCII-only derivative of GenOffice Sans KR.
+`tools/build-kr-che-latin-font.py` gives its Noto-derived outlines fixed 0.5em
+advances and transforms them to measured DotumChe ink boxes. Microsoft Office
+fonts are build-time measurement references only; no Microsoft outlines are
+included. All three derivatives are renamed because the upstream OFL notices
+reserve the name "Source"; "Noto" is the distribution family name, not the
+Reserved Font Name. Conjoining jamo keep native advances (shaping). Word
 counterpart line factors live in `lineHeightFactor()` of `line-metrics.ts`.
+The Sans/Che source copyright (Adobe 2014–2021 and Google LLC), Serif source
+copyright (Adobe 2017–2024), and full OFL 1.1 text are in `LICENSE-OFL.txt`.
+
+### GenOffice Gothic KR
+
+| Font                               | Role                                            |
+| ---------------------------------- | ----------------------------------------------- |
+| GenOffice Gothic KR (subset woff2) | real-metric face for NanumGothic-declaring docs |
+
+Source: NanumGothic Regular from [google/fonts](https://github.com/google/fonts/tree/main/ofl/nanumgothic)
+(SIL OFL 1.1). Word for Mac renders NanumGothic documents with the OS
+_downloadable_ Nanum asset (FontServices subset Chromium cannot see): hangul
+0.94em, space 0.28em, digits 0.606em (M3 probe 2026-08-14), while the
+Batang-normalized subset above ships 1.0/0.333/0.596 — +6.4% per hangul line.
+Subset to the same ranges as the KR fallbacks (KS X 1001 syllables + jamo +
+Basic Latin/punctuation/fullwidth forms), advances **unmodified**
+(`tools/build-gothic-kr-font.py`) and checked in as
+`GenOfficeGothicKR-Regular-subset.woff2`. Renamed per OFL (the upstream
+Reserved Font Names include "Nanum" and "NanumGothic"; subsetting is a
+modification). The exact NHN copyright/Reserved Font Name notice and the full
+OFL 1.1 text are in `LICENSE-OFL.txt`.
+
+## Poppins (M365 cloud font)
+
+| Font                             | Role                                 |
+| -------------------------------- | ------------------------------------ |
+| GenOffice Poppins (subset woff2) | real face for Poppins-declaring docs |
+
+Source: Poppins Regular/Bold from [google/fonts](https://github.com/google/fonts/tree/main/ofl/poppins)
+(SIL OFL 1.1). Poppins is an M365 cloud font: Word downloads the real face and
+lays out with its metrics (line box hhea = typo = 1.500em; Word probe
+2026-09-01 measured factor exactly 1.500 at 10/12/16/28pt, regular and bold,
+with the PDF embedding Poppins-Regular/Bold), while the Helvetica-class
+fallback runs ~12.6% narrower per line and 1.172-spaced — a 13-page document
+paginated as 11. Subset to Latin + Latin Extended + punctuation/currency,
+advances and vertical metrics **unmodified** (`tools/build-poppins-font.py`),
+checked in as `GenOfficePoppins-{Regular,Bold}-subset.woff2`. Renamed (no
+Reserved Font Name upstream) so a locally installed Poppins wins by chain
+order. Italic synthesizes oblique from these faces.
+
+## Tamil fallback
+
+| Font                    | Role                                     |
+| ----------------------- | ---------------------------------------- |
+| GenOffice Tamil (woff2) | Latha-metric stand-in for Tamil families |
+
+Source: Noto Sans Tamil Regular from [notofonts](https://github.com/notofonts/notofonts.github.io)
+(SIL OFL 1.1). Word substitutes missing Tamil families with Latha; Chromium's
+macOS fallback (Tamil Sangam MN) shapes ~27% narrower (M3 probe: sentence R
+0.728, space 0.39×), far past what size-adjust can fix without inflating glyph
+ink (137%). Advances are rewritten to Latha's: the 109 cmap-shared codepoints
+exactly, remaining glyphs (GSUB conjunct/matra outputs) by the median
+Tamil-letter ratio (`tools/build-tamil-font.py`; shaped sentence R vs Latha
+0.994, every probe sentence within ±2.3%). The face ships no Latin letters
+(upstream Noto Sans Tamil has none); Latin falls through the chain. Renamed
+per OFL ("Noto" is a Reserved Font Name; advances are modified).
 
 ## Arabic fallback
 
@@ -86,10 +155,17 @@ letters (only digits/punctuation); Latin text in a cs-font run falls through to
 the rest of the chain. Word substitutes a missing Arabic font with a naskh-style
 serif, so unknown Arabic families default to the Naskh chain.
 
-## PDFium sfnt variants
+## PUA blanker
 
-`NotoSansCJKsc-Regular-subset.otf`, `GenOfficeSansKR-Regular-subset.otf`, and
-`NotoNaskhArabic-Regular-subset.ttf` are mechanical `fonttools.ttLib.woff2` decompressions of the
-matching allowlisted WOFF2 files above. They preserve glyphs, metrics, names, and OFL licensing.
-The PDF browser adapter loads these sfnt variants on demand because PDFium accepts decoded font
-program bytes, while the retained DOCX renderer continues to use the smaller WOFF2 resources.
+| Font                              | Role                                             |
+| --------------------------------- | ------------------------------------------------ |
+| GenOffice PUA Blank (woff2, 312B) | blank 1em glyph for all of U+E000-F8FF (BMP PUA) |
+
+Generated from scratch by `tools/build-pua-blank-font.py` (no upstream font;
+two glyphs, both empty). Chromium never system-falls-back for Private Use
+codepoints: an unmapped PUA character renders the chain's primary font's
+`.notdef`. Chains headed by a real face (Calibri, Carlito GO) therefore draw
+tofu boxes for AI-residue PUA tokens, while Word — and chains headed by the
+bundled CJK subsets, whose subsetted `.notdef` is blank — show nothing. This
+face sits in the Aptos chain and behind the range-limited `Noto Sans/Serif
+CJK GO` aliases so PUA stays invisible there too.

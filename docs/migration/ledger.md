@@ -1,5 +1,33 @@
 # Migration ledger
 
+## 2026-09-05 selective upstream synchronization
+
+The extraction baseline remains `dc4d7e5927864498913b7ba42d0da06cc7cf628e`.
+Reviewed candidate: `360ce0625eaf748368e5535984b073f6fb2487b5`.
+See [commit dispositions, integrated DOCX capabilities, and cross-format backlog](upstream-review-2026-09-05.md).
+This synchronization now retains all applicable DOCX-native editing, layout, rendering, and
+round-trip work from the reviewed candidate, plus the earlier cross-format fixes. AI, enterprise,
+account, telemetry, Electron/IPC, and desktop-only encryption/printing remain excluded:
+
+| Source commit | Modified/admitted community paths |
+| --- | --- |
+| `945c370` | Modified `packages/docx-engine/src/parse.ts`; added `packages/docx-engine/tests/entity-decoding.test.ts` |
+| `3548a80` | Modified `apps/slides/src/renderer/App.tsx`, `SlideCanvas.tsx`, `TextEditOverlay.tsx`; added `apps/slides/src/renderer/table-hit.ts` and `apps/slides/tests/table-hit.test.ts` (extended for flips/bleed) |
+| `4846ace` | Modified `apps/slides/src/renderer/file-actions.ts`; added/adapted `apps/slides/tests/save-serialization.test.ts` for browser-host globals, Save As and rejected writes |
+| `bc1dceb` | Modified `apps/sheets/src/renderer/univer-sync.ts`; added `apps/sheets/tests/read-sheet-range-batching.test.ts` |
+| DOCX snapshot lineage through `9f971ed` | Admitted the candidate DOCX engine, non-AI renderer modules, fonts, native tests, dropdown/popover primitives, and browser-authority adaptations. This covers parse/save fidelity, pagination/sections/columns, tables, drawings, notes, review UI, shortcuts, and formatting commands. |
+| `93b8938` | Admitted and connected per-section widths/margins and percentage-table layout, including gap header/footer alignment. |
+
+Apache-2.0 attribution remains intact. Newly adapted files carry prominent modification
+notices. Mounted Session authority and Save target binding are unchanged. The new
+`docx.image.set_z_order` route raises the generated Registry to 103 DOCX / 338 total operations;
+the user gesture and Agent command share one native transaction and Undo path. The previous approved release capture becomes
+historical after these source changes; the source-current gate is not relaxed.
+Generated plugin HTML resources were rebuilt from the workspace; the gate regenerated
+`apps/mcp-server/src/generated/release-readiness.json` as not ready. These generated
+outputs introduce no additional upstream source. Functional results are in the linked review.
+
+
 The source baseline is the GenOffice community repository at commit `dc4d7e5927864498913b7ba42d0da06cc7cf628e`, licensed under Apache-2.0. Enterprise `ee/` source is outside the migration boundary and was never copied.
 
 See [`provenance.md`](provenance.md) for the file-level extraction/modification record and [`roadmap.md`](roadmap.md) for future format gates.
@@ -31,7 +59,7 @@ canonical `*.document.load_staged` operation; the remaining alias set is empty.
 
 | Area                                                                                       | Upstream disposition           | TandemFolio status                                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/docs/src/renderer`                                                                   | Selectively retained           | Retained command parity and R6-01 release gate complete             | Browser file operations replace the preload boundary; the common Host Bridge routes acknowledged Agent mutations into the mounted editor and supplies display-mode and lazy bundled-font access. One hundred two DOCX descriptors cover the complete R2-132 retained command inventory, including WordArt plus the previously closed text, references, revision, design, structure, drawing, and persistence families. Registry and retained UI share native edit kernels, deterministic identities/content, Undo or renderer-owned journals, recovery, and save/reopen projection as appropriate. The shallow `batch_update`, private random WordArt insertion, and duplicate DOCX MCP transport are deleted. Approved R6-01 evidence generates `ready: true`. Prohibited product areas remain excluded.                                                                                                                                                                                                                                                                                                                                      |
+| `apps/docs/src/renderer`                                                                   | Selectively retained           | Retained command parity complete; release recapture pending         | Browser file operations replace the preload boundary; the common Host Bridge routes acknowledged Agent mutations into the mounted editor and supplies display-mode and lazy bundled-font access. One hundred three DOCX descriptors cover the retained command inventory, including image stacking and the previously closed text, references, revision, design, structure, drawing, and persistence families. Registry and retained UI share native edit kernels, deterministic identities/content, Undo or renderer-owned journals, recovery, and save/reopen projection as appropriate. The 2026-09-05 candidate's applicable non-AI native renderer work is integrated. Prior R6 evidence is historical and the source-current gate generates `ready: false`. Prohibited product areas remain excluded. |
 | `apps/sheets/src/renderer`                                                                 | Selectively retained/adapted   | Mutation parity and R6-05 bootstrap gate complete                   | All 76 permitted pinned renderer files are present (63 byte-identical, 13 browser-host/product-boundary adapted); 35 AI-only paths are excluded. `main.tsx` mounts the pinned `App.tsx` directly. The 114-operation XLSX registry (112 Agent-visible, two internal) covers every audited retained state-changing Ribbon, dialog, native grid, visual, Pivot, table, row/column, and worksheet command through retained Univer or renderer-owned journal routes. R6-05 retains the active-workbook/sheet/canvas first-poll boundary, splits bootstrap into three strict subphases, and packages optional modules in the same self-contained resource behind an in-memory lazy module vault. Seven-sample p95 gates remain 1,400 ms total and 500 ms bootstrap; initial executable JavaScript is capped at 11 MB without removing presets, languages, history, commands, or save/reopen behavior. See [`xlsx-capability-inventory.md`](xlsx-capability-inventory.md).                                                                                                                                                                            |
 | `apps/sheets/src/host/browser-workbook.ts`                                                 | TandemFolio-owned host adapter | Browser OOXML package boundary; not a renderer                      | Supplies browser-only package open/save to the mounted community App across cells/formulas, layout, validation/CF, hyperlinks, tables, protection, sparklines/outlines, drawings/media, notes, Pivot parts, page setup, tab color, and worksheet duplication/visibility. Unsupported or lossy OOXML states fail explicitly rather than silently diverging.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `apps/slides/src/renderer`, `src/main/edit-text.ts`                                        | Selectively retained/adapted   | Retained command parity and R6-01 release gate complete             | All 80 permitted renderer paths are present (61 byte-identical, 19 browser-host/product-boundary adapted); 24 AI modules/assets are excluded. The original App/Ribbon/Konva/text editor and Presenter/Audience views run through complete browser host adapters. The 74-operation PPTX registry (73 Agent-visible plus staged load) covers every retained mutation family through one `BrowserPresentation`, native history, recovery, renderer refresh, and package save seam. A machine-checked producer baseline has no missing entry; export/print/show are classified host effects. Approved R6-01 evidence generates `ready: true`. See [`pptx-capability-inventory.md`](pptx-capability-inventory.md).                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -175,12 +203,13 @@ resource/performance budgets.
 
 - Typecheck: host bridge, five renderers, and MCP server pass the root typecheck graph.
 - Operation registry foundation: fixture and real multi-format product manifests pass deterministic
-  `--check`. The generated Manifest contains 337 operations: 102 DOCX, 22 Markdown, 114 XLSX, 74
+  `--check`. The generated Manifest contains 338 operations: 103 DOCX, 22 Markdown, 114 XLSX, 74
   PPTX, and 25 PDF. All five retained-command producer mappings have no missing entry.
-- Tests: the root run executes 223 test files as 222 passing plus one
-  environment-conditional skip, for 3,382 passing assertions and one skipped assertion. Workspace
-  assertions are Operation Contract 24, Host Bridge 29, DOCX 1,053, Markdown 127, XLSX 1,351 plus
-  one environment skip, PPTX 169, PDF 283, and MCP server 346. These include wakeable-poll/startup-
+- Tests: the root workspaces execute 289 passing test files plus one environment-conditional skip,
+  for 4,085 passing assertions and one skipped assertion. Workspace assertions are Operation
+  Contract 24, Host Bridge 44, DOCX 1,680, Markdown 127, XLSX 1,357 plus one environment skip,
+  PPTX 184, PDF 284, and MCP server 385. The separate DOCX engine suite adds 996 passing and one
+  skipped assertion. These include wakeable-poll/startup-
   trace lifecycle, five-format isolated/exact Session recovery, exclusive view-lease enforcement,
   immutable iframe binding, schema-v4 release-evidence failure modes, installed-Skill/Manifest drift,
   and the empty-alias Product Manifest guard.
@@ -210,9 +239,9 @@ resource/performance budgets.
 - XLSX verification: the format test suite, community-renderer browser scenarios, Codex
   width/fullscreen matrix, and R6-05 aggregate/subphase startup tracer run against the same mounted App. The final
   command audit requires every exact replacement ID to exist in the XLSX catalog.
-- Resource guardrails: generated resources measure DOCX 3,195,997 raw / 886,702 gzip, Markdown
-  1,757,105 / 532,321, XLSX 6,487,913 / 4,794,081, PPTX 3,373,482 / 988,047, and PDF 6,619,114 /
-  3,366,252 bytes. Raw ceilings are 3,500,000 / 2,500,000 / 21,000,000 / 4,000,000 / 7,000,000
+- Resource guardrails: generated resources measure DOCX 3,508,575 raw / 987,885 gzip, Markdown
+  1,873,880 / 572,423, XLSX 12,818,734 / 4,804,389, PPTX 3,387,763 / 992,890, and PDF 6,631,726 /
+  3,371,418 bytes. Raw ceilings are 3,650,000 / 2,500,000 / 21,000,000 / 4,000,000 / 7,000,000
   respectively. XLSX additionally caps the inflated initial executable entry at 11,000,000 bytes;
   optional modules remain compressed in the same HTML resource. PDF includes gzip-compressed PDFium WASM for retained browser content-stream
   editing; its edit fonts remain lazy external assets. Budgets are regression signals, never

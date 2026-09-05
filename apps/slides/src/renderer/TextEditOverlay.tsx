@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: selectively port community upstream fixes (2026-09-05).
 /**
  * 3.2 DOM overlay text editing (run-level rich text) — a contentEditable stacked over the text
  * box takes over input (caret/selection/IME for free). Bold/italic/underline are triggered by the
@@ -532,6 +533,8 @@ export function TextEditOverlay({
         top: box.y,
         width: box.w,
         height: box.h,
+        transform: `rotate(${box.rotationDeg ?? 0}deg) scale(${box.flipH ? -1 : 1}, ${box.flipV ? -1 : 1})`,
+        transformOrigin: 'center center',
         zIndex: 20,
         display: 'flex',
         flexDirection: 'column',

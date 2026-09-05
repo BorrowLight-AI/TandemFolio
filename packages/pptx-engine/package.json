@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./node-file": "./src/node-file.ts",
     "./table-grid": "./src/table-grid.ts",
-    "./background-promote": "./src/background-promote.ts"
+    "./background-promote": "./src/background-promote.ts",
+    "./custgeom": "./src/custgeom.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

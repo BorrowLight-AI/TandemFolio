@@ -99,6 +99,7 @@ import {
   IconCopy,
   IconCut,
   IconFormatPainter,
+  IconFontColorA,
   IconGrowFont,
   IconHighlight,
   IconIndentDec,
@@ -128,6 +129,10 @@ import {
   IconTableDelete,
 } from './icons'
 interface RibbonProps {
+  actionsRef?: React.MutableRefObject<{
+    stepFontSize?: (direction: 1 | -1) => void
+    nudgeFontSize?: (direction: 1 | -1) => void
+  }>
   /** Quick-access area on the tab row's left (save/undo-redo/autosave), matching the WPS/Office QAT */
   quickActions?: React.ReactNode
   /** Right side of the tab row (file name, etc.) */
@@ -613,6 +618,7 @@ function findNumIdOfKind(blocks: Block[], kind: 'bullet' | 'ordered'): string | 
 }
 
 function RibbonInner({
+  actionsRef,
   quickActions,
   trailingActions,
   editor,
@@ -791,7 +797,7 @@ function RibbonInner({
   }, [inImage])
 
   // ---- Shape Format (contextual tab when a floating box is selected, same mechanism) ----
-  const inShape = !sub && fs.textboxSelected
+  const inShape = fs.textboxSelected
   const shapeIsLine = !!fs.shapePrst?.startsWith('line')
   const wasInShape = useRef(false)
 
@@ -1025,20 +1031,29 @@ function RibbonInner({
             ? 'char:__preset_emphasis'
             : 'p'
 
-  // Style gallery overflow: the inline row clips (the ribbon row cannot grow),
-  // so a "more styles" expander must appear whenever cards are cut off.
+  // Cap after the last fully visible card and expose the remainder in a menu.
   const styleGalleryRef = useRef<HTMLDivElement | null>(null)
   const [styleGalleryOverflow, setStyleGalleryOverflow] = useState(false)
   useLayoutEffect(() => {
     const el = styleGalleryRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const check = () => setStyleGalleryOverflow(el.scrollWidth - el.clientWidth > 1)
+    const check = () => {
+      el.style.maxWidth = ''
+      const cards = Array.from(el.children) as HTMLElement[]
+      const firstRow = cards.filter((card) => card.offsetTop === cards[0]?.offsetTop)
+      const overflow = firstRow.length < cards.length
+      if (overflow) {
+        const last = firstRow[firstRow.length - 1]
+        el.style.maxWidth = `${last.offsetLeft - firstRow[0].offsetLeft + last.offsetWidth}px`
+      }
+      setStyleGalleryOverflow(overflow)
+    }
     check()
     const ro = new ResizeObserver(check)
-    ro.observe(el)
+    ro.observe(el.parentElement ?? el)
     return () => ro.disconnect()
     // scrollWidth changes don't fire the observer: re-check when the card set can change
-  }, [tab, charStyleItems.length, lang])
+  }, [tab, charStyleItems.length, lang, styleGalleryOverflow])
 
   const currentSize = fs.fontSizePt
   const currentFont = fs.fontFamily
@@ -1307,18 +1322,7 @@ function RibbonInner({
     stepParagraphIndent(editor, delta)
   }
 
-  const stepFontSize = (dir: 1 | -1) => {
-    const step = (base: number): number => {
-      const idx = FONT_SIZES.findIndex((s) => s >= base)
-      if (dir === 1)
-        return FONT_SIZES[
-          Math.min(
-            idx === -1 ? FONT_SIZES.length : idx + (FONT_SIZES[idx] === base ? 1 : 0),
-            FONT_SIZES.length - 1,
-          )
-        ]
-      return FONT_SIZES[Math.max(idx === -1 ? FONT_SIZES.length - 1 : idx - 1, 0)]
-    }
+  const applyFontStep = (step: (base: number) => number) => {
     // Every applied size change re-paginates the whole document synchronously —
     // ~700ms per click on table-heavy documents — so clicking A+/A- in a burst
     // froze the UI for seconds. Apply the first click immediately (a single
@@ -1362,6 +1366,29 @@ function RibbonInner({
         .run()
     }, FONT_STEP_COALESCE_MS)
   }
+
+  const stepFontSize = (direction: 1 | -1) =>
+    applyFontStep((base) => {
+      const index = FONT_SIZES.findIndex((size) => size >= base)
+      if (direction === 1) {
+        return FONT_SIZES[
+          Math.min(
+            index === -1 ? FONT_SIZES.length : index + (FONT_SIZES[index] === base ? 1 : 0),
+            FONT_SIZES.length - 1,
+          )
+        ]
+      }
+      return FONT_SIZES[Math.max(index === -1 ? FONT_SIZES.length - 1 : index - 1, 0)]
+    })
+
+  const nudgeFontSize = (direction: 1 | -1) =>
+    applyFontStep((base) => Math.min(Math.max(Math.round(base) + direction, 1), 1638))
+
+  useEffect(() => {
+    if (!actionsRef) return
+    actionsRef.current.stepFontSize = stepFontSize
+    actionsRef.current.nudgeFontSize = nudgeFontSize
+  })
 
   const toggleVertAlign = (kind: 'superscript' | 'subscript') => {
     const { from, to } = ed.state.selection
@@ -1492,6 +1519,56 @@ function RibbonInner({
       }}
     >
       {label}
+    </button>
+  )
+
+  const shapeTextActive = {
+    bold: sub ? fs.bold : fs.shapeTextBold,
+    italic: sub ? fs.italic : fs.shapeTextItalic,
+    underline: sub ? fs.underline : fs.shapeTextUnderline,
+    color: sub ? fs.textColor : fs.shapeTextColor,
+    align: sub ? fs.align : fs.shapeTextAlign,
+  }
+
+  const shapeMarkBtn = (
+    name: 'bold' | 'italic' | 'underline',
+    field: 'textBold' | 'textItalic' | 'textUnderline',
+    active: boolean,
+    title: string,
+    label: ReactNode,
+  ) => (
+    <button
+      className={`rb-icon ${active ? 'active' : ''}`}
+      disabled={!canEdit}
+      title={title}
+      data-tip={title}
+      aria-label={title}
+      onClick={() => {
+        if (sub) chain().toggleMark(name).run()
+        else setSelectedDocxObjectStyle(editor, { style: { [field]: active ? null : true }, fields: [field] })
+      }}
+    >
+      {label}
+    </button>
+  )
+
+  const shapeAlignBtn = (
+    align: 'left' | 'center' | 'right' | 'justify',
+    title: string,
+    icon: ReactNode,
+  ) => (
+    <button
+      className={`rb-icon ${shapeTextActive.align === align ? 'active' : ''}`}
+      disabled={!canEdit}
+      title={title}
+      data-tip={title}
+      aria-label={title}
+      onClick={() => {
+        if (sub) setSelectionAlign(ed, align)
+        else setSelectedDocxObjectStyle(editor, { style: { textAlign: align }, fields: ['textAlign'] })
+      }}
+    >
+      {icon}
     </button>
   )
 
@@ -1670,6 +1747,52 @@ function RibbonInner({
               </div>
               <div className="ribbon-group-label">{t('ribbonGroupShapeStyles')}</div>
             </div>
+            {fs.shapeHasText && (
+              <div className="ribbon-group">
+                <div className="ribbon-group-items">
+                  <div className="rb-col">
+                    <div className="rb-row">
+                      {shapeMarkBtn('bold', 'textBold', shapeTextActive.bold, t('ribbonBoldTip'), <b>B</b>)}
+                      {shapeMarkBtn('italic', 'textItalic', shapeTextActive.italic, t('ribbonItalicTip'), <i>I</i>)}
+                      {shapeMarkBtn('underline', 'textUnderline', shapeTextActive.underline, t('ribbonUnderlineTip'), <u>U</u>)}
+                      <div className="rb-split-wrap">
+                        <button
+                          className="rb-icon rb-color-btn"
+                          disabled={!canEdit}
+                          title={t('ribbonFontColor')}
+                          data-tip={t('ribbonFontColor')}
+                          aria-label={t('ribbonFontColor')}
+                          onClick={() => setDropdown((value) => value === 'shapeTextColor' ? null : 'shapeTextColor')}
+                        >
+                          <span className="rb-color-glyph rb-color-glyph-svg">
+                            <IconFontColorA />
+                            <span className="rb-color-bar" style={{ background: shapeTextActive.color ? `#${shapeTextActive.color}` : 'transparent' }} />
+                          </span>
+                        </button>
+                        {dropdown === 'shapeTextColor' && (
+                          <ShapeColorPalette
+                            current={shapeTextActive.color}
+                            noneLabel={t('ribbonAutomatic')}
+                            onPick={(hex) => {
+                              if (sub) setTextStyle({ color: hex })
+                              else setSelectedDocxObjectStyle(editor, { style: { textColor: hex }, fields: ['textColor'] })
+                              setDropdown(null)
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <div className="rb-row">
+                      {shapeAlignBtn('left', t('ribbonAlignLeftTip'), <IconAlignLeft />)}
+                      {shapeAlignBtn('center', t('ribbonAlignCenterTip'), <IconAlignCenter />)}
+                      {shapeAlignBtn('right', t('ribbonAlignRightTip'), <IconAlignRight />)}
+                      {shapeAlignBtn('justify', t('ribbonJustifyTip'), <IconAlignJustify />)}
+                    </div>
+                  </div>
+                </div>
+                <div className="ribbon-group-label">{t('ribbonGroupText')}</div>
+              </div>
+            )}
           </div>
         ) : tab === 'pictureFormat' && inImage ? (
           <div className="table-ribbon-body">

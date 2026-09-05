@@ -29,18 +29,19 @@ Run `npm run measure:assets` after `npm run build`. The command fails when a raw
 
 | Format   | Raw bytes | Gzip bytes | Raw budget |
 | -------- | --------: | ---------: | ---------: |
-| DOCX     | 3,195,997 |    886,702 |  3,500,000 |
-| Markdown | 1,757,105 |    532,321 |  2,500,000 |
-| XLSX     | 6,487,913 |  4,794,081 | 21,000,000 |
-| PPTX     | 3,373,482 |    988,047 |  4,000,000 |
-| PDF      | 6,619,114 |  3,366,252 |  7,000,000 |
+| DOCX     | 3,508,575 |    987,885 |  3,650,000 |
+| Markdown | 1,873,880 |    572,423 |  2,500,000 |
+| XLSX     | 12,818,734 | 4,804,389 | 21,000,000 |
+| PPTX     | 3,387,763 |    992,890 |  4,000,000 |
+| PDF      | 6,631,726 |  3,371,418 |  7,000,000 |
 
 The plugin is about 55 MB on disk because allowlisted document/PDF edit fonts remain external lazy
 assets (about 20 MB) rather than entering the initial renderer HTML. The bundled MCP server is
 1,804,055 bytes raw.
 
-The DOCX ceiling allows completion of typed registry parity without treating capability removal as
-an optimization. XLSX keeps the full permitted pinned community App in one HTML resource, but its
+The DOCX ceiling was rebaselined on 2026-09-05 for the audited upstream-native pagination, layout,
+font and dialog port; it keeps about 4% raw headroom without treating capability removal as an
+optimization. XLSX keeps the full permitted pinned community App in one HTML resource, but its
 Vite modules are individually gzip/base64 embedded: the packaged entry inflates to 10,081,034 bytes
 under an 11,000,000-byte gate and optional locale/hyphenation modules inflate only on demand. Both
 raw and entry budgets are regression ceilings, not permission to remove renderer capabilities.

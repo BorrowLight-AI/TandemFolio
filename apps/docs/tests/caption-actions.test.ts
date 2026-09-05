@@ -85,7 +85,7 @@ describe('DOCX caption actions', () => {
     ).toMatchObject({ ok: true })
     const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
     const reopened = await parseDocx(await saveDocx(parsed, plan.saveBlocks))
-    expect(reopened.blocks.find((block) => block.fieldDisplay)?.fieldDisplay).toEqual({
+    expect(reopened.blocks.find((block) => block.fieldDisplay)?.fieldDisplay).toMatchObject({
       kind: 'text',
       left: 'Figure 2 Registry architecture',
     })

@@ -104,9 +104,9 @@
   --docs-paper-sdt-border: #a0c0e8;
   --docs-paper-sdt-ink: #5080b0;
   --docs-paper-sdt-bg: #eef4fb;
-  --docs-paper-comment-bg: rgb(255 196 0 / 22%);
-  --docs-paper-comment-flash: rgb(255 170 0 / 55%);
-  --docs-paper-comment-line: #e8a33d;
+  --docs-paper-comment-bg: rgb(179 247 95 / 25%);
+  --docs-paper-comment-flash: rgb(130 171 81 / 45%);
+  --docs-paper-comment-line: #82ab51;
   --docs-paper-xe-ink: #8a6d3b;
   --docs-paper-xe-bg: #fdf6e3;
   --docs-paper-xe-border: #d5c48a;
@@ -2981,8 +2981,9 @@ th.cell-rev-del {
 .page-gap-notes::before {
   content: '';
   display: block;
-  width: 33%;
-  border-top: 1px solid var(--docs-paper-ink-faint);
+  width: min(2in, 100%);
+  height: 11px;
+  border-bottom: 1px solid var(--docs-paper-ink-faint);
   margin-bottom: 4px;
 }
 
@@ -2997,6 +2998,7 @@ th.cell-rev-del {
 
 .page-gap-note sup {
   margin-right: 4px;
+  font-size: 0.65em;
 }
 
 /* pagination preview: page-bottom footnote area (the referencing page; separator + small text); tiny overflow spills into the bottom margin */
@@ -3012,13 +3014,15 @@ th.cell-rev-del {
 .pv-footnotes::before {
   content: '';
   display: block;
-  width: 33%;
-  border-top: 1px solid var(--docs-paper-ink-faint);
+  width: min(2in, 100%);
+  height: 11px;
+  border-bottom: 1px solid var(--docs-paper-ink-faint);
   margin-bottom: 4px;
 }
 
 .pv-footnote sup {
   margin-right: 4px;
+  font-size: 0.65em;
 }
 
 /* endnote area: right after the body's end, separator above the first entry, continuation pages have no separator */
@@ -3033,8 +3037,8 @@ th.cell-rev-del {
 
 .pv-endnote-separator {
   /* matches FOOTNOTE_SEPARATOR_H (16px): 11 + 1 border + 4 bottom spacing */
-  width: 33%;
-  border-top: 1px solid var(--docs-paper-ink-faint);
+  width: min(2in, 100%);
+  border-bottom: 1px solid var(--docs-paper-ink-faint);
   margin-bottom: 4px;
   height: 11px;
 }
@@ -5307,17 +5311,8 @@ body.docs-crop-active
 /* ---- References → Footnotes/Endnotes: reference marker + page-bottom notes area ---- */
 
 .doc-note-ref {
-  color: var(--docs-paper-accent);
   cursor: default;
-}
-
-/* editor-only affordance brackets around the note number; hidden when printing */
-.doc-note-ref::before {
-  content: '[';
-}
-
-.doc-note-ref::after {
-  content: ']';
+  font-size: 0.65em;
 }
 
 .doc-note-ref.ProseMirror-selectednode {
@@ -5407,26 +5402,16 @@ ruby.doc-ruby.ProseMirror-selectednode {
 .page-notes::before {
   content: '';
   display: block;
-  width: 33%;
-  border-top: 1px solid var(--docs-paper-ink-faint);
+  width: min(2in, 100%);
+  height: 11px;
+  border-bottom: 1px solid var(--docs-paper-ink-faint);
   margin-bottom: 6px;
-}
-
-.page-notes-label {
-  margin-top: 8px;
-  font-weight: 600;
-  color: var(--docs-paper-ink-mid);
 }
 
 /* endnotes follow the footnote block as their own area: cancel the pull-up overlap and stack below */
 .page-notes + .page-endnotes {
   margin-top: 0;
   padding-top: 0;
-}
-
-.page-endnotes .page-notes-label {
-  margin-top: 0;
-  margin-bottom: 4px;
 }
 
 .page-note {
@@ -5438,7 +5423,25 @@ ruby.doc-ruby.ProseMirror-selectednode {
 
 .page-note sup {
   flex: none;
-  color: var(--docs-paper-accent);
+  position: relative;
+  top: -0.33em;
+  font-size: 0.65em;
+}
+
+.page-endnotes-anchored {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: auto;
+  margin: 0;
+  padding-top: 8px;
+  background: none;
+}
+
+.doc-page .doc-col-block.doc-protected-floating,
+.doc-page .doc-col-block.doc-img-float {
+  width: var(--col-w, 100%);
+  max-width: var(--col-w, 100%);
 }
 
 .page-note-text {

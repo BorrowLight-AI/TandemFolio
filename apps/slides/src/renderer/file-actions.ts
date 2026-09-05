@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: selectively port community upstream fixes (2026-09-05).
 /**
  * File actions extracted from App.tsx: save / save-as, image & PDF
  * export, and printing. Each function takes the ActionCtx built fresh per call.
@@ -38,44 +39,56 @@ export function adoptSavedSlides(ctx: ActionCtx, next: RenderSlide[]): void {
   ctx.setSlides(next)
 }
 
+// Upstream #155: serialize writes; include Save As in the same renderer queue.
+let saveTail: Promise<unknown> = Promise.resolve()
+function enqueueSave<T>(run: () => Promise<T>): Promise<T> {
+  const pass = saveTail.then(run, run)
+  saveTail = pass.catch(() => undefined)
+  return pass
+}
+
 export async function save(ctx: ActionCtx, quiet = false): Promise<boolean> {
-  await flushActiveEdit(ctx)
-  await ctx.flushNotes()
-  const r = await window.slidesApi.save()
-  if (r.ok) {
-    if (r.slides) adoptSavedSlides(ctx, r.slides)
-    if (r.path) ctx.setPath(r.path)
-    ctx.setDirty(false)
-    const saved = t('appStatusSaved', { name: r.path?.split('/').pop() ?? '' })
-    ctx.setStatus(saved)
-    if (!quiet) showToast(saved)
-  } else {
-    const failed = t('appStatusSaveFailed', { error: r.error ?? t('appErrorCanceled') })
-    ctx.setStatus(failed)
-    if (!quiet) showToast(failed, 'error')
-  }
-  return r.ok
+  return enqueueSave(async () => {
+    await flushActiveEdit(ctx)
+    await ctx.flushNotes()
+    const r = await window.slidesApi.save()
+    if (r.ok) {
+      if (r.slides) adoptSavedSlides(ctx, r.slides)
+      if (r.path) ctx.setPath(r.path)
+      ctx.setDirty(false)
+      const saved = t('appStatusSaved', { name: r.path?.split('/').pop() ?? '' })
+      ctx.setStatus(saved)
+      if (!quiet) showToast(saved)
+    } else {
+      const failed = t('appStatusSaveFailed', { error: r.error ?? t('appErrorCanceled') })
+      ctx.setStatus(failed)
+      showToast(failed, 'error')
+    }
+    return r.ok
+  })
 }
 
 export async function saveAs(ctx: ActionCtx, fileName?: string): Promise<void> {
-  await flushActiveEdit(ctx)
-  await ctx.flushNotes()
-  const name = fileName ?? ctx.path?.split('/').pop() ?? 'presentation.pptx'
-  const r = await window.slidesApi.saveAs(name)
-  if (r.ok) {
-    if (r.slides) adoptSavedSlides(ctx, r.slides)
-    ctx.setPath(r.path ?? ctx.path)
-    ctx.setDirty(false)
-    const saved = t('appStatusSavedAs', { name: r.path?.split('/').pop() ?? '' })
-    ctx.setStatus(saved)
-    showToast(saved)
-  } else if (r.error) {
-    // a canceled dialog returns ok:false without error — only real write
-    // failures surface, matching the docs/sheets save-as feedback
-    const failed = t('appStatusSaveFailed', { error: r.error })
-    ctx.setStatus(failed)
-    showToast(failed, 'error')
-  }
+  return enqueueSave(async () => {
+    await flushActiveEdit(ctx)
+    await ctx.flushNotes()
+    const name = fileName ?? ctx.path?.split('/').pop() ?? 'presentation.pptx'
+    const r = await window.slidesApi.saveAs(name)
+    if (r.ok) {
+      if (r.slides) adoptSavedSlides(ctx, r.slides)
+      ctx.setPath(r.path ?? ctx.path)
+      ctx.setDirty(false)
+      const saved = t('appStatusSavedAs', { name: r.path?.split('/').pop() ?? '' })
+      ctx.setStatus(saved)
+      showToast(saved)
+    } else if (r.error) {
+      // a canceled dialog returns ok:false without error — only real write
+      // failures surface, matching the docs/sheets save-as feedback
+      const failed = t('appStatusSaveFailed', { error: r.error })
+      ctx.setStatus(failed)
+      showToast(failed, 'error')
+    }
+  })
 }
 
 /** Export base name: file name without the .pptx extension */

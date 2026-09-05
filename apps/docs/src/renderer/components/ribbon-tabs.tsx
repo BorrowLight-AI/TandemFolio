@@ -73,7 +73,32 @@ export const toggleDropdown = (setDropdown: SetDropdown, key: string) =>
   setDropdown((prev) => (prev === key ? null : key))
 
 /** apply paragraph-level attrs to every block type in the selection */
-export function setParaAttrs(editor: Editor, attrs: Record<string, unknown>): void {
+export function setParaAttrs(
+  editor: Editor,
+  attrs: Record<string, unknown>,
+  range?: { from: number; to: number },
+): void {
+  if ('spaceBefore' in attrs && !('spaceBeforeAuto' in attrs)) attrs.spaceBeforeAuto = false
+  if ('spaceAfter' in attrs && !('spaceAfterAuto' in attrs)) attrs.spaceAfterAuto = false
+  if (range) {
+    const paraTypes = new Set(['docParagraph', 'docHeading', 'docListItem'])
+    editor
+      .chain()
+      .command(({ tr, dispatch }) => {
+        const from = Math.min(range.from, tr.doc.content.size)
+        const to = Math.min(range.to, tr.doc.content.size)
+        let changed = false
+        tr.doc.nodesBetween(from, to, (node, pos) => {
+          if (!paraTypes.has(node.type.name)) return true
+          if (dispatch) tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs })
+          changed = true
+          return false
+        })
+        return changed
+      })
+      .run()
+    return
+  }
   let chain = editor
     .chain()
     .focus()
@@ -85,6 +110,81 @@ export function setParaAttrs(editor: Editor, attrs: Record<string, unknown>): vo
     chain = chain.updateAttributes('docProtected', { imageAlign: attrs.align ?? null })
   }
   chain.run()
+}
+
+const DIRECT_PARA_ATTRS: Record<string, unknown> = {
+  align: null,
+  lineSpacing: null,
+  lineRule: null,
+  lineRawTwips: null,
+  indentLeft: null,
+  indentRight: null,
+  indentFirstLine: null,
+  spaceBefore: null,
+  spaceAfter: null,
+  spaceBeforeAuto: null,
+  spaceAfterAuto: null,
+  contextualSpacing: null,
+  shadingFill: null,
+  borders: null,
+  borderLines: null,
+  tabStops: null,
+  dropCap: null,
+  pageBreakBefore: false,
+}
+
+export function clearParagraphFormatting(editor: Editor): void {
+  setParaAttrs(editor, { ...DIRECT_PARA_ATTRS })
+}
+
+export function applyParagraphStyle(editor: Editor, key: 'p' | 'h1' | 'h2' | 'h3'): void {
+  let chain = editor.chain().focus()
+  chain = key === 'p'
+    ? chain.setNode('docParagraph')
+    : chain.setNode('docHeading', { level: Number(key.slice(1)) })
+  chain
+    .command(({ tr }) => {
+      const { from, to } = tr.selection
+      let start = from
+      let end = to
+      tr.doc.nodesBetween(from, to, (node, pos) => {
+        if (node.isTextblock) {
+          start = Math.min(start, pos + 1)
+          end = Math.max(end, pos + node.nodeSize - 1)
+        }
+      })
+      const markType = editor.schema.marks.docTextStyle
+      const jobs: Array<{ from: number; to: number; attrs: Record<string, unknown> | null }> = []
+      tr.doc.nodesBetween(start, end, (node, pos) => {
+        if (!node.isText) return
+        const mark = node.marks.find((candidate) => candidate.type === markType)
+        if (!mark) return
+        if (
+          mark.attrs.color == null &&
+          mark.attrs.sizeHalfPoints == null &&
+          mark.attrs.font == null &&
+          mark.attrs.fontAscii == null
+        ) return
+        const attrs = {
+          ...mark.attrs,
+          color: null,
+          sizeHalfPoints: null,
+          font: null,
+          fontAscii: null,
+        }
+        jobs.push({
+          from: Math.max(pos, start),
+          to: Math.min(pos + node.nodeSize, end),
+          attrs: Object.values(attrs).some((value) => value !== null) ? attrs : null,
+        })
+      })
+      for (const job of jobs) {
+        tr.removeMark(job.from, job.to, markType)
+        if (job.attrs) tr.addMark(job.from, job.to, markType.create(job.attrs))
+      }
+      return true
+    })
+    .run()
 }
 
 /** attrs of the paragraph-like node at the cursor */

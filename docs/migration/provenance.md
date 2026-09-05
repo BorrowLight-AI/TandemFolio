@@ -1,5 +1,33 @@
 # Source provenance
 
+## 2026-09-05 selective upstream ports
+
+The extraction baseline remains `dc4d7e5927864498913b7ba42d0da06cc7cf628e`.
+Reviewed candidate: `360ce0625eaf748368e5535984b073f6fb2487b5`.
+See [commit dispositions, integrated DOCX capabilities, and cross-format backlog](upstream-review-2026-09-05.md).
+The candidate's applicable DOCX-native engine and renderer work is selectively retained together
+with the earlier cross-format fixes. No AI, enterprise, account, telemetry, Electron, IPC, or
+desktop-only encryption/printing code is admitted:
+
+| Source commit | Modified/admitted community paths |
+| --- | --- |
+| `945c370` | Modified `packages/docx-engine/src/parse.ts`; added `packages/docx-engine/tests/entity-decoding.test.ts` |
+| `3548a80` | Modified `apps/slides/src/renderer/App.tsx`, `SlideCanvas.tsx`, `TextEditOverlay.tsx`; added `apps/slides/src/renderer/table-hit.ts` and `apps/slides/tests/table-hit.test.ts` (extended for flips/bleed) |
+| `4846ace` | Modified `apps/slides/src/renderer/file-actions.ts`; added/adapted `apps/slides/tests/save-serialization.test.ts` for browser-host globals, Save As and rejected writes |
+| `bc1dceb` | Modified `apps/sheets/src/renderer/univer-sync.ts`; added `apps/sheets/tests/read-sheet-range-batching.test.ts` |
+| `d5558b6`…`9f971ed` DOCX snapshot lineage | Updated `packages/docx-engine/src` parse/save/render fidelity modules and native fixtures; admitted the non-AI `apps/docs/src/renderer` pagination, formatting, table, note, shortcut, dialog, font, and shared UI primitives; adapted `App.tsx`, Ribbon, ContextMenu, file actions, Registry, and local i18n to TandemFolio's mounted browser authority. |
+| `93b8938` | Retained per-section page margins, content widths, percentage table geometry, header/footer alignment, and mixed-section layout decorations. |
+
+Apache-2.0 attribution remains intact. Newly adapted files carry prominent modification
+notices. The mounted Session and Save target binding remain unchanged. One typed native operation,
+`docx.image.set_z_order`, raises the Registry to 103 DOCX / 338 total operations and uses the same
+renderer state, Undo, recovery, and save projection. The previous approved release capture becomes
+historical after these source changes; the source-current gate is not relaxed.
+Generated plugin HTML resources were rebuilt from the workspace; the gate regenerated
+`apps/mcp-server/src/generated/release-readiness.json` as not ready. These generated
+outputs introduce no additional upstream source. Functional results are in the linked review.
+
+
 For the public summary of this record and the distribution obligations, see
 [Project facts and attribution](../project-facts.md).
 

@@ -64,11 +64,12 @@ export function findMatches(editor: Editor, query: string, opts: FindOptions): R
 interface FindPanelProps {
   editor: Editor
   onClose: () => void
+  focusReplaceNonce?: number
 }
 
 const SCAN_DEBOUNCE_MS = 150
 
-export function FindPanel({ editor, onClose }: FindPanelProps) {
+export function FindPanel({ editor, onClose, focusReplaceNonce }: FindPanelProps) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
   const [replacement, setReplacement] = useState('')
@@ -77,6 +78,7 @@ export function FindPanel({ editor, onClose }: FindPanelProps) {
   const [matchCase, setMatchCase] = useState(false)
   const [wholeWord, setWholeWord] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const replaceInputRef = useRef<HTMLInputElement>(null)
   const indexRef = useRef(0)
   const canEdit = editor.isEditable
 
@@ -144,6 +146,13 @@ export function FindPanel({ editor, onClose }: FindPanelProps) {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!focusReplaceNonce) return
+    const input = replaceInputRef.current ?? inputRef.current
+    input?.focus()
+    input?.select()
+  }, [focusReplaceNonce])
 
   // stay in sync while the document changes underneath (typing, external edits).
   // The listener reads the query through a ref: between a keystroke in the find
@@ -236,7 +245,8 @@ export function FindPanel({ editor, onClose }: FindPanelProps) {
         />
         <button
           className={`find-opt ${matchCase ? 'on' : ''}`}
-          title={t('appMatchCase')}
+          data-tip={t('appMatchCase')}
+          aria-label={t('appMatchCase')}
           onClick={() => {
             setMatchCase(!matchCase)
             refresh(query, index, { matchCase: !matchCase })
@@ -246,7 +256,8 @@ export function FindPanel({ editor, onClose }: FindPanelProps) {
         </button>
         <button
           className={`find-opt ${wholeWord ? 'on' : ''}`}
-          title={t('appWholeWord')}
+          data-tip={t('appWholeWord')}
+          aria-label={t('appWholeWord')}
           onClick={() => {
             setWholeWord(!wholeWord)
             refresh(query, index, { wholeWord: !wholeWord })
@@ -263,7 +274,8 @@ export function FindPanel({ editor, onClose }: FindPanelProps) {
         </span>
         <button
           className="find-btn"
-          title={t('appPrevMatch')}
+          data-tip={t('appPrevMatch')}
+          aria-label={t('appPrevMatch')}
           onClick={() => step(-1)}
           disabled={matches.length === 0}
         >
@@ -271,19 +283,26 @@ export function FindPanel({ editor, onClose }: FindPanelProps) {
         </button>
         <button
           className="find-btn"
-          title={t('appNextMatch')}
+          data-tip={t('appNextMatch')}
+          aria-label={t('appNextMatch')}
           onClick={() => step(1)}
           disabled={matches.length === 0}
         >
           ›
         </button>
-        <button className="find-btn find-close" title={t('appCloseEsc')} onClick={close}>
+        <button
+          className="find-btn find-close"
+          data-tip={t('appCloseEsc')}
+          aria-label={t('appCloseEsc')}
+          onClick={close}
+        >
           ✕
         </button>
       </div>
       {canEdit && (
         <div className="find-row">
           <input
+            ref={replaceInputRef}
             className="find-input"
             placeholder={t('appReplacePlaceholder')}
             value={replacement}

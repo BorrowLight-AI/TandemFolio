@@ -7,7 +7,8 @@
   "description": "docx parsing (Block tree with docxIndex anchors), OOXML fragment generation, paragraph-patch save",
   "exports": {
     ".": "./src/index.ts",
-    "./math": "./src/math.ts"
+    "./math": "./src/math.ts",
+    "./metafile": "./src/metafile.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -16,6 +17,7 @@
     "fixtures": "tsx scripts/generate-fixtures.ts"
   },
   "dependencies": {
+    "@genoffice/pptx-engine": "*",
     "fast-xml-parser": "^5.3.4",
     "jszip": "^3.10.1",
     "utif2": "^4.1.0"

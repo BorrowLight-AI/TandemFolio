@@ -3766,6 +3766,89 @@
       "atomic": true,
       "compatibilityAliases": [],
       "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "image",
+      "format": "docx",
+      "id": "docx.image.set_z_order",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "floatInline": {
+            "type": "boolean"
+          },
+          "imageBlockIndex": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "zOrder": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imageBlockIndex",
+          "zOrder",
+          "floatInline"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "type": "boolean"
+          },
+          "imageBlockIndex": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "wrap": {
+            "enum": [
+              "square-left",
+              "square-right",
+              "topBottom",
+              "behind",
+              "front",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "zOrder": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "summary",
+          "imageBlockIndex",
+          "zOrder",
+          "wrap",
+          "changed"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Set one indexed DOCX image stacking rank, optionally floating an inline image.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
         "document",
         "selection"
       ],
@@ -5438,11 +5521,16 @@
             "items": {
               "enum": [
                 "fillHex",
-                "borderHex"
+                "borderHex",
+                "textBold",
+                "textItalic",
+                "textUnderline",
+                "textColor",
+                "textAlign"
               ],
               "type": "string"
             },
-            "maxItems": 2,
+            "maxItems": 7,
             "minItems": 1,
             "type": "array"
           },
@@ -5471,6 +5559,46 @@
                   "string",
                   "null"
                 ]
+              },
+              "textAlign": {
+                "enum": [
+                  "left",
+                  "center",
+                  "right",
+                  "justify",
+                  null
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "textBold": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "textColor": {
+                "maxLength": 6,
+                "minLength": 6,
+                "pattern": "^[0-9A-F]{6}$",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "textItalic": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "textUnderline": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             "required": [],
@@ -5495,11 +5623,16 @@
             "items": {
               "enum": [
                 "fillHex",
-                "borderHex"
+                "borderHex",
+                "textBold",
+                "textItalic",
+                "textUnderline",
+                "textColor",
+                "textAlign"
               ],
               "type": "string"
             },
-            "maxItems": 2,
+            "maxItems": 7,
             "minItems": 1,
             "type": "array"
           },
@@ -5531,7 +5664,7 @@
         "type": "object"
       },
       "risk": "medium",
-      "summary": "Set masked final fill and outline fields on one retained DOCX drawing.",
+      "summary": "Set masked fill, outline, and whole-object text fields on one retained DOCX drawing.",
       "undoable": true,
       "visibility": "agent"
     },

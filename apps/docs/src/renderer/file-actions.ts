@@ -24,9 +24,11 @@ import {
   readSectionSettings,
   saveDocx,
   type CommentInfo,
+  type Block,
   type DocProtection,
   type HeaderFooter,
   type NoteInfo,
+  type ParsedDocFull,
   type SectionInfo,
   type SectionSettings,
   type SourceInfo,
@@ -61,9 +63,47 @@ import { createSaveSerializer } from './save-until-persisted'
 import { loadBundledFallbackFonts } from './bundled-font-loader'
 import { checkMissingFonts, collectDocFonts, collectDocText } from './font-check'
 import { defaultEastAsiaFontFor } from './font-list'
+import { setDocFontTable } from './line-metrics'
 import { readLiveEditorBundledFontAsset } from '@tandemfolio/host-bridge'
 import { hasPrintableHeaderFooter } from './pagination'
 import { showToast } from './components/toast-bus'
+
+/** True when an unresolved comment has no text, range, table, or bare-reference anchor. */
+export function hasUnanchoredComments(comments: CommentInfo[], blocks: Block[]): boolean {
+  if (comments.length === 0) return false
+  const anchored = new Set<string>()
+  for (const block of blocks) {
+    for (const id of [...(block.commentStarts ?? []), ...(block.commentEnds ?? [])]) anchored.add(id)
+    for (const run of block.runs ?? []) for (const id of run.commentIds ?? []) anchored.add(id)
+    for (const row of block.table?.rows ?? [])
+      for (const cell of row)
+        for (const para of cell.richParas ?? [])
+          for (const run of para.runs) for (const id of run.commentIds ?? []) anchored.add(id)
+    if (block.originalXml) {
+      for (const match of block.originalXml.matchAll(
+        /<w:comment(?:Reference|RangeStart)\b[^>]*w:id="([^"]+)"/g,
+      )) {
+        anchored.add(match[1])
+      }
+    }
+  }
+  return comments.some(
+    (comment) =>
+      !comment.done &&
+      !anchored.has(comment.id) &&
+      !(comment.parentId && anchored.has(comment.parentId)),
+  )
+}
+
+/** Hydrate layout inputs that live outside the ProseMirror document tree. */
+export function applyDocLayoutSettings(editor: Editor, parsed: ParsedDocFull): void {
+  editor.storage.tabStops.defaultTabStopTwips = parsed.defaultTabStopTwips ?? null
+  editor.storage.justifyShrink.enabled = (parsed.compatibilityMode ?? 0) >= 15
+  editor.storage.cjkPunctShrink.enabled = parsed.compressPunctuation === true
+  const language = parsed.autoHyphenation ? parsed.docDefaults?.lang : undefined
+  if (language) editor.view.dom.setAttribute('lang', language)
+  else editor.view.dom.removeAttribute('lang')
+}
 
 /** The App state the file actions need; built fresh per call. */
 export interface FileActionContext {
@@ -172,7 +212,11 @@ export async function loadFile(
   if (!result || !ctx.editor) return
   try {
     const parsed = await parseDocx(new Uint8Array(result.data))
+    setDocFontTable(parsed.fontTable)
     ctx.editor.storage.listNumbering.defs = parsed.numbering
+    ctx.editor.storage.listNumbering.styles = parsed.styles
+    ctx.editor.storage.listNumbering.docDefaults = parsed.docDefaults
+    applyDocLayoutSettings(ctx.editor, parsed)
     ctx.editor.commands.setContent(blocksToPmDoc(parsed.blocks, readSections(parsed)) as never)
     resetEditorHistory(ctx.editor)
     noteDocumentSwapped()
@@ -207,7 +251,7 @@ export async function loadFile(
     ctx.setEvenOddHf(parsed.evenAndOddHeaders ?? false)
     ctx.setEvenOddHfDirty(false)
     ctx.setHfView('default')
-    ctx.setShowComments(false)
+    ctx.setShowComments(hasUnanchoredComments(parsed.comments, parsed.blocks))
     ctx.setComments(parsed.comments)
     ctx.setCommentsDirty(false)
     ctx.setWatermark(parsed.watermarkText ?? null)
@@ -269,7 +313,11 @@ export async function newFile(ctx: FileActionContext): Promise<boolean | undefin
   try {
     const bytes = await buildBlankDocx({ eastAsiaFont: defaultEastAsiaFontFor(getLang()) })
     const parsed = await parseDocx(bytes)
+    setDocFontTable(parsed.fontTable)
     ctx.editor.storage.listNumbering.defs = parsed.numbering
+    ctx.editor.storage.listNumbering.styles = parsed.styles
+    ctx.editor.storage.listNumbering.docDefaults = parsed.docDefaults
+    applyDocLayoutSettings(ctx.editor, parsed)
     ctx.editor.commands.setContent(blocksToPmDoc(parsed.blocks, readSections(parsed)) as never)
     resetEditorHistory(ctx.editor)
     noteDocumentSwapped()
@@ -659,7 +707,11 @@ async function saveOnce(ctx: FileActionContext, saveAs: boolean, auto: boolean):
     }
     // Reload from saved bytes so docxIndex anchors point at the new file.
     const reparsed = await parseDocx(bytes)
+    setDocFontTable(reparsed.fontTable)
     editor.storage.listNumbering.defs = reparsed.numbering
+    editor.storage.listNumbering.styles = reparsed.styles
+    editor.storage.listNumbering.docDefaults = reparsed.docDefaults
+    applyDocLayoutSettings(editor, reparsed)
     const rebasedPm = blocksToPmDoc(reparsed.blocks, readSections(reparsed))
     let unchanged = false
     try {
