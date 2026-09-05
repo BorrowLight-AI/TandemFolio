@@ -4,6 +4,7 @@
 /// headings). The main process turns the HTML into a PDF.
 
 import { htmlLang, type Lang } from '@genoffice/i18n'
+import { BorderStyleTypes } from '@univerjs/core'
 import { columnIndex, columnLabel } from '../domain/cell-address'
 
 import type { WorkbookExportPdfRequest } from '../shared/desktop-api'
@@ -68,8 +69,22 @@ interface PrintCellStyle {
   readonly vt?: number
   readonly tb?: number
   readonly bd?: Partial<
-    Record<'t' | 'b' | 'l' | 'r', { cl?: { rgb?: string | null } | null } | null>
+    Record<'t' | 'b' | 'l' | 'r', { s?: number; cl?: { rgb?: string | null } | null } | null>
   > | null
+}
+
+export function printBorderWidthPt(style: number | undefined): number {
+  switch (style) {
+    case BorderStyleTypes.MEDIUM:
+    case BorderStyleTypes.MEDIUM_DASHED:
+    case BorderStyleTypes.MEDIUM_DASH_DOT:
+    case BorderStyleTypes.MEDIUM_DASH_DOT_DOT:
+      return 1.5
+    case BorderStyleTypes.THICK:
+      return 2.25
+    default:
+      return 0.75
+  }
 }
 
 /// Inches, mirroring the gateway's Margins presets.
@@ -428,7 +443,9 @@ function cellCss(style: PrintCellStyle | null, rawValue: unknown, gridlines: boo
     const border = style?.bd?.[edge as 't' | 'b' | 'l' | 'r']
     rules.push(
       `border-${css}:${
-        border ? `0.75pt solid ${cssColor(border.cl?.rgb ?? '#000000')}` : defaultBorder
+        border
+          ? `${printBorderWidthPt(border.s)}pt solid ${cssColor(border.cl?.rgb ?? '#000000')}`
+          : defaultBorder
       }`,
     )
   }

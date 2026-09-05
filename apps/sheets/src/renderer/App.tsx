@@ -99,6 +99,9 @@ import { createUniver } from './create-univer'
 import { BrowserWorkbookDesktopApi } from './browser-desktop-api'
 import { structuralDeleteFormulaErrorSync } from './structural-delete-guard'
 import { installCenterContinuousRender } from './center-continuous'
+import { installMergeBorderFix } from './merge-border-fix'
+import { installThickBorderFix } from './thick-border-fix'
+import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import {
   CLEAR_SELECTION_CONTENT_COMMAND,
   shouldInterceptClearSelection,
@@ -222,6 +225,8 @@ import { installFormulaNullResultFix } from './formula-null-result'
 import { installCachedValueFallbackInterceptor } from './formula-cached-fallback'
 import { installIfsEmptySetFix } from './ifs-empty-set'
 import { installCriteriaCompareCacheFix } from './criteria-compare-cache'
+import { installSupportedFunctionProbe } from './function-registry-probe'
+import { installFormulaBarAutosize } from './formula-bar-autosize'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installRateFallback } from './rate-function'
 import {
@@ -1057,6 +1062,9 @@ export function App(): React.JSX.Element {
       ],
     })
     installCenterContinuousRender()
+    installMergeBorderFix()
+    installThickBorderFix()
+    installCellClipAnchorFix()
     const clearSelectionKeydown = (event: KeyboardEvent): void => {
       if (!shouldInterceptClearSelection(event, editingCellRef.current)) return
       event.preventDefault()
@@ -1173,6 +1181,8 @@ export function App(): React.JSX.Element {
     // MINIFS/MAXIFS with no matching rows return numeric zero, matching Excel.
     const ifsEmptySetDisposable = installIfsEmptySetFix(runtime)
     const criteriaCompareCacheDisposable = installCriteriaCompareCacheFix()
+    const supportedFunctionProbeDisposable = installSupportedFunctionProbe(runtime)
+    const formulaBarAutosizeDisposable = installFormulaBarAutosize(runtime)
     // Copy/cut load their selection into the lazy window first so streamed
     // workbooks don't serialize blanks for never-viewed rows.
     const copyMaterializeDisposable = installCopyMaterialize(runtime, lazyWorkbookRef, setMessage)
@@ -2078,6 +2088,8 @@ export function App(): React.JSX.Element {
       nullResultDisposable.dispose()
       ifsEmptySetDisposable.dispose()
       criteriaCompareCacheDisposable.dispose()
+      supportedFunctionProbeDisposable.dispose()
+      formulaBarAutosizeDisposable.dispose()
       copyMaterializeDisposable.dispose()
       dataValidationArrowDisposable.dispose()
       ruleDetailDisposable()

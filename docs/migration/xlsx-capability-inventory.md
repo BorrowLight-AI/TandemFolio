@@ -17,7 +17,9 @@ The first completed XLSX slices retain namespace-tolerant OOXML parsing, Rich Da
 shared and future formula handling, theme and protection metadata helpers, 1904-date primitives,
 calculation mode/recalculation, cached formula values, IFS empty-set behavior, quadratic-formula and
 structural-delete guards, center-continuous rendering, fit-to-page printing, numeric/date criteria
-comparison, Delete/Backspace selection clearing, and browser CSV serialization. Formula and
+comparison, Delete/Backspace selection clearing, browser CSV serialization, absolute A1 pivot
+references, Excel-weight merged/thick borders, first-line-preserving cell clipping, formula-bar
+autosizing, and unsupported-function cache retention. Formula and
 structural mutations continue through the mounted Univer state and native Undo; package changes
 continue through the browser workbook adapter and save/reopen path.
 

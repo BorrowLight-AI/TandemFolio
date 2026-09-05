@@ -69,12 +69,15 @@ import {
   type VisualEditEntry,
 } from './edit-journal'
 import {
+  containsUnresolvedNames,
   cellKey,
   closureFetchRanges,
   computeFormulaClosure,
   recalcReadRanges,
   type ClosureSheetInput,
 } from './formula-closure'
+import { isPlainArithmeticFormula } from './formula-cached-fallback'
+import { extractFunctionNames } from './formula-functions'
 import { t } from './i18n/locale'
 import { INDENT_STEP_PX } from './selection-format'
 import { CENTER_ACROSS_END_KEY } from './center-continuous'
@@ -2234,7 +2237,12 @@ export function patchWorksheetRangeInner(
     ) {
       continue
     }
-    const displayValue = cell.value ?? cell.formula ?? ''
+    const keepsCache =
+      useFormulas && cell.formula
+        ? formulaKeepsCache(cell.formula, hasUsableCachedValue(cell.value))
+        : false
+    const displayValue =
+      cell.value ?? (cell.formula ? (useFormulas && !keepsCache ? cell.formula : '') : '') ?? ''
     const row = matrix[cell.row - range.startRow]
     const style = cell.styleIndex === undefined ? undefined : styles[cell.styleIndex]
     if (style?.horizontalAlignment === 'centerContinuous') {
@@ -2261,12 +2269,15 @@ export function patchWorksheetRangeInner(
         // text ("007", phone numbers) into numbers.
         ...(cell.rich && typeof displayValue === 'string'
           ? { p: toRichTextDocument(displayValue, cell.rich) }
-          : useFormulas && cell.formula
+          : useFormulas && cell.formula && !keepsCache
             ? // No cached value: leave v unset so the engine computes instead
               // of showing the formula text as a literal.
-              cell.value === null || cell.value === undefined
+              cell.value === null ||
+              cell.value === undefined ||
+              (typeof cell.value === 'string' && EXCEL_ERROR_LITERALS.has(cell.value)) ||
+              (!cell.arrayRef && isPlainArithmeticFormula(cell.formula))
               ? { f: cell.formula }
-              : { f: cell.formula, v: cell.value }
+              : cachedFormulaCellData(cell.formula, cell.value)
             : typeof displayValue === 'string' && multiline
               ? // Bare `v` renders only the first line; the doc model keeps all.
                 { p: toRichTextDocument(displayValue) }
@@ -2300,6 +2311,83 @@ export function patchWorksheetRangeInner(
   }
   applyTableBanding(matrix, range, tables)
   worksheet.getRange(range.startRow, range.startColumn, rows, columns).setValues(matrix)
+}
+
+const EXCEL_ERROR_LITERALS = new Set([
+  '#NULL!',
+  '#DIV/0!',
+  '#VALUE!',
+  '#REF!',
+  '#NAME?',
+  '#NUM!',
+  '#N/A',
+  '#SPILL!',
+  '#CALC!',
+])
+
+export function cachedFormulaCellData(
+  formula: string,
+  value: string | number | boolean | null | undefined,
+): { f: string; v?: string | number | boolean; t?: CellValueType } {
+  if (value === null || value === undefined) return { f: formula }
+  return typeof value === 'string'
+    ? { f: formula, v: value, t: CellValueType.STRING }
+    : { f: formula, v: value }
+}
+
+const LOCALE_DEPENDENT_FUNCTION = /(?:^|[^A-Z0-9_.])(?:NUMBERSTRING|DOLLAR)\s*\(/
+export function usesLocaleDependentFunction(formula: string): boolean {
+  const segments = formula.split('"')
+  for (let index = 0; index < segments.length; index += 2) {
+    if (LOCALE_DEPENDENT_FUNCTION.test((segments[index] ?? '').toUpperCase())) return true
+  }
+  return false
+}
+
+export interface SupportedFunctionProbe {
+  readonly ready: () => boolean
+  readonly supports: (name: string) => boolean
+}
+
+let supportedFunctionProbe: SupportedFunctionProbe | null = null
+const keepsCacheMemo = new Map<
+  string,
+  { readonly always: boolean; readonly unsupportedFunction: boolean }
+>()
+
+export function setSupportedFunctionProbe(probe: SupportedFunctionProbe | null): void {
+  supportedFunctionProbe = probe
+  keepsCacheMemo.clear()
+}
+
+export function formulaKeepsCache(formula: string, hasCachedValue = true): boolean {
+  let verdict = keepsCacheMemo.get(formula)
+  if (verdict === undefined) {
+    if (keepsCacheMemo.size > 20_000) keepsCacheMemo.clear()
+    const always =
+      formula.includes('__xludf.') ||
+      usesLocaleDependentFunction(formula) ||
+      containsUnresolvedNames(formula)
+    const probe = supportedFunctionProbe
+    const registryReady = probe === null || probe.ready()
+    verdict = {
+      always,
+      unsupportedFunction:
+        !always &&
+        probe !== null &&
+        registryReady &&
+        extractFunctionNames(formula).some((name) => !probe.supports(name)),
+    }
+    if (registryReady) keepsCacheMemo.set(formula, verdict)
+  }
+  return verdict.always || (hasCachedValue && verdict.unsupportedFunction)
+}
+
+export function hasUsableCachedValue(
+  value: string | number | boolean | null | undefined,
+): boolean {
+  if (value === null || value === undefined) return false
+  return !(typeof value === 'string' && EXCEL_ERROR_LITERALS.has(value))
 }
 
 /// Approximates Excel table styles (header band + row stripes) for cells that
@@ -3286,7 +3374,7 @@ function toUniverBorder(edge: NonNullable<WorkbookCellStyle['borderTop']>): {
   }
 }
 
-function mapBorderStyle(style: string): BorderStyleTypes {
+export function mapBorderStyle(style: string): BorderStyleTypes {
   switch (style) {
     case 'hair':
       return BorderStyleTypes.HAIR

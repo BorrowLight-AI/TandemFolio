@@ -11,7 +11,7 @@ export interface RangeBounds {
 }
 
 export function parseAddress(address: string): CellCoordinates {
-  const match = /^([A-Z]+)([1-9][0-9]*)$/.exec(address)
+  const match = /^\$?([A-Z]+)\$?([1-9][0-9]*)$/.exec(address)
   if (!match?.[1] || !match[2]) throw new Error(`Invalid cell address: ${address}`)
   let column = 0
   for (const character of match[1]) {
