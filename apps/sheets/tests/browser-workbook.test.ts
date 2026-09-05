@@ -1026,6 +1026,58 @@ describe('browser XLSX workbook', () => {
     ])
   })
 
+  it('reopens sparse chart caches with their blank-point display mode', async () => {
+    const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
+    await workbook.applyVisuals([
+      {
+        sheetName: 'Budget',
+        anchor: {
+          fromRow: 0,
+          fromColumn: 3,
+          fromRowOffset: 0,
+          fromColumnOffset: 0,
+          toRow: 15,
+          toColumn: 10,
+          toRowOffset: 0,
+          toColumnOffset: 0,
+        },
+        chart: {
+          chartType: 'line',
+          title: 'Sparse revenue',
+          series: [{ name: 'Revenue', categories: ['Q1', 'Q2', 'Q3'], values: [10, 0, 30] }],
+        },
+      },
+    ])
+
+    const zip = await JSZip.loadAsync(await workbook.save())
+    const chartXml = await zip.file('xl/charts/chart2.xml')!.async('text')
+    zip.file(
+      'xl/charts/chart2.xml',
+      chartXml
+        .replace(
+          /<c:num(?:Cache|Lit)>[\s\S]*?<\/c:num(?:Cache|Lit)>/,
+          '<c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="2"><c:v>30</c:v></c:pt></c:numLit>',
+        )
+        .replace('</c:chart>', '<c:dispBlanksAs val="gap"/></c:chart>'),
+    )
+
+    const reopened = await openBrowserWorkbook(
+      await zip.generateAsync({ type: 'uint8array' }),
+      'sparse.xlsx',
+    )
+    expect(reopened.visuals[0]?.chart).toEqual(
+      expect.objectContaining({
+        dispBlanksAs: 'gap',
+        series: [
+          expect.objectContaining({
+            values: [10, 0, 30],
+            blanks: [1],
+          }),
+        ],
+      }),
+    )
+  })
+
   it('writes and reopens a shape through the transactional browser package boundary', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
 

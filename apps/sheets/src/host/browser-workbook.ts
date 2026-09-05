@@ -764,6 +764,35 @@ function chartPointValues(xml: string): string[] {
   ].map((match) => decodeXml((match[1] ?? '').replace(/<[^>]+>/g, '')))
 }
 
+function chartNumericPoints(xml: string): { values: number[]; blanks: number[] } {
+  const declaredCount = integerAttribute(xml, 'c:ptCount', 'val')
+  const points = [...xml.matchAll(/<c:pt\b([^>]*)>([\s\S]*?)<\/c:pt>/g)].flatMap(
+    (match) => {
+      const index = Number(xmlAttribute(match[1] ?? '', 'idx'))
+      if (!Number.isInteger(index) || index < 0) return []
+      const raw = textContent(match[2] ?? '', 'c:v')
+      const value = raw === undefined || raw.trim() === '' ? undefined : Number(raw)
+      return [{ index, value: value !== undefined && Number.isFinite(value) ? value : undefined }]
+    },
+  )
+  const highestIndex = points.reduce((highest, point) => Math.max(highest, point.index), -1)
+  const count = Math.max(declaredCount ?? 0, highestIndex + 1)
+  const values = Array<number>(count).fill(0)
+  const present = new Set<number>()
+  const blanks: number[] = []
+  for (const point of points) {
+    if (point.index >= count) continue
+    present.add(point.index)
+    if (point.value === undefined) blanks.push(point.index)
+    else values[point.index] = point.value
+  }
+  for (let index = 0; index < count; index += 1) {
+    if (!present.has(index)) blanks.push(index)
+  }
+  blanks.sort((left, right) => left - right)
+  return { values, blanks }
+}
+
 function chartSeries(chartXml: string): NonNullable<WorkbookVisualObject['chart']>['series'] {
   return [...chartXml.matchAll(/<c:ser\b[^>]*>([\s\S]*?)<\/c:ser>/g)].map((match) => {
     const body = match[1] ?? ''
@@ -771,7 +800,7 @@ function chartSeries(chartXml: string): NonNullable<WorkbookVisualObject['chart'
     const categoriesBody = xmlElementBody(body, 'c:cat') ?? xmlElementBody(body, 'c:xVal') ?? ''
     const valuesBody = xmlElementBody(body, 'c:val') ?? xmlElementBody(body, 'c:yVal') ?? ''
     const name = textContent(tx, 'c:v') ?? xmlTexts(tx, 'a:t').join('')
-    const values = chartPointValues(valuesBody).map(Number).filter(Number.isFinite)
+    const numericPoints = chartNumericPoints(valuesBody)
     const categories = chartPointValues(categoriesBody)
     const valuesRef = textContent(valuesBody, 'c:f')
     const categoriesRef = textContent(categoriesBody, 'c:f')
@@ -780,7 +809,8 @@ function chartSeries(chartXml: string): NonNullable<WorkbookVisualObject['chart'
     return {
       name,
       categories,
-      values,
+      values: numericPoints.values,
+      ...(numericPoints.blanks.length === 0 ? {} : { blanks: numericPoints.blanks }),
       ...(valuesRef === undefined ? {} : { valuesRef }),
       ...(categoriesRef === undefined ? {} : { categoriesRef }),
       ...(rawColor && /^[0-9A-Fa-f]{6}$/.test(rawColor) ? { color: `#${rawColor}` } : {}),
@@ -852,6 +882,11 @@ function chartMetadata(chartXml: string): NonNullable<WorkbookVisualObject['char
       : undefined
   const gapWidthPct = integerAttribute(plotArea, 'c:gapWidth', 'val')
   const holeSizePct = integerAttribute(plotArea, 'c:holeSize', 'val')
+  const rawDispBlanksAs = elementAttribute(chartXml, 'c:dispBlanksAs', 'val')
+  const dispBlanksAs =
+    rawDispBlanksAs === 'gap' || rawDispBlanksAs === 'zero' || rawDispBlanksAs === 'span'
+      ? rawDispBlanksAs
+      : undefined
   return {
     chartTypes,
     ...(elementAttribute(plotArea, 'c:barDir', 'val') === undefined
@@ -859,6 +894,7 @@ function chartMetadata(chartXml: string): NonNullable<WorkbookVisualObject['char
       : { barDirection: elementAttribute(plotArea, 'c:barDir', 'val') }),
     title,
     series: chartSeries(plotArea),
+    ...(dispBlanksAs === undefined ? {} : { dispBlanksAs }),
     legend,
     ...(dataLabels === undefined ? {} : { dataLabels }),
     ...(dataLabelPosition === undefined ? {} : { dataLabelPosition }),

@@ -285,6 +285,7 @@ const visualObjectSchema = z
               name: z.string(),
               categories: z.array(z.string()),
               values: z.array(z.number().finite()),
+              blanks: z.array(z.number().int().nonnegative()).optional(),
               numberFormat: z.string().optional(),
               /// numCache formatCode of the category (or scatter X) data.
               categoryFormat: z.string().optional(),
@@ -322,6 +323,7 @@ const visualObjectSchema = z
         /// Parsed from the chart part by the sidecar; session edits overlay the
         /// same fields so the on-screen chart previews the pending save.
         legend: z.enum(['none', 'right', 'bottom', 'top', 'left']).optional(),
+        dispBlanksAs: z.enum(['gap', 'zero', 'span']).optional(),
         axisTitles: z
           .object({
             category: z.string().nullable().optional(),

@@ -34,6 +34,9 @@ export interface ChartSeriesVisualState {
   name: string
   categories: string[]
   values: number[]
+  /// Sparse numeric-cache indexes whose source cells are blank. Values keeps
+  /// zero placeholders so category indexes remain aligned.
+  blanks?: number[] | undefined
   numberFormat?: string | undefined
   /// numCache formatCode of the category (or scatter X) data.
   categoryFormat?: string | undefined
@@ -53,6 +56,8 @@ export interface ChartVisualState {
   barDirection?: string | undefined
   title: string
   series: ChartSeriesVisualState[]
+  /// Workbook chart policy for blank source cells.
+  dispBlanksAs?: 'gap' | 'zero' | 'span' | undefined
   legend?: 'none' | 'right' | 'bottom' | 'top' | 'left' | undefined
   axisTitles?:
     { category?: string | null | undefined; value?: string | null | undefined } | undefined

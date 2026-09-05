@@ -61,6 +61,10 @@ row block loads, preserving file-owned font/fill/alignment defaults.
 List data validation now has active-cell native chrome for both empty and populated cells. The
 dropdown honors `showDropDown`, executes Univer's own list picker command, follows merged ranges and
 selection/sheet changes, and displays file-owned input-message titles/prompts in a bounded overlay.
+Sparse chart numeric caches now keep blank indexes aligned with their categories, and
+`c:dispBlanksAs` reaches the mounted SVG chart preview. Line charts break at blanks for `gap`, bridge
+them for `span`, and retain zero fillers for `zero` and stacked calculations; save keeps the original
+chart part and reopen reproduces the same mode.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -132,7 +136,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,597 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,601 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

@@ -1328,6 +1328,7 @@ function ChartVisual({
             gridlines={chart.gridlines}
             valueAxis={chart.valueAxis}
             categoryFormat={categoryFormat}
+            dispBlanksAs={chart.dispBlanksAs}
             onElement={selectElement}
             selectedEl={selectedEl}
           />
@@ -2080,6 +2081,34 @@ function linePoints(values: readonly number[], maximum: number, minimum = 0): st
     .join(' ')
 }
 
+export function lineSegments(
+  count: number,
+  blanks: readonly number[] | undefined,
+  mode: string | undefined,
+): number[][] {
+  const indices = Array.from({ length: count }, (_, index) => index)
+  if ((mode !== 'gap' && mode !== 'span') || blanks === undefined || blanks.length === 0) {
+    return count > 0 ? [indices] : []
+  }
+  const blankSet = new Set(blanks)
+  if (mode === 'span') {
+    const kept = indices.filter((index) => !blankSet.has(index))
+    return kept.length > 0 ? [kept] : []
+  }
+  const segments: number[][] = []
+  let current: number[] = []
+  for (const index of indices) {
+    if (blankSet.has(index)) {
+      if (current.length > 0) segments.push(current)
+      current = []
+    } else {
+      current.push(index)
+    }
+  }
+  if (current.length > 0) segments.push(current)
+  return segments
+}
+
 /// 5-tick nice ceiling so the top gridline sits at or above the data maximum.
 function niceAxisMaximum(maximum: number): number {
   if (maximum <= 0) return 1
@@ -2185,6 +2214,7 @@ function LineChart({
   gridlines,
   valueAxis,
   categoryFormat,
+  dispBlanksAs,
   onElement,
   selectedEl,
 }: {
@@ -2195,6 +2225,7 @@ function LineChart({
   readonly gridlines?: boolean | undefined
   readonly valueAxis?: ChartValueAxis
   readonly categoryFormat?: string | undefined
+  readonly dispBlanksAs?: ChartMetadata['dispBlanksAs']
 } & ChartElementProps): React.JSX.Element {
   const primary = seriesList[0]
   if (!primary) return <div className="xlsx-visual-error">{t('appChartCacheEmpty')}</div>
@@ -2232,6 +2263,17 @@ function LineChart({
   const span = bounds.max - bounds.min
   const categories = primary.categories.map((value) => formatCategoryLabel(value, categoryFormat))
   const count = Math.max(1, primary.values.length - 1)
+  const isSkippedBlank = (series: ChartSeries, index: number): boolean =>
+    !isStacked &&
+    (dispBlanksAs === 'gap' || dispBlanksAs === 'span') &&
+    (series.blanks?.includes(index) ?? false)
+  const seriesClick = (seriesIndex: number) =>
+    onElement
+      ? (event: React.MouseEvent) => {
+          event.stopPropagation()
+          onElement({ kind: 'series', seriesIndex })
+        }
+      : undefined
   return (
     <svg className="chart-svg" viewBox="0 0 600 320" role="img">
       <VerticalAxis
@@ -2248,25 +2290,28 @@ function LineChart({
             : undefined
         }
       />
-      {seriesList.map((series, seriesIndex) => (
-        <polyline
-          key={seriesIndex}
-          points={linePoints(displayValues(seriesIndex), bounds.max, bounds.min)}
-          fill="none"
-          stroke={seriesColor(series, seriesIndex)}
-          strokeWidth={
-            selectedEl?.kind === 'series' && selectedEl.seriesIndex === seriesIndex ? '5' : '3'
-          }
-          onClick={
-            onElement
-              ? (event) => {
-                  event.stopPropagation()
-                  onElement({ kind: 'series', seriesIndex })
-                }
-              : undefined
-          }
-        />
-      ))}
+      {seriesList.flatMap((series, seriesIndex) => {
+        const values = displayValues(seriesIndex)
+        return lineSegments(values.length, isStacked ? undefined : series.blanks, dispBlanksAs).map(
+          (indices, segmentIndex) => (
+            <polyline
+              key={`${seriesIndex}-${segmentIndex}`}
+              points={indices
+                .map(
+                  (index) =>
+                    `${60 + (index / Math.max(1, values.length - 1)) * 500},${280 - Math.max(0, Math.min(1, ((values[index] ?? 0) - bounds.min) / span)) * 240}`,
+                )
+                .join(' ')}
+              fill="none"
+              stroke={seriesColor(series, seriesIndex)}
+              strokeWidth={
+                selectedEl?.kind === 'series' && selectedEl.seriesIndex === seriesIndex ? '5' : '3'
+              }
+              onClick={seriesClick(seriesIndex)}
+            />
+          ),
+        )
+      })}
       {seriesList.map((series, seriesIndex) =>
         series.trendline === 'linear' ? (
           <TrendLine
@@ -2298,17 +2343,19 @@ function LineChart({
         </text>
       ))}
       {dataLabels === 'value' &&
-        displayValues(0).map((displayed, index) => (
-          <text
-            key={`label-${index}`}
-            x={60 + (index / count) * 500}
-            y={272 - Math.max(0, Math.min(1, (displayed - bounds.min) / span)) * 240}
-            textAnchor="middle"
-            className="axis-label"
-          >
-            {formatAxisValue(primary.values[index] ?? 0, primary.numberFormat)}
-          </text>
-        ))}
+        displayValues(0).map((displayed, index) =>
+          isSkippedBlank(primary, index) ? null : (
+            <text
+              key={`label-${index}`}
+              x={60 + (index / count) * 500}
+              y={272 - Math.max(0, Math.min(1, (displayed - bounds.min) / span)) * 240}
+              textAnchor="middle"
+              className="axis-label"
+            >
+              {formatAxisValue(primary.values[index] ?? 0, primary.numberFormat)}
+            </text>
+          ),
+        )}
       <AxisTitleTexts bottom={axisTitles?.category} left={axisTitles?.value} />
     </svg>
   )
