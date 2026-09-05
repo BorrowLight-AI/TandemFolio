@@ -341,6 +341,11 @@ export const workbookFileSchema = z
       .object({ major: z.string(), minor: z.string() })
       .strict()
       .optional(),
+    /// workbook.xml structure protection; absent without the element.
+    workbookProtection: z
+      .object({ lockStructure: z.boolean(), hasPassword: z.boolean() })
+      .strict()
+      .optional(),
   })
   .strict()
 
@@ -1488,6 +1493,12 @@ export const workbookSaveRequestSchema = z
       .strict()
       .nullable()
       .default(null),
+    /// Desired passwordless workbook structure-protection state.
+    workbookProtectionState: z
+      .object({ lockStructure: z.boolean() })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict()
   .refine(
@@ -1511,6 +1522,7 @@ export const workbookSaveRequestSchema = z
       request.sheetProtections.length > 0 ||
       request.definedNamesState !== null ||
       request.themeState !== null ||
+      request.workbookProtectionState !== null ||
       request.visualAdditions.length > 0 ||
       request.tableAdditions.length > 0 ||
       request.pivotAdditions.length > 0 ||

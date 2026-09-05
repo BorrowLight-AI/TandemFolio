@@ -121,6 +121,7 @@ import {
 } from '../univer-sync'
 import { applyWorkbookTableAdd } from '../workbook-ops'
 import { structuralDeleteFormulaError } from '../structural-delete-guard'
+import { applyWorkbookStructureProtection } from '../workbook-protection'
 import {
   BORDER_COMMAND_TYPES,
   type ActiveWorkbook,
@@ -1176,6 +1177,21 @@ function normalizeXlsxComparisonOperand(
 }
 
 const handlers = {
+  'xlsx.document.set_protection': (arguments_, services) => {
+    const runtime = services.runtime()
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    const state = xlsxOperationState(services)
+    if (!state.file) throw new Error('Open a file-backed XLSX workbook first.')
+    const lockStructure = arguments_.lockStructure as boolean
+    const error = applyWorkbookStructureProtection(
+      runtime,
+      { editJournal: state.editJournal, file: state.file },
+      lockStructure,
+      services.setPendingEdits,
+    )
+    if (error) return { ok: false, error: 'execution_failed', message: error }
+    return { ok: true, output: { lockStructure } }
+  },
   'xlsx.document.set_theme': (arguments_, services) => {
     const runtime = services.runtime()
     if (!runtime) throw new Error('Open an XLSX workbook first.')

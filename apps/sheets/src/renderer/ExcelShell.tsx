@@ -154,6 +154,7 @@ interface ExcelShellProps {
   readonly onGetSortColumns: () => { label: string; colIndex: number }[]
   /// Effective protection of the active sheet (null = unknown / demo).
   readonly onGetSheetProtection: () => boolean | null
+  readonly onGetWorkbookProtection: () => boolean | null
   /// Name Manager data + actions (actions return an error message or null).
   readonly onGetDefinedNames: () => {
     names: DefinedNameRow[]
@@ -220,6 +221,7 @@ export function ExcelShell({
   selectionFormat,
   onGetSortColumns,
   onGetSheetProtection,
+  onGetWorkbookProtection,
   onGetDefinedNames,
   onDefinedNameAction,
   onGetPivotFields,
@@ -390,6 +392,7 @@ export function ExcelShell({
           activeTab={activeTab}
           selectionFormat={selectionFormat}
           sheetProtected={onGetSheetProtection()}
+          workbookProtected={onGetWorkbookProtection()}
           pageLayout={pageLayout}
           calcManual={calcManual}
           selectedChart={selectedChart}
@@ -968,6 +971,7 @@ function Ribbon({
   activeTab,
   selectionFormat,
   sheetProtected,
+  workbookProtected,
   pageLayout,
   calcManual,
   selectedChart,
@@ -978,6 +982,7 @@ function Ribbon({
   readonly activeTab: RibbonTab
   readonly selectionFormat: SelectionFormat | null
   readonly sheetProtected: boolean | null
+  readonly workbookProtected: boolean | null
   readonly pageLayout: PageLayoutEcho
   readonly calcManual: boolean
   readonly selectedChart: SelectedChartRibbon | null
@@ -2114,7 +2119,13 @@ function Ribbon({
             symbol={sheetProtected ? '🔓' : '🔒'}
             onClick={() => onCommand('sheet-protect')}
           />
-          <RibbonReserved large label={t('appProtectWorkbook')} symbol="🔐" />
+          <RibbonButton
+            large
+            label={t('appProtectWorkbook')}
+            detail={t(workbookProtected === null ? 'appOpenFileFirst' : 'appNoPassword')}
+            symbol={workbookProtected ? '🔓' : '🔐'}
+            onClick={() => onCommand('workbook-protect')}
+          />
           <RibbonReserved large label={t('appAllowEditRanges')} symbol="⬚" />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupInk')}>

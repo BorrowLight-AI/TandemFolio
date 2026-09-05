@@ -21471,6 +21471,48 @@
       ],
       "family": "document",
       "format": "xlsx",
+      "id": "xlsx.document.set_protection",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "lockStructure": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "lockStructure"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "lockStructure": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "lockStructure"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Set the passwordless workbook structure-protection state.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "document",
+      "format": "xlsx",
       "id": "xlsx.document.set_theme",
       "inputSchema": {
         "additionalProperties": false,

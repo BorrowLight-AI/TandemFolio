@@ -228,6 +228,9 @@ export class BrowserWorkbookDesktopApi {
             },
           }
         : {}),
+      ...(workbook.workbookProtection()
+        ? { workbookProtection: workbook.workbookProtection()! }
+        : {}),
       ...(handle ? {} : { needsSaveAs: true }),
     }
     this.#sessions.set(sessionId, { workbook, file, sheetNames, handle })
@@ -483,6 +486,9 @@ export class BrowserWorkbookDesktopApi {
       workbook.replaceDefinedNames(request.definedNamesState.names)
     }
     if (request.themeState) workbook.applyTheme(request.themeState)
+    if (request.workbookProtectionState) {
+      workbook.setWorkbookProtection(request.workbookProtectionState.lockStructure)
+    }
     const bytes = await workbook.save()
     if (destination === 'document' && 'parent' in window && window.parent !== window) {
       const fileName = xlsxName(session.file.name)

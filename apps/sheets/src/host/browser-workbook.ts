@@ -24,7 +24,10 @@ import { parsePivotDefinition, setPivotRefreshOnLoad } from '../gateway/xlsx-piv
 import { applyPivotAdditions, type PivotAddition } from '../gateway/xlsx-pivot-add'
 import { applyPivotLayoutExpansions, type PivotRefreshUpdate } from '../gateway/xlsx-pivot-expand'
 import { applySheetNotes, readSheetNotes, type SheetNote } from '../gateway/xlsx-notes'
-import { applySheetProtection as applySheetProtectionToXml } from '../gateway/xlsx-protection'
+import {
+  applySheetProtection as applySheetProtectionToXml,
+  applyWorkbookProtection as applyWorkbookProtectionToXml,
+} from '../gateway/xlsx-protection'
 import {
   applyThemeState,
   readThemeState,
@@ -1178,6 +1181,29 @@ export class BrowserWorkbook {
     const xml = this.#metadataXml.get(path)
     if (xml === undefined) throw new Error('The workbook has no editable theme part.')
     this.#metadataXml.set(path, applyThemeState(xml, state))
+    this.#dirtyPaths.add(path)
+  }
+
+  workbookProtection(): { readonly lockStructure: boolean; readonly hasPassword: boolean } | null {
+    const xml = this.#metadataXml.get('xl/workbook.xml')!
+    const attributes = /<workbookProtection\b([^>]*)\/?\s*>/.exec(xml)?.[1]
+    if (attributes === undefined) return null
+    return {
+      lockStructure:
+        xmlAttribute(attributes, 'lockStructure') === '1' ||
+        xmlAttribute(attributes, 'lockStructure') === 'true',
+      hasPassword:
+        xmlAttribute(attributes, 'workbookPassword') !== undefined ||
+        xmlAttribute(attributes, 'workbookHashValue') !== undefined,
+    }
+  }
+
+  setWorkbookProtection(lockStructure: boolean): void {
+    const path = 'xl/workbook.xml'
+    this.#metadataXml.set(
+      path,
+      applyWorkbookProtectionToXml(this.#metadataXml.get(path)!, lockStructure),
+    )
     this.#dirtyPaths.add(path)
   }
 

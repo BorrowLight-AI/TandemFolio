@@ -401,6 +401,20 @@ describe('browser XLSX workbook', () => {
     expect(reopened.sheets[0]?.sheetProtection).toBeNull()
   })
 
+  it('sets and reopens passwordless workbook structure protection', async () => {
+    const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
+    expect(workbook.workbookProtection()).toBeNull()
+    workbook.setWorkbookProtection(true)
+    const protectedWorkbook = await openBrowserWorkbook(await workbook.save(), 'budget.xlsx')
+    expect(protectedWorkbook.workbookProtection()).toEqual({
+      lockStructure: true,
+      hasPassword: false,
+    })
+    protectedWorkbook.setWorkbookProtection(false)
+    const reopened = await openBrowserWorkbook(await protectedWorkbook.save(), 'budget.xlsx')
+    expect(reopened.workbookProtection()).toBeNull()
+  })
+
   it('writes and reopens native sparklines through the browser boundary', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
 

@@ -63,6 +63,7 @@ import {
   queueSparklineInstall,
   workbookTextToColumnsDelimiterFromFlag,
 } from './univer-sync'
+import { applyWorkbookStructureProtection, workbookStructureLocked } from './workbook-protection'
 import {
   BORDER_COMMAND_TYPES,
   type ActiveWorkbook,
@@ -356,6 +357,21 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
       }
       ctx.setPendingEdits(journalSize(state.editJournal))
       ctx.setMessage(!current ? t('appProtectionWillWrite') : t('appProtectionWillRemove'))
+      return
+    }
+    case 'workbook-protect': {
+      const state = ctx.lazyWorkbookRef.current
+      if (!state) {
+        ctx.setMessage(t('appProtectionNeedsFile'))
+        return
+      }
+      const next = !workbookStructureLocked(state)
+      const error = applyWorkbookStructureProtection(runtime, state, next, ctx.setPendingEdits)
+      if (error) {
+        ctx.setMessage(error)
+        return
+      }
+      ctx.setMessage(next ? 'Workbook structure will be protected.' : 'Workbook protection removed.')
       return
     }
     case 'outline-group:rows':

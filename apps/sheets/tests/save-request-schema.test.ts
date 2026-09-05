@@ -59,4 +59,13 @@ describe('workbookSaveRequestSchema', () => {
       }),
     ).not.toThrow()
   })
+
+  it('accepts a workbook-protection-only ordinary save', () => {
+    expect(() =>
+      workbookSaveRequestSchema.parse({
+        ...emptyRequest('save'),
+        workbookProtectionState: { lockStructure: true },
+      }),
+    ).not.toThrow()
+  })
 })

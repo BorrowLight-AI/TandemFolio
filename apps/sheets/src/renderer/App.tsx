@@ -103,6 +103,7 @@ import { installMergeBorderFix } from './merge-border-fix'
 import { installThickBorderFix } from './thick-border-fix'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { solveGoalSeek } from './goal-seek'
+import { workbookStructureLocked } from './workbook-protection'
 import {
   CLEAR_SELECTION_CONTENT_COMMAND,
   shouldInterceptClearSelection,
@@ -2757,6 +2758,10 @@ export function App(): React.JSX.Element {
         selectedChart={selectedChart}
         onGetSortColumns={sortColumnOptions}
         onGetSheetProtection={sheetProtectionEcho}
+        onGetWorkbookProtection={() => {
+          const state = lazyWorkbookRef.current
+          return state ? workbookStructureLocked(state) : null
+        }}
         onGetDefinedNames={definedNameRows}
         onDefinedNameAction={handleDefinedNameAction}
         onGetPivotFields={() => pivotFieldOptionsImpl(pivotContext())}

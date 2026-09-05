@@ -135,6 +135,8 @@ export interface EditJournal {
     colors?: { name: string; values: string[] }
     fonts?: { name: string; major: string; minor: string }
   }
+  /// Desired workbook structure lock (null = untouched).
+  readonly workbookProtection: { desired: boolean | null }
   /// The defined-name set changed; the save snapshots the full model.
   readonly definedNames: { dirty: boolean }
   /// sheetId → "row:column" → link target ('#Sheet!A1' internal, URL
@@ -238,6 +240,7 @@ export function createEditJournal(): EditJournal {
     dvDirty: new Set(),
     sheetProtection: new Map(),
     theme: {},
+    workbookProtection: { desired: null },
     definedNames: { dirty: false },
     hyperlinks: new Map(),
     pageSetup: new Map(),
@@ -317,6 +320,14 @@ export function recordThemeFonts(
   minor: string,
 ): void {
   journal.theme.fonts = { name, major, minor }
+}
+
+export function recordWorkbookProtection(
+  journal: EditJournal,
+  desired: boolean,
+  original: boolean,
+): void {
+  journal.workbookProtection.desired = desired === original ? null : desired
 }
 
 export function recordSheetProtection(
@@ -1737,6 +1748,7 @@ export function journalSize(journal: EditJournal): number {
   if (journal.definedNames.dirty) total += 1
   if (journal.theme.colors !== undefined) total += 1
   if (journal.theme.fonts !== undefined) total += 1
+  if (journal.workbookProtection.desired !== null) total += 1
   for (const [sheetId, state] of journal.pageSetup) {
     if (!isSheetRemoved(journal, sheetId) && Object.keys(state).length > 0) total += 1
   }

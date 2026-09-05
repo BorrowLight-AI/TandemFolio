@@ -231,9 +231,9 @@ operation and its `open_local_file` transport alias are hidden from capability d
 be called through `office_execute`; success returns `{ opened: true, fileName }` after the mounted
 renderer accepts the hydrated workbook bytes.
 
-Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 116 public
+Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 117 public
 XLSX operations include the audited retained command surface and candidate-native calculation mode,
-recalculation, Goal Seek, and native workbook themes; two internal operations carry staged workbook/image bytes. The current
+recalculation, Goal Seek, native workbook themes, and workbook structure protection; two internal operations carry staged workbook/image bytes. The current
 candidate-native migration keeps source-current release readiness fail-closed until recapture.
 
 ## PPTX
