@@ -238,6 +238,13 @@ import {
   storeCrossHighlightPreference,
   type CrossHighlightHandle,
 } from './cross-highlight'
+import {
+  WatchWindowPanel,
+  appendWatchSelection,
+  removeWatch,
+  type WatchCell,
+  type WatchRowValue,
+} from './WatchWindowPanel'
 import { installCfFormulaFold } from './cf-formula-fold'
 import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
@@ -874,6 +881,8 @@ export function App(): React.JSX.Element {
   const [zoomPercent, setZoomPercent] = useState(100)
   const [selectionFormat, setSelectionFormat] = useState<SelectionFormat | null>(null)
   const [calcManual, setCalcManual] = useState(false)
+  const [watchOpen, setWatchOpen] = useState(false)
+  const [watchCells, setWatchCells] = useState<readonly WatchCell[]>([])
   /// A1 label of the active cell, echoed live by the Name Box. Updated from
   /// the same SelectionChanged refresh that keeps selectionFormat current.
   const [activeCellA1, setActiveCellA1] = useState('')
@@ -2388,6 +2397,10 @@ export function App(): React.JSX.Element {
 
   function handleRibbonCommand(command: string): void {
     const runtime = univerRef.current
+    if (command === 'watch-window') {
+      setWatchOpen((open) => !open)
+      return
+    }
     if (command === 'toggle-page-break-preview') {
       togglePageBreakPreview()
       return
@@ -2425,6 +2438,27 @@ export function App(): React.JSX.Element {
       return
     }
     handleRibbonCommandImpl(ribbonContext(), command)
+  }
+
+  function addWatchSelection(): void {
+    const workbook = univerRef.current?.univerAPI.getActiveWorkbook()
+    const worksheet = workbook?.getActiveSheet()
+    const selection = workbook?.getActiveRange()?.getRange()
+    if (!worksheet || !selection) return
+    setWatchCells((current) => appendWatchSelection(current, worksheet.getSheetId(), selection))
+  }
+
+  function resolveWatch(cell: WatchCell): WatchRowValue | null {
+    const worksheet = univerRef.current?.univerAPI
+      .getActiveWorkbook()
+      ?.getSheetBySheetId(cell.sheetId)
+    if (!worksheet) return null
+    const range = worksheet.getRange(cell.row, cell.column, 1, 1)
+    return {
+      sheetName: worksheet.getSheetName(),
+      value: range.getDisplayValue() ?? '',
+      formula: range.getFormula() ?? '',
+    }
   }
 
   function selectionStyle(
@@ -3126,6 +3160,15 @@ export function App(): React.JSX.Element {
         onClear={(timelineId) => handleTimelineRangeImpl(pivotContext(), timelineId, null)}
         onRemove={(timelineId) => handleRemoveTimelineImpl(pivotContext(), timelineId)}
       />
+      {watchOpen && (
+        <WatchWindowPanel
+          watches={watchCells}
+          onResolve={resolveWatch}
+          onAddSelection={addWatchSelection}
+          onRemove={(key) => setWatchCells((current) => removeWatch(current, key))}
+          onClose={() => setWatchOpen(false)}
+        />
+      )}
     </>
   )
 

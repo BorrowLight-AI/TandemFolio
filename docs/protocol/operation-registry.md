@@ -1212,6 +1212,10 @@ streamed file rows with journal and structural mappings, then loads and selects 
 does not change workbook state, document revision, history, or saved bytes, so it remains a native
 Ribbon navigation action outside the mutation Registry.
 
+The source-current XLSX Watch Window is also outside the mutation Registry. Its bounded session
+list reads live values and formulas from stable worksheet/cell identities and supports local
+add/remove/close controls without changing document state, revision, history, or saved bytes.
+
 ## Module map
 
 ```text

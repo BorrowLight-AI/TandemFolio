@@ -1868,7 +1868,13 @@ function Ribbon({
             symbol="⚠"
             onClick={() => onCommand('error-checking')}
           />
-          <RibbonReserved large label={t('appWatchWindow')} symbol="👓" />
+          <RibbonButton
+            large
+            label={t('appWatchWindow')}
+            detail={t('appWatchWindowDetail')}
+            symbol="👓"
+            onClick={() => onCommand('watch-window')}
+          />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupCalculation')}>
           {largeMenu(t('appCalculationOptions'), '🧮', t('appCalculationOptions'), [

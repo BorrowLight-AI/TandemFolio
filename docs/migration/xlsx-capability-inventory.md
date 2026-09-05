@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 168 passing files and one environment-conditional LibreOffice pivot
-suite; 1,961 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 169 passing files and one environment-conditional LibreOffice pivot
+suite; 1,967 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -245,6 +245,13 @@ loads and activates the next error after the current selection, wraps across wor
 safely when the workbook changes or the 400,000-cell budget is reached. This is renderer-owned
 read-only inspection and navigation, so it does not advance the document revision or add a mutation
 operation.
+
+Formulas › Watch Window is restored as a non-modal native inspection panel. It captures selected
+cells by stable worksheet ID and zero-based coordinates, deduplicates them, caps the complete list
+at 20 entries, and refreshes displayed worksheet name, formatted value, and formula while open.
+Worksheet renames remain visible without changing watch identity; deleted sheets are shown as gone.
+The watch list is session-local read-only state and never changes workbook history, revision, or
+saved bytes.
 
 The quick-access toolbar now exposes Save As independently from dirty-state Save. Any open
 file-backed workbook can choose a new browser file target even when clean, while the in-memory demo
