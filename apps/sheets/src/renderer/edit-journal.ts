@@ -130,6 +130,11 @@ export interface EditJournal {
   readonly dvDirty: Set<string>
   /// Desired sheet-protection state (dropped when toggled back to original).
   readonly sheetProtection: Map<string, boolean>
+  /// Document theme change; only the halves touched in this session exist.
+  readonly theme: {
+    colors?: { name: string; values: string[] }
+    fonts?: { name: string; major: string; minor: string }
+  }
   /// The defined-name set changed; the save snapshots the full model.
   readonly definedNames: { dirty: boolean }
   /// sheetId → "row:column" → link target ('#Sheet!A1' internal, URL
@@ -232,6 +237,7 @@ export function createEditJournal(): EditJournal {
     cfDirty: new Set(),
     dvDirty: new Set(),
     sheetProtection: new Map(),
+    theme: {},
     definedNames: { dirty: false },
     hyperlinks: new Map(),
     pageSetup: new Map(),
@@ -294,6 +300,23 @@ export function toSavePageSetupStates(
 
 export function recordDefinedNamesChange(journal: EditJournal): void {
   journal.definedNames.dirty = true
+}
+
+export function recordThemeColors(
+  journal: EditJournal,
+  name: string,
+  values: readonly string[],
+): void {
+  journal.theme.colors = { name, values: [...values] }
+}
+
+export function recordThemeFonts(
+  journal: EditJournal,
+  name: string,
+  major: string,
+  minor: string,
+): void {
+  journal.theme.fonts = { name, major, minor }
 }
 
 export function recordSheetProtection(
@@ -1712,6 +1735,8 @@ export function journalSize(journal: EditJournal): number {
     if (!isSheetRemoved(journal, sheetId)) total += 1
   }
   if (journal.definedNames.dirty) total += 1
+  if (journal.theme.colors !== undefined) total += 1
+  if (journal.theme.fonts !== undefined) total += 1
   for (const [sheetId, state] of journal.pageSetup) {
     if (!isSheetRemoved(journal, sheetId) && Object.keys(state).length > 0) total += 1
   }

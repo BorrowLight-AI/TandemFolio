@@ -204,6 +204,7 @@ export class BrowserWorkbookDesktopApi {
         sparklines: sheet.sparklines,
       }
     })
+    const theme = workbook.theme()
     const file: WorkbookFile = {
       sessionId,
       name,
@@ -218,6 +219,15 @@ export class BrowserWorkbookDesktopApi {
       }),
       definedNames: workbook.definedNames(),
       readOnly: false,
+      ...(theme?.colors ? { themeColors: [...theme.colors.values] } : {}),
+      ...(theme?.fonts
+        ? {
+            themeFonts: {
+              major: theme.fonts.major,
+              minor: theme.fonts.minor,
+            },
+          }
+        : {}),
       ...(handle ? {} : { needsSaveAs: true }),
     }
     this.#sessions.set(sessionId, { workbook, file, sheetNames, handle })
@@ -472,6 +482,7 @@ export class BrowserWorkbookDesktopApi {
     if (request.definedNamesState) {
       workbook.replaceDefinedNames(request.definedNamesState.names)
     }
+    if (request.themeState) workbook.applyTheme(request.themeState)
     const bytes = await workbook.save()
     if (destination === 'document' && 'parent' in window && window.parent !== window) {
       const fileName = xlsxName(session.file.name)

@@ -99,6 +99,45 @@ export const xlsxOperationCatalog = {
       compatibilityAliases: [],
     },
     {
+      id: 'xlsx.document.set_theme',
+      format: 'xlsx',
+      family: 'document',
+      summary: 'Apply a native workbook theme, color scheme, or font scheme.',
+      visibility: 'agent',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          mode: { type: 'string', enum: ['theme', 'theme-colors', 'theme-fonts'] },
+          scheme: {
+            type: 'string',
+            enum: [
+              'office', 'ember', 'indigo', 'forest', 'cream', 'rose', 'graphite', 'midnight',
+              'arial', 'georgia', 'candara', 'segoe', 'trebuchet',
+            ],
+          },
+        },
+        required: ['mode', 'scheme'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          mode: { type: 'string', enum: ['theme', 'theme-colors', 'theme-fonts'] },
+          scheme: { type: 'string' },
+          name: { type: 'string' },
+        },
+        required: ['mode', 'scheme', 'name'],
+        additionalProperties: false,
+      },
+      risk: 'medium',
+      context: ['document'],
+      effects: ['document'],
+      mutates: true,
+      undoable: true,
+      atomic: true,
+      compatibilityAliases: [],
+    },
+    {
       id: 'xlsx.cell.set_value',
       format: 'xlsx',
       family: 'cell',

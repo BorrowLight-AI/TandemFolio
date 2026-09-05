@@ -21461,6 +21461,85 @@
       "visibility": "agent"
     },
     {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "document",
+      "format": "xlsx",
+      "id": "xlsx.document.set_theme",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "theme",
+              "theme-colors",
+              "theme-fonts"
+            ],
+            "type": "string"
+          },
+          "scheme": {
+            "enum": [
+              "office",
+              "ember",
+              "indigo",
+              "forest",
+              "cream",
+              "rose",
+              "graphite",
+              "midnight",
+              "arial",
+              "georgia",
+              "candara",
+              "segoe",
+              "trebuchet"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "scheme"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "theme",
+              "theme-colors",
+              "theme-fonts"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scheme": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "scheme",
+          "name"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Apply a native workbook theme, color scheme, or font scheme.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
       "atomic": false,
       "compatibilityAliases": [],
       "context": [

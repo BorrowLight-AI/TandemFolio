@@ -25,6 +25,11 @@ import { applyPivotAdditions, type PivotAddition } from '../gateway/xlsx-pivot-a
 import { applyPivotLayoutExpansions, type PivotRefreshUpdate } from '../gateway/xlsx-pivot-expand'
 import { applySheetNotes, readSheetNotes, type SheetNote } from '../gateway/xlsx-notes'
 import { applySheetProtection as applySheetProtectionToXml } from '../gateway/xlsx-protection'
+import {
+  applyThemeState,
+  readThemeState,
+  type WorkbookThemeState,
+} from '../gateway/xlsx-theme'
 import { applySparklineAdditions, type SparklineGroupAdd } from '../gateway/xlsx-sparkline'
 import { StylesheetEditor } from '../gateway/xlsx-styles'
 import { applyTableAdditions, type TableAddition } from '../gateway/xlsx-table-add'
@@ -1163,6 +1168,19 @@ export class BrowserWorkbook {
     this.#dirtyPaths.add(workbookPath)
   }
 
+  theme(): WorkbookThemeState | null {
+    const xml = this.#metadataXml.get('xl/theme/theme1.xml')
+    return xml === undefined ? null : readThemeState(xml)
+  }
+
+  applyTheme(state: WorkbookThemeState): void {
+    const path = 'xl/theme/theme1.xml'
+    const xml = this.#metadataXml.get(path)
+    if (xml === undefined) throw new Error('The workbook has no editable theme part.')
+    this.#metadataXml.set(path, applyThemeState(xml, state))
+    this.#dirtyPaths.add(path)
+  }
+
   pageSetup(sheetName: string): SheetPageSetupState {
     const sheet = this.#sheet(sheetName)
     return readPageSetupState(
@@ -2241,6 +2259,14 @@ export async function openBrowserWorkbook(
     ['xl/_rels/workbook.xml.rels', relsXml],
     ['[Content_Types].xml', contentTypesXml],
   ])
+  const themeRelationship = [...relsXml.matchAll(/<Relationship\b([^>]*)\/?\s*>/g)].find(
+    (match) => /\/theme$/.test(xmlAttribute(match[1] ?? '', 'Type') ?? ''),
+  )
+  const themeTarget = themeRelationship ? xmlAttribute(themeRelationship[1] ?? '', 'Target') : undefined
+  if (themeTarget) {
+    const themePath = `xl/${themeTarget.replace(/^\/?xl\//, '').replace(/^\.\//, '')}`
+    if (zip.file(themePath)) metadataXml.set(themePath, await zipText(zip, themePath))
+  }
   const sharedStrings = readSharedStrings(
     zip.file('xl/sharedStrings.xml') ? await zipText(zip, 'xl/sharedStrings.xml') : null,
   )

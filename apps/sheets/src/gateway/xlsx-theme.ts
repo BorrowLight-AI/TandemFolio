@@ -12,6 +12,72 @@ export interface WorkbookThemeState {
     { readonly name: string; readonly major: string; readonly minor: string } | undefined
 }
 
+function decodeAttr(value: string): string {
+  return value
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&')
+}
+
+function attr(xml: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const value = new RegExp(`(?:^|\\s)${escaped}="([^"]*)"`).exec(xml)?.[1]
+  return value === undefined ? undefined : decodeAttr(value)
+}
+
+function themeElement(xml: string, name: string): { attributes: string; body: string } | null {
+  const prefix = '(?:[A-Za-z_][\\w.-]*:)?'
+  const match = new RegExp(
+    `<${prefix}${name}\\b([^>]*)>([\\s\\S]*?)<\\/${prefix}${name}>`,
+  ).exec(xml)
+  return match ? { attributes: match[1] ?? '', body: match[2] ?? '' } : null
+}
+
+function themeColor(xml: string, slot: string): string | null {
+  const element = themeElement(xml, slot)
+  if (!element) return null
+  const direct = /<(?:[A-Za-z_][\w.-]*:)?srgbClr\b([^>]*)\/?\s*>/.exec(element.body)
+  const system = /<(?:[A-Za-z_][\w.-]*:)?sysClr\b([^>]*)\/?\s*>/.exec(element.body)
+  const value = direct ? attr(direct[1] ?? '', 'val') : system ? attr(system[1] ?? '', 'lastClr') : undefined
+  return value && /^[0-9A-Fa-f]{6}$/.test(value) ? `#${value.toUpperCase()}` : null
+}
+
+/** Reads the palette/font state needed by the renderer from theme1.xml. */
+export function readThemeState(themeXml: string): WorkbookThemeState | null {
+  const colorScheme = themeElement(themeXml, 'clrScheme')
+  const values: (string | null)[] = Array.from({ length: 12 }, () => null)
+  for (const [slot, index] of SCHEME_SLOTS) values[index] = themeColor(themeXml, slot)
+  const colors =
+    colorScheme && values.every((value): value is string => value !== null)
+      ? {
+          name: attr(colorScheme.attributes, 'name') ?? 'Theme Colors',
+          values,
+        }
+      : undefined
+  const fontScheme = themeElement(themeXml, 'fontScheme')
+  const major = themeElement(themeXml, 'majorFont')
+  const minor = themeElement(themeXml, 'minorFont')
+  const majorLatin = major
+    ? /<(?:[A-Za-z_][\w.-]*:)?latin\b([^>]*)\/?\s*>/.exec(major.body)
+    : null
+  const minorLatin = minor
+    ? /<(?:[A-Za-z_][\w.-]*:)?latin\b([^>]*)\/?\s*>/.exec(minor.body)
+    : null
+  const majorName = majorLatin ? attr(majorLatin[1] ?? '', 'typeface') : undefined
+  const minorName = minorLatin ? attr(minorLatin[1] ?? '', 'typeface') : undefined
+  const fonts =
+    fontScheme && majorName && minorName
+      ? {
+          name: attr(fontScheme.attributes, 'name') ?? 'Theme Fonts',
+          major: majorName,
+          minor: minorName,
+        }
+      : undefined
+  return colors || fonts ? { ...(colors ? { colors } : {}), ...(fonts ? { fonts } : {}) } : null
+}
+
 /// clrScheme document order, paired with the slot's position in the theme
 /// index order the renderer uses (light/dark pairs are swapped).
 const SCHEME_SLOTS: readonly (readonly [string, number])[] = [

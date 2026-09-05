@@ -170,6 +170,12 @@ const cellStyleSchema = z
     wrapText: z.boolean(),
     fontColor: z.string().optional(),
     fillColor: z.string().optional(),
+    /// Original theme slots/tints let a live theme change re-resolve colors.
+    fontColorTheme: z.number().int().nonnegative().optional(),
+    fontColorTint: z.number().min(-1).max(1).optional(),
+    fillColorTheme: z.number().int().nonnegative().optional(),
+    fillColorTint: z.number().min(-1).max(1).optional(),
+    fontScheme: z.enum(['major', 'minor']).optional(),
     horizontalAlignment: z.string().optional(),
     verticalAlignment: z.string().optional(),
     /// OOXML alignment indent steps read from the xf; absent when 0.
@@ -329,6 +335,12 @@ export const workbookFileSchema = z
     /// Converted import (.xls/.csv): the first save opens a Save As dialog,
     /// so background flows (AutoSave) must not trigger mode 'save'.
     needsSaveAs: z.boolean().optional(),
+    /// Native theme1.xml state; absent when the package has no readable theme.
+    themeColors: z.array(z.string()).length(12).optional(),
+    themeFonts: z
+      .object({ major: z.string(), minor: z.string() })
+      .strict()
+      .optional(),
   })
   .strict()
 
@@ -1454,6 +1466,28 @@ export const workbookSaveRequestSchema = z
       })
       .strict()
       .nullable(),
+    /// Native theme1.xml rewrite; null means the theme is untouched.
+    themeState: z
+      .object({
+        colors: z
+          .object({
+            name: z.string().min(1).max(64),
+            values: z.array(hexColorSchema).length(12),
+          })
+          .strict()
+          .optional(),
+        fonts: z
+          .object({
+            name: z.string().min(1).max(64),
+            major: z.string().min(1).max(128),
+            minor: z.string().min(1).max(128),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict()
   .refine(
@@ -1476,6 +1510,7 @@ export const workbookSaveRequestSchema = z
       request.pivotRefreshUpdates.length > 0 ||
       request.sheetProtections.length > 0 ||
       request.definedNamesState !== null ||
+      request.themeState !== null ||
       request.visualAdditions.length > 0 ||
       request.tableAdditions.length > 0 ||
       request.pivotAdditions.length > 0 ||

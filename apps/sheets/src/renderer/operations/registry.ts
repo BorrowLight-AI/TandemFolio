@@ -86,6 +86,7 @@ import {
   applyWorkbookPrintHeadings,
   applyWorkbookPrintScale,
   applyWorkbookPrintTitles,
+  applyWorkbookThemeSelection,
   type WorkbookPageMargins,
   type WorkbookPageOrientation,
   type WorkbookPaperSize,
@@ -1175,6 +1176,25 @@ function normalizeXlsxComparisonOperand(
 }
 
 const handlers = {
+  'xlsx.document.set_theme': (arguments_, services) => {
+    const runtime = services.runtime()
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    const state = xlsxOperationState(services)
+    if (!state.file) throw new Error('Open a file-backed XLSX workbook first.')
+    const mode = arguments_.mode as 'theme' | 'theme-colors' | 'theme-fonts'
+    const scheme = arguments_.scheme as string
+    const result = applyWorkbookThemeSelection(
+      runtime,
+      { editJournal: state.editJournal, file: state.file },
+      mode,
+      scheme,
+      services.setPendingEdits,
+    )
+    if ('error' in result) {
+      return { ok: false, error: 'execution_failed', message: result.error }
+    }
+    return { ok: true, output: { mode, scheme, name: result.name } }
+  },
   'xlsx.calculation.goal_seek': async (arguments_, services) => {
     const runtime = services.runtime()
     if (!runtime) throw new Error('Open an XLSX workbook first.')

@@ -38,6 +38,31 @@ async function fixture(): Promise<Uint8Array> {
   return zip.generateAsync({ type: 'uint8array' })
 }
 
+async function themeFixture(): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(await fixture())
+  const rels = await zip.file('xl/_rels/workbook.xml.rels')!.async('text')
+  zip.file(
+    'xl/_rels/workbook.xml.rels',
+    rels.replace(
+      '</Relationships>',
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>',
+    ),
+  )
+  zip.file(
+    'xl/theme/theme1.xml',
+    '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office"><a:themeElements>' +
+      '<a:clrScheme name="Office"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>' +
+      '<a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>' +
+      '<a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2>' +
+      '<a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4>' +
+      '<a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6>' +
+      '<a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme>' +
+      '<a:fontScheme name="Office"><a:majorFont><a:latin typeface="Calibri Light"/></a:majorFont>' +
+      '<a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>',
+  )
+  return zip.generateAsync({ type: 'uint8array' })
+}
+
 function inMemoryFileHandle(name: string) {
   let persisted = new Uint8Array()
   const writable = {
@@ -107,6 +132,56 @@ function cellSaveRequest(
 
 describe('browser XLSX workbook', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('reads, rewrites, saves, and reopens the native workbook theme', async () => {
+    const workbook = await openBrowserWorkbook(await themeFixture(), 'theme.xlsx')
+    expect(workbook.theme()).toMatchObject({
+      colors: {
+        name: 'Office',
+        values: expect.arrayContaining(['#FFFFFF', '#000000', '#E7E6E6', '#44546A']),
+      },
+      fonts: { name: 'Office', major: 'Calibri Light', minor: 'Calibri' },
+    })
+
+    workbook.applyTheme({
+      colors: {
+        name: 'Forest',
+        values: [
+          '#FFFFFF', '#1E2B20', '#E9F2EB', '#375E43', '#217346', '#4EA72E',
+          '#92D050', '#FFC000', '#3E8E8B', '#70AD47', '#217346', '#954F72',
+        ],
+      },
+      fonts: { name: 'Candara', major: 'Candara', minor: 'Candara' },
+    })
+    const reopened = await openBrowserWorkbook(await workbook.save(), 'theme.xlsx')
+    expect(reopened.theme()).toMatchObject({
+      colors: { name: 'Forest', values: expect.arrayContaining(['#217346', '#4EA72E']) },
+      fonts: { name: 'Candara', major: 'Candara', minor: 'Candara' },
+    })
+  })
+
+  it('persists a theme-only Desktop API save and returns the reopened theme state', async () => {
+    vi.stubGlobal('window', {})
+    const memoryFile = inMemoryFileHandle('theme.xlsx')
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer((await themeFixture()).buffer as ArrayBuffer, 'theme.xlsx', memoryFile.handle)
+    expect(file.themeFonts).toEqual({ major: 'Calibri Light', minor: 'Calibri' })
+
+    const result = await api.saveWorkbookEdits({
+      ...cellSaveRequest(file, 10),
+      edits: [],
+      themeState: { fonts: { name: 'Georgia', major: 'Georgia', minor: 'Georgia' } },
+    })
+    expect(result.canceled).toBe(false)
+    if (result.canceled) return
+    expect(result.file.themeFonts).toEqual({ major: 'Georgia', minor: 'Georgia' })
+    const reopened = await openBrowserWorkbook(memoryFile.bytes(), 'theme.xlsx')
+    expect(reopened.theme()?.fonts).toEqual({
+      name: 'Georgia',
+      major: 'Georgia',
+      minor: 'Georgia',
+    })
+  })
 
   it('saves and reopens an explicit worksheet tab color', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')

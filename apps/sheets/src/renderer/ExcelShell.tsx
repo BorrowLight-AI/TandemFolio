@@ -22,6 +22,7 @@ import { NameManagerDialog, type DefinedNameAction, type DefinedNameRow } from '
 import { categoryOptionForPattern, NUMBER_FORMAT_CATEGORIES } from './number-format'
 import { type SelectionFormat } from './selection-format'
 import { fontFamilyGroups, useSystemFontFamilies } from './system-fonts'
+import { COLOR_SCHEMES, FONT_SCHEMES, THEME_PRESETS } from './themes'
 
 import type { ChartSeriesVisualState } from '../domain/chart-visual'
 import {
@@ -1505,17 +1506,43 @@ function Ribbon({
     return (
       <div className="ribbon">
         <RibbonGroup label={t('appGroupThemes')}>
-          <RibbonReserved large menu label={t('appGroupThemes')} symbol="🎨" />
+          {largeMenu(
+            t('appGroupThemes'),
+            '🎨',
+            t('appGroupThemes'),
+            THEME_PRESETS.map((preset) => ({
+              value: `page-layout:theme:${preset.id}`,
+              label: preset.name,
+            })),
+          )}
           <div className="row-stack">
-            <span className="styles-row reserved" data-tip={t('appNotAvailableYet')}>
+            <span className="styles-row">
               <ToolSymbol symbol="▤" />
               {t('appColors')}
               <CaretIcon />
+              <MenuSelect
+                cover
+                label={t('appColors')}
+                options={COLOR_SCHEMES.map((scheme) => ({
+                  value: `page-layout:theme-colors:${scheme.id}`,
+                  label: scheme.name,
+                }))}
+                onPick={onCommand}
+              />
             </span>
-            <span className="styles-row reserved" data-tip={t('appNotAvailableYet')}>
+            <span className="styles-row">
               <ToolSymbol symbol="A" />
               {t('appFonts')}
               <CaretIcon />
+              <MenuSelect
+                cover
+                label={t('appFonts')}
+                options={FONT_SCHEMES.map((scheme) => ({
+                  value: `page-layout:theme-fonts:${scheme.id}`,
+                  label: scheme.name,
+                }))}
+                onPick={onCommand}
+              />
             </span>
           </div>
         </RibbonGroup>

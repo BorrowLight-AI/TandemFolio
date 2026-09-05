@@ -134,6 +134,17 @@ export async function handleSave(
     }),
   )
   const definedNamesState = collectDefinedNamesState(ctx.univerRef.current, state)
+  const themeState =
+    state.editJournal.theme.colors === undefined && state.editJournal.theme.fonts === undefined
+      ? null
+      : {
+          ...(state.editJournal.theme.colors === undefined
+            ? {}
+            : { colors: state.editJournal.theme.colors }),
+          ...(state.editJournal.theme.fonts === undefined
+            ? {}
+            : { fonts: state.editJournal.theme.fonts }),
+        }
   // Recalculated formula results: the engine's values are on screen but
   // deliberately kept out of the journal (they must not become literals). Send them
   // separately so the save refreshes each formula cell's cached <v>, keeping its <f>.
@@ -187,6 +198,7 @@ export async function handleSave(
     pivotCacheRefreshPaths.length +
     sheetProtections.length +
     (definedNamesState === null ? 0 : 1) +
+    (themeState === null ? 0 : 1) +
     visualAdditions.length +
     visualEdits.length +
     tableAdditions.length +
@@ -232,6 +244,7 @@ export async function handleSave(
     sparklineAdditions: toSaveSparklineAdds(state.editJournal),
     formulaValues,
     definedNamesState,
+    themeState,
   }
   if (mode === 'recovery') {
     // Best-effort; a failure only means this tick's copy is skipped
@@ -266,6 +279,7 @@ export async function handleSave(
       sparklineAdditions: toSaveSparklineAdds(state.editJournal),
       formulaValues,
       definedNamesState: splitSave ? null : definedNamesState,
+      themeState,
     })
     if (ctx.lazyWorkbookRef.current !== state) return
     if (result.canceled) {
@@ -310,6 +324,7 @@ export async function handleSave(
         // The first phase already refreshed the cached values
         formulaValues: [],
         definedNamesState: heldNames,
+        themeState: null,
       })
       if (ctx.lazyWorkbookRef.current !== state) return
       if (second.canceled) {

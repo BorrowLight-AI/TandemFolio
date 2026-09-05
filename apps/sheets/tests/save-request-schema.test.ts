@@ -42,4 +42,21 @@ describe('workbookSaveRequestSchema', () => {
   it('still rejects an empty ordinary save', () => {
     expect(() => workbookSaveRequestSchema.parse(emptyRequest('save'))).toThrow(/at least one edit/)
   })
+
+  it('accepts a native theme-only ordinary save', () => {
+    expect(() =>
+      workbookSaveRequestSchema.parse({
+        ...emptyRequest('save'),
+        themeState: {
+          colors: {
+            name: 'Forest',
+            values: [
+              '#FFFFFF', '#1E2B20', '#E9F2EB', '#375E43', '#217346', '#4EA72E',
+              '#92D050', '#FFC000', '#3E8E8B', '#70AD47', '#217346', '#954F72',
+            ],
+          },
+        },
+      }),
+    ).not.toThrow()
+  })
 })

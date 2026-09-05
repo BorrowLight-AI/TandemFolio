@@ -7,6 +7,39 @@ import {
 } from '../src/renderer/page-layout-actions'
 
 describe('page layout actions', () => {
+  it('applies a native theme preset to the live file state and save journal', () => {
+    const editJournal = createEditJournal()
+    const worksheet = { getSheetId: () => 'sheet-1' }
+    const workbook = { getId: () => undefined, getActiveSheet: () => worksheet }
+    let pendingEdits = 0
+    const state = {
+      editJournal,
+      file: {
+        themeColors: Array.from({ length: 12 }, () => '#000000'),
+        themeFonts: { major: 'Old Major', minor: 'Old Minor' },
+        styles: [],
+      },
+    }
+    const ctx = {
+      univerRef: { current: { univerAPI: { getActiveWorkbook: () => workbook } } },
+      lazyWorkbookRef: { current: state },
+      setMessage: () => undefined,
+      setPendingEdits: (count: number) => {
+        pendingEdits = count
+      },
+    } as unknown as PageLayoutContext
+
+    handlePageLayoutCommand(ctx, 'theme:forest')
+
+    expect(state.file.themeColors[4]).toBe('#217346')
+    expect(state.file.themeFonts).toEqual({ major: 'Candara', minor: 'Candara' })
+    expect(editJournal.theme).toMatchObject({
+      colors: { name: 'Forest' },
+      fonts: { name: 'Candara', major: 'Candara', minor: 'Candara' },
+    })
+    expect(pendingEdits).toBe(2)
+  })
+
   it('sets the selected worksheet orientation to an explicit final state', () => {
     const editJournal = createEditJournal()
     const worksheet = { getSheetId: () => 'sheet-1' }

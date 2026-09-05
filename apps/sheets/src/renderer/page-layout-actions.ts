@@ -9,6 +9,8 @@ import { columnLabel } from '../domain/cell-address'
 import {
   isSheetRemoved,
   journalSize,
+  recordThemeColors,
+  recordThemeFonts,
   type HeaderFooterParts,
   type PageSetupJournalState,
 } from './edit-journal'
@@ -16,6 +18,7 @@ import type { HeaderFooterResult } from './HeaderFooterDialog'
 import { t } from './i18n/locale'
 import { buildSheetPrintPayload, type PrintWorksheet } from './print-html'
 import { pushWorkbookUndo } from './univer-sync'
+import { COLOR_SCHEMES, FONT_SCHEMES, rethemeStyles, THEME_PRESETS } from './themes'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
 
 const PAPER_NAMES: Record<string, string> = {
@@ -34,6 +37,99 @@ export interface PageLayoutContext {
   lazyWorkbookRef: { readonly current: LazyWorkbookState | null }
   setMessage: (message: string) => void
   setPendingEdits: (count: number) => void
+}
+
+type ThemeSelectionMode = 'theme' | 'theme-colors' | 'theme-fonts'
+
+interface ThemeSnapshot {
+  readonly journalColors?: { readonly name: string; readonly values: readonly string[] }
+  readonly journalFonts?: { readonly name: string; readonly major: string; readonly minor: string }
+  readonly fileColors?: readonly string[]
+  readonly fileFonts?: { readonly major: string; readonly minor: string }
+  readonly styles: LazyWorkbookState['file']['styles']
+}
+
+type ThemeMutableState = Pick<LazyWorkbookState, 'editJournal' | 'file'>
+
+function themeSnapshot(state: ThemeMutableState): ThemeSnapshot {
+  return {
+    ...(state.editJournal.theme.colors
+      ? {
+          journalColors: {
+            name: state.editJournal.theme.colors.name,
+            values: [...state.editJournal.theme.colors.values],
+          },
+        }
+      : {}),
+    ...(state.editJournal.theme.fonts ? { journalFonts: { ...state.editJournal.theme.fonts } } : {}),
+    ...(state.file.themeColors ? { fileColors: [...state.file.themeColors] } : {}),
+    ...(state.file.themeFonts ? { fileFonts: { ...state.file.themeFonts } } : {}),
+    styles: state.file.styles,
+  }
+}
+
+function restoreThemeSnapshot(
+  state: ThemeMutableState,
+  snapshot: ThemeSnapshot,
+  setPendingEdits?: (count: number) => void,
+): void {
+  if (snapshot.journalColors) {
+    state.editJournal.theme.colors = {
+      name: snapshot.journalColors.name,
+      values: [...snapshot.journalColors.values],
+    }
+  } else delete state.editJournal.theme.colors
+  if (snapshot.journalFonts) state.editJournal.theme.fonts = { ...snapshot.journalFonts }
+  else delete state.editJournal.theme.fonts
+  if (snapshot.fileColors) state.file.themeColors = [...snapshot.fileColors]
+  else delete state.file.themeColors
+  if (snapshot.fileFonts) state.file.themeFonts = { ...snapshot.fileFonts }
+  else delete state.file.themeFonts
+  state.file.styles = snapshot.styles
+  setPendingEdits?.(journalSize(state.editJournal))
+}
+
+/** Applies a built-in document theme/colors/fonts choice as one native Undo item. */
+export function applyWorkbookThemeSelection(
+  runtime: UniverRuntime,
+  state: ThemeMutableState,
+  mode: ThemeSelectionMode,
+  id: string,
+  setPendingEdits?: (count: number) => void,
+): { readonly name: string } | { readonly error: string } {
+  if (!state.file.themeColors || (mode === 'theme-fonts' && !state.file.themeFonts)) {
+    return { error: 'This workbook has no editable theme part.' }
+  }
+  const colors = mode === 'theme-fonts' ? undefined : COLOR_SCHEMES.find((entry) => entry.id === id)
+  const fonts =
+    mode === 'theme-colors' || !state.file.themeFonts
+      ? undefined
+      : mode === 'theme'
+        ? THEME_PRESETS.find((entry) => entry.id === id)?.fonts
+        : FONT_SCHEMES.find((entry) => entry.id === id)
+  if (!colors && !fonts) return { error: `Unknown workbook theme selection: ${id}` }
+
+  const before = themeSnapshot(state)
+  if (colors) {
+    recordThemeColors(state.editJournal, colors.name, colors.values)
+    state.file.themeColors = [...colors.values]
+  }
+  if (fonts) {
+    recordThemeFonts(state.editJournal, fonts.name, fonts.major, fonts.minor)
+    state.file.themeFonts = { major: fonts.major, minor: fonts.minor }
+  }
+  state.file.styles = rethemeStyles(
+    state.file.styles,
+    state.file.themeColors,
+    state.file.themeFonts ?? null,
+  )
+  setPendingEdits?.(journalSize(state.editJournal))
+  const after = themeSnapshot(state)
+  pushWorkbookUndo(runtime, {
+    undo: () => restoreThemeSnapshot(state, before, setPendingEdits),
+    redo: () => restoreThemeSnapshot(state, after, setPendingEdits),
+  })
+  return { name: (colors ?? fonts)!.name }
 }
 
 export type WorkbookPageOrientation = 'portrait' | 'landscape'
@@ -329,6 +425,13 @@ export function handlePageLayoutCommand(ctx: PageLayoutContext, rest: string): v
   const key = separator === -1 ? rest : rest.slice(0, separator)
   const value = separator === -1 ? '' : rest.slice(separator + 1)
   switch (key) {
+    case 'theme':
+    case 'theme-colors':
+    case 'theme-fonts': {
+      const result = applyWorkbookThemeSelection(runtime, state, key, value, ctx.setPendingEdits)
+      ctx.setMessage('error' in result ? result.error : `Theme applied: ${result.name}`)
+      return
+    }
     case 'orientation':
       if (value !== 'portrait' && value !== 'landscape') return
       applyWorkbookPageOrientation(runtime, state, sheetId, value, ctx.setPendingEdits)
