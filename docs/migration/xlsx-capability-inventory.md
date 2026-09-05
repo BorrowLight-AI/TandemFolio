@@ -114,6 +114,15 @@ headers, borders, selections, frozen panes, scroll/reveal math, autofill handles
 and resize directions while retaining logical row/column indexes. Plain and rich cell text apply
 Unicode bidi ordering, neutral punctuation context, Arabic/Hebrew paragraph direction, and stable
 numeric/Latin runs; the original run content and OOXML RTL flag remain authoritative on save.
+Native drawing anchors now distinguish real `<xdr:to>` markers from synthesized size markers:
+malformed explicit offsets clamp at the owning row or column edge, and move/resize begins from the
+same clamped geometry shown on screen. Browser OOXML hydration also resolves built-in table and
+PivotTable styles against the workbook theme. Pivot header, body, row/column stripe, row-label,
+subheading, subtotal, and grand-total bands follow file layout metadata while preserving explicit
+cell fills and non-default font colors. Filtered tables rank stripes by visible row order once the
+stream has proven row visibility through the table; manual hides and incomplete streams keep
+physical parity. Cached formula strings remain explicitly typed, and anchored A1 addresses remain
+valid throughout Pivot and range parsing.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -184,8 +193,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 146 passing files and one environment-conditional LibreOffice pivot
-suite; 1,766 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 152 passing files and one environment-conditional LibreOffice pivot
+suite; 1,799 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

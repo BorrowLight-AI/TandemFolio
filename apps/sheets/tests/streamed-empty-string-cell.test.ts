@@ -21,6 +21,7 @@ function patchedMatrix(cells: WorkbookRangeResult['cells']): ICellData[][] {
     [],
     [],
     [],
+    [],
     null,
     false,
   )

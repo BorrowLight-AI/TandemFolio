@@ -2456,6 +2456,8 @@ export function App(): React.JSX.Element {
       retryTimers: new Map(),
       appliedMerges: new Map(),
       appliedRowKeys: new Map(),
+      hiddenFileRows: new Map(),
+      hiddenRowsCoveredThrough: new Map(),
       sheetProtections: new Map(),
       sheetProtectedRanges: new Map(),
       uninstalledDefinedNames: new Set(),

@@ -26,6 +26,7 @@ function patched(cells: WorkbookRangeResult['cells']): ICellData[][] {
     [center],
     [],
     [],
+    [],
     null,
     false,
   )

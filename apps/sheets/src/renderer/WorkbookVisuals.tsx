@@ -176,12 +176,20 @@ export function installWorkbookVisuals(
     const marginY = Math.max(0, visual.anchor.fromRowOffset / EMU_PER_PIXEL)
     const width = markerSpan(
       { index: fromColumn, offset: marginX },
-      markerFrom(toColumn, visual.anchor.toColumnOffset),
+      clampExplicitTo(
+        markerFrom(toColumn, visual.anchor.toColumnOffset),
+        visual.anchor.explicitTo === true,
+        columnWidth,
+      ),
       columnWidth,
     )
     const height = markerSpan(
       { index: fromRow, offset: marginY },
-      markerFrom(toRow, visual.anchor.toRowOffset),
+      clampExplicitTo(
+        markerFrom(toRow, visual.anchor.toRowOffset),
+        visual.anchor.explicitTo === true,
+        rowHeight,
+      ),
       rowHeight,
     )
     // Degenerate anchors (oneCellAnchor fallback parses to a zero span):
@@ -572,6 +580,18 @@ export function walkMarker(
   return { index, offset }
 }
 
+/// A real `<xdr:to>` marker never reaches past its own cell: Excel clamps
+/// malformed writer offsets at the cell edge. Synthesized markers encode a
+/// size by overflowing and therefore keep their original offset.
+export function clampExplicitTo(
+  to: AnchorMarker,
+  explicitTo: boolean,
+  sizeOf: (index: number) => number,
+): AnchorMarker {
+  if (!explicitTo || to.offset <= sizeOf(to.index)) return to
+  return { index: to.index, offset: sizeOf(to.index) }
+}
+
 /// Pixel distance between two markers (negative when `to` sits before `from`).
 function markerSpan(
   from: AnchorMarker,
@@ -671,8 +691,15 @@ function EditableShapeVisual({
     const maxRow = XLSX_MAX_ROW
     let fromX = markerFrom(anchor.fromColumn, anchor.fromColumnOffset)
     let fromY = markerFrom(anchor.fromRow, anchor.fromRowOffset)
-    let toX = markerFrom(anchor.toColumn, anchor.toColumnOffset)
-    let toY = markerFrom(anchor.toRow, anchor.toRowOffset)
+    // Seed edits from the geometry the user sees. Committed anchors are
+    // normalized and intentionally drop the file-only explicitTo marker.
+    const explicitTo = anchor.explicitTo === true
+    let toX = clampExplicitTo(
+      markerFrom(anchor.toColumn, anchor.toColumnOffset),
+      explicitTo,
+      columnWidth,
+    )
+    let toY = clampExplicitTo(markerFrom(anchor.toRow, anchor.toRowOffset), explicitTo, rowHeight)
     const rtl = config.rightToLeft === BooleanNumber.TRUE
     const corner = rtl ? mirrorCornerX(screenCorner) : screenCorner
     const dx = (rtl ? -dxRaw : dxRaw) / zoom

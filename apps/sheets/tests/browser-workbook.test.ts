@@ -393,6 +393,18 @@ describe('browser XLSX workbook', () => {
         path: 'xl/pivotTables/pivotTable1.xml',
         cachePath: 'xl/pivotCache/pivotCacheDefinition1.xml',
         outputRef: 'F1:G5',
+        styled: true,
+        firstDataRow: 1,
+        firstDataCol: 1,
+        rowGrandTotals: true,
+        rowKinds: 'dddg',
+        headerFill: '#DAE3F3',
+        headerBold: true,
+        subheadingBold: true,
+        subheading2Bold: true,
+        subtotalBold: true,
+        totalRowFill: '#DAE3F3',
+        totalRowBold: true,
       },
     ])
     const pivot = reopened.sheets[0]!.pivotTables[0]!
@@ -959,6 +971,11 @@ describe('browser XLSX workbook', () => {
         name: 'Table1',
         columns: ['Region', 'Amount'],
         styleName: 'TableStyleMedium4',
+        headerFill: '#A5A5A5',
+        headerFontColor: '#FFFFFF',
+        stripeFill: '#EDEDED',
+        totalRowBorderColor: '#A5A5A5',
+        totalRowBorderStyle: 'double',
       },
     ])
   })

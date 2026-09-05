@@ -70,6 +70,7 @@ import {
   type VisualAddition,
 } from '../gateway/xlsx-drawing-add'
 import { applyVisualEdits as applyVisualEditsToPackage } from '../gateway/xlsx-drawing-edit'
+import { readPivotStyleMetadata, readTableStyleMetadata } from './xlsx-pivot-style'
 import type { SheetPivotAddition } from '../gateway/xlsx-gateway'
 import type {
   WorkbookCellStyle,
@@ -955,7 +956,8 @@ function drawingAnchor(anchorXml: string): WorkbookVisualObject['anchor'] {
     }
   }
   const from = marker('xdr:from')
-  const to = xmlElementBody(anchorXml, 'xdr:to')
+  const explicitTo = xmlElementBody(anchorXml, 'xdr:to') !== undefined
+  const to = explicitTo
     ? marker('xdr:to')
     : { row: from.row + 15, column: from.column + 7, rowOffset: 0, columnOffset: 0 }
   return {
@@ -967,6 +969,7 @@ function drawingAnchor(anchorXml: string): WorkbookVisualObject['anchor'] {
     toColumn: to.column,
     toRowOffset: to.rowOffset,
     toColumnOffset: to.columnOffset,
+    ...(explicitTo ? { explicitTo: true } : {}),
   }
 }
 
@@ -1103,6 +1106,7 @@ async function readSheetTables(
   worksheetPath: string,
   relsXml: string | null,
   readPart: (path: string) => Promise<string | null>,
+  themeColors?: readonly string[],
 ): Promise<WorkbookFile['sheets'][number]['tables']> {
   if (!relsXml) return []
   const relationshipTargets = new Map<string, string>()
@@ -1133,15 +1137,23 @@ async function readSheetTables(
     const styleName = elementAttribute(tableXml, 'tableStyleInfo', 'name')
     const showRowStripes = elementAttribute(tableXml, 'tableStyleInfo', 'showRowStripes')
     const showColumnStripes = elementAttribute(tableXml, 'tableStyleInfo', 'showColumnStripes')
+    const autoFilterXml = xmlElementBody(tableXml, 'autoFilter')
+    const filterActive =
+      autoFilterXml !== undefined &&
+      /<(?:[A-Za-z_][\w.-]*:)?(?:filters|customFilters|dynamicFilter|top10|colorFilter|iconFilter)\b/.test(
+        autoFilterXml,
+      )
     tables.push({
       range: tableArea(ref),
       headerRowCount,
       showRowStripes: showRowStripes === '1' || showRowStripes === 'true',
       showColumnStripes: showColumnStripes === '1' || showColumnStripes === 'true',
+      ...(filterActive ? { filterActive: true } : {}),
       ...(name ? { name: decodeXml(name) } : {}),
       ...(columns.length > 0 ? { columns } : {}),
       ...(totalsRowCount > 0 ? { totalsRowCount } : {}),
       ...(styleName ? { styleName: decodeXml(styleName) } : {}),
+      ...readTableStyleMetadata(styleName ? decodeXml(styleName) : undefined, themeColors),
     })
   }
   return tables
@@ -1151,6 +1163,7 @@ async function readSheetPivots(
   worksheetPath: string,
   relsXml: string | null,
   readPart: (path: string) => Promise<string | null>,
+  themeColors?: readonly string[],
 ): Promise<Pick<BrowserSheet, 'pivotRanges' | 'pivotTables'>> {
   if (!relsXml) return { pivotRanges: [], pivotTables: [] }
   const pivotTables: WorkbookFile['sheets'][number]['pivotTables'] = []
@@ -1178,6 +1191,7 @@ async function readSheetPivots(
       path,
       cachePath: cacheRelationship ? resolvePartTarget(path, cacheRelationship.target) : null,
       outputRef,
+      ...readPivotStyleMetadata(pivotXml, themeColors),
     })
     pivotRanges.push(range)
     if (pivotTables.length >= 100) break
@@ -2693,9 +2707,14 @@ export async function openBrowserWorkbook(
     (match) => /\/theme$/.test(xmlAttribute(match[1] ?? '', 'Type') ?? ''),
   )
   const themeTarget = themeRelationship ? xmlAttribute(themeRelationship[1] ?? '', 'Target') : undefined
+  let themeColors: readonly string[] | undefined
   if (themeTarget) {
     const themePath = `xl/${themeTarget.replace(/^\/?xl\//, '').replace(/^\.\//, '')}`
-    if (zip.file(themePath)) metadataXml.set(themePath, await zipText(zip, themePath))
+    if (zip.file(themePath)) {
+      const themeXml = await zipText(zip, themePath)
+      metadataXml.set(themePath, themeXml)
+      themeColors = readThemeState(themeXml)?.colors?.values
+    }
   }
   const sharedStrings = readSharedStrings(
     zip.file('xl/sharedStrings.xml') ? await zipText(zip, 'xl/sharedStrings.xml') : null,
@@ -2714,14 +2733,21 @@ export async function openBrowserWorkbook(
     const xml = await zipText(zip, path)
     const sheetRelsPath = worksheetRelationshipsPath(path)
     const sheetRelsXml = zip.file(sheetRelsPath) ? await zipText(zip, sheetRelsPath) : null
-    const tables = await readSheetTables(xml, path, sheetRelsXml, async (tablePath) =>
-      zip.file(tablePath) ? zipText(zip, tablePath) : null,
+    const tables = await readSheetTables(
+      xml,
+      path,
+      sheetRelsXml,
+      async (tablePath) => (zip.file(tablePath) ? zipText(zip, tablePath) : null),
+      themeColors,
     )
     const comments = await readSheetNotes(path, sheetRelsXml, async (commentsPath) =>
       zip.file(commentsPath) ? zipText(zip, commentsPath) : null,
     )
-    const pivots = await readSheetPivots(path, sheetRelsXml, async (partPath) =>
-      zip.file(partPath) ? zipText(zip, partPath) : null,
+    const pivots = await readSheetPivots(
+      path,
+      sheetRelsXml,
+      async (partPath) => (zip.file(partPath) ? zipText(zip, partPath) : null),
+      themeColors,
     )
     visuals.push(
       ...(await readSheetVisuals(xml, path, decodeXml(sheetName), sheetRelsXml, async (partPath) =>

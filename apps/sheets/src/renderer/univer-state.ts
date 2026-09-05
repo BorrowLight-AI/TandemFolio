@@ -25,6 +25,10 @@ export interface LazyWorkbookState {
   readonly retryTimers: Map<string, ReturnType<typeof setTimeout>>
   readonly appliedMerges: Map<string, Set<string>>
   readonly appliedRowKeys: Map<string, Set<string>>
+  /// File rows proven hidden by streamed reads, plus the last contiguous row
+  /// whose visibility is known. Filtered table stripes use visible order.
+  readonly hiddenFileRows: Map<string, Set<number>>
+  readonly hiddenRowsCoveredThrough: Map<string, number>
   readonly appliedCfSheets: Set<string>
   readonly appliedFilterSheets: Set<string>
   readonly appliedDvSheets: Set<string>

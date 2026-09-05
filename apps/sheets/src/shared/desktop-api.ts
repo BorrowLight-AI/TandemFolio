@@ -107,6 +107,9 @@ const worksheetMetadataSchema = z
           headerRowCount: z.number().int().nonnegative(),
           showRowStripes: z.boolean(),
           showColumnStripes: z.boolean(),
+          /// autoFilter has live criteria: Excel re-ranks row stripes by
+          /// visible order while a filter hides rows.
+          filterActive: z.boolean().optional(),
           name: z.string().optional(),
           columns: z.array(z.string()).optional(),
           totalsRowCount: z.number().int().nonnegative().optional(),
@@ -114,6 +117,27 @@ const worksheetMetadataSchema = z
           headerFill: z.string().optional(),
           headerFontColor: z.string().optional(),
           stripeFill: z.string().optional(),
+          secondRowStripeFill: z.string().optional(),
+          columnStripeFill: z.string().optional(),
+          secondColumnStripeFill: z.string().optional(),
+          wholeTableFill: z.string().optional(),
+          firstColumnFill: z.string().optional(),
+          lastColumnFill: z.string().optional(),
+          totalRowFill: z.string().optional(),
+          totalRowFontColor: z.string().optional(),
+          totalRowBorderColor: z.string().optional(),
+          totalRowBorderStyle: z.string().optional(),
+          bodyFontColor: z.string().optional(),
+          firstHeaderCellFontColor: z.string().optional(),
+          borderColor: z.string().optional(),
+          wholeTableBorderColor: z.string().optional(),
+          wholeTableBorderStyle: z.string().optional(),
+          innerHorizontalBorderColor: z.string().optional(),
+          innerHorizontalBorderStyle: z.string().optional(),
+          innerVerticalBorderColor: z.string().optional(),
+          innerVerticalBorderStyle: z.string().optional(),
+          headerBottomBorderColor: z.string().optional(),
+          headerBottomBorderStyle: z.string().optional(),
         })
         .strict(),
     ),
@@ -138,6 +162,40 @@ const worksheetMetadataSchema = z
             path: z.string().min(1),
             cachePath: z.string().min(1).nullable(),
             outputRef: z.string().min(1),
+            headerFill: z.string().optional(),
+            headerFontColor: z.string().optional(),
+            headerBold: z.boolean().optional(),
+            firstHeaderCellFontColor: z.string().optional(),
+            firstHeaderCellBold: z.boolean().optional(),
+            wholeTableFill: z.string().optional(),
+            wholeTableFontColor: z.string().optional(),
+            stripeFill: z.string().optional(),
+            secondRowStripeFill: z.string().optional(),
+            columnStripeFill: z.string().optional(),
+            secondColumnStripeFill: z.string().optional(),
+            firstColumnFill: z.string().optional(),
+            firstColumnBold: z.boolean().optional(),
+            subheadingFill: z.string().optional(),
+            subheadingFontColor: z.string().optional(),
+            subheadingBold: z.boolean().optional(),
+            subheading2Fill: z.string().optional(),
+            subheading2FontColor: z.string().optional(),
+            subheading2Bold: z.boolean().optional(),
+            subtotalFill: z.string().optional(),
+            subtotalFontColor: z.string().optional(),
+            subtotalBold: z.boolean().optional(),
+            totalRowFill: z.string().optional(),
+            totalRowFontColor: z.string().optional(),
+            totalRowBold: z.boolean().optional(),
+            styled: z.boolean().optional(),
+            firstDataRow: z.number().int().nonnegative().optional(),
+            firstDataCol: z.number().int().nonnegative().optional(),
+            rowGrandTotals: z.boolean().optional(),
+            rowKinds: z
+              .string()
+              .regex(/^[dsStgb]*$/)
+              .max(1_048_576)
+              .optional(),
           })
           .strict(),
       )
@@ -270,6 +328,9 @@ const drawingAnchorSchema = z
     toColumn: z.number().int().nonnegative(),
     toRowOffset: z.number().int(),
     toColumnOffset: z.number().int(),
+    /// A real xdr:to marker clamps its offset at the cell edge. Synthesized
+    /// one-cell and absolute anchors may intentionally overflow it.
+    explicitTo: z.boolean().optional(),
   })
   .strict()
 const visualObjectSchema = z

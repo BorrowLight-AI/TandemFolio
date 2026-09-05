@@ -1258,6 +1258,7 @@ export async function activateFormulaClosure(
         state.file.styles,
         [],
         sheetMeta.tables,
+        sheetMeta.pivotTables,
         sheetMeta.freeze,
         true,
         state.editJournal,
@@ -1882,19 +1883,24 @@ async function loadFrozenColumnStrip(
       state.frozenStripKeys.delete(sheetId)
       return
     }
+    const stripPatchRange = { ...stripRange, endRow: availableEndRow }
+    recordHiddenFileRows(state, sheetId, mapped.screen.rows, stripPatchRange)
     patchWorksheetRange(
       worksheet,
       undefined,
-      { ...stripRange, endRow: availableEndRow },
+      stripPatchRange,
       mapped.screen.cells,
       state.file.styles,
       mapped.screen.hyperlinks,
       sheet.tables,
+      sheet.pivotTables,
       sheet.freeze,
       state.formulaMode,
       state.editJournal,
       state.closure.pinned.get(sheetId),
       state.recalc.overlay.get(sheetId),
+      undefined,
+      hiddenRowsInfo(state, sheetId),
     )
   } catch {
     state.frozenStripKeys.delete(sheetId)
@@ -1941,6 +1947,7 @@ async function loadRange(
         : Math.min(mapped.indexedThroughScreen, range.endRow)
     if (availableEndRow !== null && availableEndRow >= range.startRow) {
       const availableRange = { ...range, endRow: availableEndRow }
+      recordHiddenFileRows(state, sheetId, mapped.screen.rows, availableRange)
       const alreadyLoaded = state.loadedRanges.get(sheetId)
       if (!alreadyLoaded || !containsRange(alreadyLoaded, availableRange)) {
         patchWorksheetRange(
@@ -1951,11 +1958,14 @@ async function loadRange(
           state.file.styles,
           mapped.screen.hyperlinks,
           sheetMeta.tables,
+          sheetMeta.pivotTables,
           sheetMeta.freeze,
           state.formulaMode,
           state.editJournal,
           state.closure.pinned.get(sheetId),
           state.recalc.overlay.get(sheetId),
+          undefined,
+          hiddenRowsInfo(state, sheetId),
         )
         state.loadedRanges.set(sheetId, availableRange)
       }
@@ -2078,6 +2088,38 @@ export async function ensureLazyRangeLoaded(
   const state = lazyWorkbookRef.current
   const loaded = state?.loadedRanges.get(worksheet.getSheetId())
   return state === initialState && loaded !== undefined && containsRange(loaded, range)
+}
+
+export function hiddenRowsInfo(
+  state: LazyWorkbookState,
+  sheetId: string,
+): HiddenRowsInfo | undefined {
+  const rows = state.hiddenFileRows.get(sheetId)
+  if (!rows?.size) return undefined
+  return { rows, coveredThrough: state.hiddenRowsCoveredThrough.get(sheetId) ?? -1 }
+}
+
+/// Record row visibility before painting a streamed range. Coverage advances
+/// only across contiguous reads, so an absent row beyond a gap stays unknown.
+export function recordHiddenFileRows(
+  state: LazyWorkbookState,
+  sheetId: string,
+  rows: WorkbookRangeResult['rows'],
+  range: IRange,
+): void {
+  let hiddenSet = state.hiddenFileRows.get(sheetId)
+  for (const row of rows) {
+    if (!row.hidden) continue
+    if (!hiddenSet) {
+      hiddenSet = new Set()
+      state.hiddenFileRows.set(sheetId, hiddenSet)
+    }
+    hiddenSet.add(row.row)
+  }
+  const covered = state.hiddenRowsCoveredThrough.get(sheetId) ?? -1
+  if (range.startRow <= covered + 1 && range.endRow > covered) {
+    state.hiddenRowsCoveredThrough.set(sheetId, range.endRow)
+  }
 }
 
 export function applyRowProperties(
@@ -2265,12 +2307,14 @@ function patchWorksheetRange(
   styles: readonly WorkbookCellStyle[],
   hyperlinks: WorkbookRangeResult['hyperlinks'],
   tables: WorkbookFile['sheets'][number]['tables'],
+  pivotTables: WorkbookFile['sheets'][number]['pivotTables'],
   freeze: WorkbookFile['sheets'][number]['freeze'],
   useFormulas = false,
   journal?: EditJournal,
   pinned?: ReadonlyMap<string, PinnedClosureCell>,
   recalcOverlay?: ReadonlyMap<string, PinnedClosureCell>,
   arrayFollowers?: ReadonlySet<string>,
+  hiddenRows?: HiddenRowsInfo,
 ): void {
   journalSuppression.active = true
   try {
@@ -2282,9 +2326,11 @@ function patchWorksheetRange(
       styles,
       hyperlinks,
       tables,
+      pivotTables,
       freeze,
       useFormulas,
       arrayFollowers,
+      hiddenRows,
     )
     // Closure cells were just evicted or clobbered with static cached
     // values; re-pin them first — the journal overlay runs after so user
@@ -2387,9 +2433,11 @@ export function patchWorksheetRangeInner(
   styles: readonly WorkbookCellStyle[],
   hyperlinks: WorkbookRangeResult['hyperlinks'],
   tables: WorkbookFile['sheets'][number]['tables'],
+  pivotTables: WorkbookFile['sheets'][number]['pivotTables'],
   freeze: WorkbookFile['sheets'][number]['freeze'],
   useFormulas: boolean,
   arrayFollowers?: ReadonlySet<string>,
+  hiddenRows?: HiddenRowsInfo,
 ): void {
   if (previousRange) {
     // Frozen rows/columns stay visible while scrolling, so never evict them —
@@ -2518,7 +2566,8 @@ export function patchWorksheetRangeInner(
       if (anchor) anchor.custom = { ...anchor.custom, [CENTER_ACROSS_END_KEY]: end }
     }
   }
-  applyTableBanding(matrix, range, tables)
+  applyTableBanding(matrix, range, tables, hiddenRows)
+  applyPivotStyling(matrix, range, pivotTables)
   worksheet.getRange(range.startRow, range.startColumn, rows, columns).setValues(matrix)
 }
 
@@ -2599,12 +2648,26 @@ export function hasUsableCachedValue(
   return !(typeof value === 'string' && EXCEL_ERROR_LITERALS.has(value))
 }
 
+/// Hidden-row knowledge for visible-order table stripes. A missing row is
+/// only known visible through `coveredThrough`.
+export interface HiddenRowsInfo {
+  readonly rows: ReadonlySet<number>
+  readonly coveredThrough: number
+}
+
+/// True only for a real fill: unfilled xfs carry the bg empty-rgb sentinel
+/// (see toUniverStyle), which must not read as "baked fill".
+function styleHasFill(style: IStyleData): boolean {
+  return Boolean((style.bg as { rgb?: string } | null | undefined)?.rgb)
+}
+
 /// Approximates Excel table styles (header band + row stripes) for cells that
 /// carry no explicit fill of their own.
-function applyTableBanding(
+export function applyTableBanding(
   matrix: ICellData[][],
   range: IRange,
   tables: WorkbookFile['sheets'][number]['tables'],
+  hiddenRows?: HiddenRowsInfo,
 ): void {
   for (const table of tables) {
     const rowStart = Math.max(range.startRow, table.range.startRow)
@@ -2612,29 +2675,326 @@ function applyTableBanding(
     const columnStart = Math.max(range.startColumn, table.range.startColumn)
     const columnEnd = Math.min(range.endColumn, table.range.endColumn)
     if (rowStart > rowEnd || columnStart > columnEnd) continue
+    // A name-less tableStyleInfo is Excel's style "None": paint nothing.
+    if (!table.styleName && !table.headerFill && !table.headerFontColor && !table.stripeFill) {
+      continue
+    }
     // Colors are resolved sidecar-side from the workbook's real theme accents
-    // (Light/Medium/Dark variant rules); the literals are a last-resort fallback.
+    // (Light/Medium/Dark variant rules) or the file's custom <tableStyle>
+    // dxfs; the literals are a last-resort fallback.
     const headerFill = table.headerFill
     const headerFont = table.headerFontColor ?? '#FFFFFF'
-    const stripeFill = table.stripeFill ?? '#D9E1F2'
+    // No stripe color means the style genuinely has none (custom styles
+    // without band dxfs, Light 8-14) — a fallback would invent banding.
+    const stripeFill = table.stripeFill
     const dataStartRow = table.range.startRow + table.headerRowCount
+    const totalsStartRow = table.range.endRow - (table.totalsRowCount ?? 0) + 1
+    // A live autoFilter makes Excel re-rank the stripes by VISIBLE row order
+    // (a filtered Light19 ref alternates across the hidden gaps); manually
+    // hidden rows keep the physical banding, so only filtered tables re-rank.
+    // The scan needs full hidden knowledge from the table's top: past the
+    // streamed coverage an absent row is merely unknown, not visible.
+    let visibleParity: Map<number, number> | undefined
+    const scanEnd = Math.min(rowEnd, totalsStartRow - 1)
+    if (
+      table.filterActive &&
+      table.showRowStripes &&
+      hiddenRows &&
+      hiddenRows.rows.size > 0 &&
+      scanEnd <= hiddenRows.coveredThrough
+    ) {
+      visibleParity = new Map()
+      let ordinal = 0
+      for (let row = dataStartRow; row <= scanEnd; row += 1) {
+        if (hiddenRows.rows.has(row)) continue
+        if (row >= rowStart) visibleParity.set(row, ordinal % 2)
+        ordinal += 1
+      }
+    }
     for (let row = rowStart; row <= rowEnd; row += 1) {
       const isHeader = row < dataStartRow
-      const isStripe = !isHeader && table.showRowStripes && (row - dataStartRow) % 2 === 1
-      if (!isHeader && !isStripe) continue
+      const isTotals = !isHeader && row >= totalsStartRow
+      // Excel's firstRowStripe covers the FIRST data row (ref: Medium9 shades
+      // data row 1 with #B8CCE4), then alternates with secondRowStripe.
+      const rowParity = visibleParity?.get(row) ?? (row - dataStartRow) % 2
+      const isStripe = !isHeader && !isTotals && table.showRowStripes && rowParity === 0
+      const secondStripeFill =
+        !isHeader && !isTotals && table.showRowStripes && rowParity === 1
+          ? table.secondRowStripeFill
+          : undefined
       for (let column = columnStart; column <= columnEnd; column += 1) {
         const cell = matrix[row - range.startRow]?.[column - range.startColumn]
         if (!cell) continue
-        const style = (cell.s ?? {}) as IStyleData
-        if (style.bg) continue
-        cell.s = isHeader
-          ? {
-              ...style,
-              ...(headerFill ? { bg: { rgb: headerFill } } : {}),
-              cl: { rgb: headerFill ? headerFont : (table.headerFontColor ?? '#333333') },
-              bl: BooleanNumber.TRUE,
+        let style = (cell.s ?? {}) as IStyleData
+        const hasCustomBorders =
+          table.wholeTableBorderColor !== undefined ||
+          table.innerHorizontalBorderColor !== undefined ||
+          table.innerVerticalBorderColor !== undefined ||
+          table.headerBottomBorderColor !== undefined
+        if (table.borderColor || hasCustomBorders || (isTotals && table.totalRowBorderColor)) {
+          const edges: IStyleData['bd'] = {}
+          if (table.borderColor) {
+            if (row === table.range.startRow) {
+              edges.t = { s: BorderStyleTypes.MEDIUM, cl: { rgb: table.borderColor } }
             }
-          : { ...style, bg: { rgb: stripeFill } }
+            if (isHeader && row === dataStartRow - 1) {
+              edges.b = { s: BorderStyleTypes.THIN, cl: { rgb: table.borderColor } }
+            }
+            if (row === table.range.endRow) {
+              edges.b = { s: BorderStyleTypes.MEDIUM, cl: { rgb: table.borderColor } }
+            }
+          }
+          // Custom wholeTable dxf borders: inner grid first, the header rule
+          // over it, the outline last — later edges win shared boundaries.
+          if (table.innerHorizontalBorderColor && row < table.range.endRow) {
+            edges.b = {
+              s: mapBorderStyle(table.innerHorizontalBorderStyle ?? 'thin'),
+              cl: { rgb: table.innerHorizontalBorderColor },
+            }
+          }
+          if (table.innerVerticalBorderColor && column < table.range.endColumn) {
+            edges.r = {
+              s: mapBorderStyle(table.innerVerticalBorderStyle ?? 'thin'),
+              cl: { rgb: table.innerVerticalBorderColor },
+            }
+          }
+          if (table.headerBottomBorderColor && isHeader && row === dataStartRow - 1) {
+            edges.b = {
+              s: mapBorderStyle(table.headerBottomBorderStyle ?? 'thin'),
+              cl: { rgb: table.headerBottomBorderColor },
+            }
+          }
+          if (table.wholeTableBorderColor) {
+            const outline = {
+              s: mapBorderStyle(table.wholeTableBorderStyle ?? 'thin'),
+              cl: { rgb: table.wholeTableBorderColor },
+            }
+            if (row === table.range.startRow) edges.t = outline
+            if (row === table.range.endRow) edges.b = outline
+            if (column === table.range.startColumn) edges.l = outline
+            if (column === table.range.endColumn) edges.r = outline
+          }
+          if (isTotals && row === totalsStartRow && table.totalRowBorderColor) {
+            edges.t = {
+              s: mapBorderStyle(table.totalRowBorderStyle ?? 'thin'),
+              cl: { rgb: table.totalRowBorderColor },
+            }
+          }
+          if (edges.t || edges.b || edges.l || edges.r) {
+            cell.s = { ...style, bd: { ...(style.bd ?? {}), ...edges } }
+            style = cell.s as IStyleData
+          }
+        }
+        if (isHeader) {
+          const fontColor =
+            column === table.range.startColumn && table.firstHeaderCellFontColor
+              ? table.firstHeaderCellFontColor
+              : headerFill
+                ? headerFont
+                : (table.headerFontColor ?? '#333333')
+          if (styleHasFill(style)) {
+            // Baked header fill: keep it, but a default-black font still takes
+            // the style's header font (Excel lets table-style text win over
+            // the automatic color).
+            const cellFont = (style.cl as { rgb?: string } | undefined)?.rgb
+            if (headerFill && (!cellFont || cellFont === '#000000')) {
+              cell.s = { ...style, cl: { rgb: fontColor }, bl: BooleanNumber.TRUE }
+            }
+            continue
+          }
+          // An explicit non-automatic cell font color survives the table
+          // style (Book1_custom's red "Names" header).
+          const explicitFont = (style.cl as { rgb?: string } | undefined)?.rgb
+          cell.s = {
+            ...style,
+            ...(headerFill ? { bg: { rgb: headerFill } } : {}),
+            ...(explicitFont && explicitFont !== '#000000' ? {} : { cl: { rgb: fontColor } }),
+            bl: BooleanNumber.TRUE,
+          }
+          continue
+        }
+        if (styleHasFill(style)) continue
+        if (isTotals) {
+          cell.s = {
+            ...style,
+            ...(table.totalRowFill ? { bg: { rgb: table.totalRowFill } } : {}),
+            ...(table.totalRowFontColor ? { cl: { rgb: table.totalRowFontColor } } : {}),
+            bl: BooleanNumber.TRUE,
+          }
+          continue
+        }
+        // Band precedence below header/totals: first/last column emphasis,
+        // then row stripes, then column stripes, then the whole-table fill.
+        const isFirstColumn = column === table.range.startColumn && table.firstColumnFill
+        const isLastColumn = column === table.range.endColumn && table.lastColumnFill
+        const columnStripeFill = table.showColumnStripes
+          ? (column - table.range.startColumn) % 2 === 0
+            ? table.columnStripeFill
+            : table.secondColumnStripeFill
+          : undefined
+        const fill = isFirstColumn
+          ? table.firstColumnFill
+          : isLastColumn
+            ? table.lastColumnFill
+            : ((isStripe ? stripeFill : undefined) ??
+              secondStripeFill ??
+              columnStripeFill ??
+              table.wholeTableFill)
+        if (fill) {
+          // Dark families set a body text color; a default-black font yields
+          // to it (explicit cell colors survive, mirroring the header rule).
+          const cellFont = (style.cl as { rgb?: string } | undefined)?.rgb
+          const fontPatch =
+            table.bodyFontColor && (!cellFont || cellFont === '#000000')
+              ? { cl: { rgb: table.bodyFontColor } }
+              : {}
+          cell.s = { ...style, bg: { rgb: fill }, ...fontPatch }
+        }
+      }
+    }
+  }
+}
+
+/// One pivot style band: an absent value inherits the band below it.
+interface PivotBand {
+  fill?: string | undefined
+  fontColor?: string | undefined
+  bold?: boolean | undefined
+}
+
+/// Excel keeps pivot styling out of cell xfs entirely; paint the style bands
+/// resolved sidecar-side from pivotTableStyleInfo (calibrated against Excel
+/// for Mac: genoffice-sample/sheets/calib/pivot-style-truths.json).
+///
+/// Precedence, lowest first: wholeTable, row stripe, column stripe,
+/// firstColumn (row-label columns), subheading / subtotal, header (+ the
+/// first header cell), grand-total row. Row stripes count from firstDataRow
+/// over every body row (subheadings and subtotals included; a band with its
+/// own fill covers them); column stripes count from firstDataCol and skip
+/// the header rows. Row kinds come from the sidecar's `rowKinds`; without
+/// them the rows are plain data with the last one the grand total.
+export function applyPivotStyling(
+  matrix: ICellData[][],
+  range: IRange,
+  pivotTables: WorkbookFile['sheets'][number]['pivotTables'],
+): void {
+  for (const pivot of pivotTables) {
+    // Fills imply a named style; the extra checks keep stale sidecars working.
+    if (!pivot.styled && !pivot.headerFill && !pivot.wholeTableFill && !pivot.stripeFill) continue
+    let bounds: ReturnType<typeof parseRange>
+    try {
+      bounds = parseRange(pivot.outputRef)
+    } catch {
+      continue
+    }
+    const headerEndRow = bounds.startRow + (pivot.firstDataRow ?? 1) - 1
+    const firstDataColumn = bounds.startColumn + (pivot.firstDataCol ?? 1)
+    const rowGrandTotals = pivot.rowGrandTotals ?? true
+    const rowKinds = pivot.rowKinds ?? ''
+    const rowStart = Math.max(range.startRow, bounds.startRow)
+    const rowEnd = Math.min(range.endRow, bounds.endRow)
+    const columnStart = Math.max(range.startColumn, bounds.startColumn)
+    const columnEnd = Math.min(range.endColumn, bounds.endColumn)
+    // An absent bold flag inherits (the calibrated palettes spell out every
+    // band that is bold); only a style the sidecar could not resolve (custom
+    // name, stale binary) falls back to bold header and grand-total rows.
+    const resolved =
+      pivot.headerBold !== undefined ||
+      pivot.totalRowBold !== undefined ||
+      pivot.headerFill !== undefined ||
+      pivot.wholeTableFill !== undefined
+    const fallbackBold = resolved ? undefined : true
+    const wholeTable: PivotBand = {
+      fill: pivot.wholeTableFill,
+      fontColor: pivot.wholeTableFontColor,
+    }
+    const firstColumn: PivotBand = { fill: pivot.firstColumnFill, bold: pivot.firstColumnBold }
+    const header: PivotBand = {
+      fill: pivot.headerFill,
+      fontColor: pivot.headerFontColor,
+      bold: pivot.headerBold ?? fallbackBold,
+    }
+    const firstHeaderCell: PivotBand = {
+      fontColor: pivot.firstHeaderCellFontColor,
+      bold: pivot.firstHeaderCellBold,
+    }
+    const rowBands: Record<string, PivotBand | undefined> = {
+      s: {
+        fill: pivot.subheadingFill,
+        fontColor: pivot.subheadingFontColor,
+        bold: pivot.subheadingBold,
+      },
+      S: {
+        fill: pivot.subheading2Fill,
+        fontColor: pivot.subheading2FontColor,
+        bold: pivot.subheading2Bold,
+      },
+      t: {
+        fill: pivot.subtotalFill,
+        fontColor: pivot.subtotalFontColor,
+        bold: pivot.subtotalBold,
+      },
+      g: {
+        fill: pivot.totalRowFill,
+        fontColor: pivot.totalRowFontColor,
+        bold: pivot.totalRowBold ?? fallbackBold,
+      },
+    }
+    for (let row = rowStart; row <= rowEnd; row += 1) {
+      const isHeader = row <= headerEndRow
+      const rowOffset = row - headerEndRow - 1
+      const kind = isHeader
+        ? 'h'
+        : (rowKinds[rowOffset] ?? (rowGrandTotals && row === bounds.endRow ? 'g' : 'd'))
+      const rowStripe = isHeader
+        ? undefined
+        : rowOffset % 2 === 0
+          ? pivot.stripeFill
+          : pivot.secondRowStripeFill
+      const rowBand = rowBands[kind]
+      for (let column = columnStart; column <= columnEnd; column += 1) {
+        const cell = matrix[row - range.startRow]?.[column - range.startColumn]
+        if (!cell) continue
+        const isFirstColumn = column < firstDataColumn
+        const columnStripe =
+          isHeader || isFirstColumn
+            ? undefined
+            : (column - firstDataColumn) % 2 === 0
+              ? pivot.columnStripeFill
+              : pivot.secondColumnStripeFill
+        const layers: (PivotBand | undefined)[] = [
+          wholeTable,
+          { fill: rowStripe },
+          { fill: columnStripe },
+          isFirstColumn ? firstColumn : undefined,
+          rowBand,
+          isHeader ? header : undefined,
+          isHeader && row === bounds.startRow && column === bounds.startColumn
+            ? firstHeaderCell
+            : undefined,
+        ]
+        let fill: string | undefined
+        let fontColor: string | undefined
+        let bold = false
+        for (const layer of layers) {
+          if (!layer) continue
+          if (layer.fill !== undefined) fill = layer.fill
+          if (layer.fontColor !== undefined) fontColor = layer.fontColor
+          if (layer.bold !== undefined) bold = layer.bold
+        }
+        if (!fill && !fontColor && !bold) continue
+        const style = (cell.s ?? {}) as IStyleData
+        // Explicit cell fills and non-black font colors survive the band.
+        const cellFont = (style.cl as { rgb?: string } | undefined)?.rgb
+        const paintFill = fill && !styleHasFill(style)
+        const paintFont = fontColor && (!cellFont || cellFont === '#000000')
+        if (!paintFill && !paintFont && !bold) continue
+        cell.s = {
+          ...style,
+          ...(paintFill ? { bg: { rgb: fill } } : {}),
+          ...(paintFont ? { cl: { rgb: fontColor } } : {}),
+          ...(bold ? { bl: BooleanNumber.TRUE } : {}),
+        }
       }
     }
   }
@@ -2826,6 +3186,7 @@ export async function preloadEntireWorkbook(
       const screen = ops.length === 0 ? result : mapRangeResultToScreen(ops, result)
       storeFormulaText(state, sheetId, screen.cells)
       collectArrayFollowers(arrayFollowers, screen.cells, ops)
+      recordHiddenFileRows(state, sheetId, screen.rows, screenRange)
       patchWorksheetRange(
         worksheet,
         undefined,
@@ -2834,12 +3195,14 @@ export async function preloadEntireWorkbook(
         state.file.styles,
         screen.hyperlinks,
         sheet.tables,
+        sheet.pivotTables,
         sheet.freeze,
         true,
         state.editJournal,
         undefined,
         undefined,
         arrayFollowers,
+        hiddenRowsInfo(state, sheetId),
       )
       recordHyperlinks(state, sheetId, screen.hyperlinks)
       applyRowProperties(worksheet, state, sheetId, screen.rows)
@@ -4153,6 +4516,8 @@ export function clearLazyState(state: LazyWorkbookState | null): void {
   state.retryTimers.clear()
   state.loadingKeys.clear()
   state.loadedRanges.clear()
+  state.hiddenFileRows.clear()
+  state.hiddenRowsCoveredThrough.clear()
 }
 
 /// Reads a cell's current content for AI previews and drift checks.
