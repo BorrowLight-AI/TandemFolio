@@ -196,7 +196,7 @@ export function withDefaultBarLabels(chart: ChartVisualState): ChartVisualState 
     chart.series.length === 1 &&
     chart.grouping !== 'stacked' &&
     chart.grouping !== 'percentStacked' &&
-    (chart.dataLabels === undefined || chart.dataLabels === 'none')
+    chart.dataLabels === undefined
   return upgradable ? { ...chart, dataLabels: 'value' } : chart
 }
 
@@ -326,11 +326,13 @@ function mergeValueAxis(
   patch: ChartStateEdit['valueAxis'],
 ): ChartVisualState['valueAxis'] {
   if (!patch) return existing
-  const merged: { min?: number; max?: number } = {}
+  const merged: NonNullable<ChartVisualState['valueAxis']> = { ...existing }
   const min = patch.min === undefined ? existing?.min : patch.min
   const max = patch.max === undefined ? existing?.max : patch.max
   if (typeof min === 'number') merged.min = min
+  else delete merged.min
   if (typeof max === 'number') merged.max = max
+  else delete merged.max
   return Object.keys(merged).length === 0 ? undefined : merged
 }
 
@@ -388,8 +390,10 @@ export function applyChartStateEdit(
           ? mergePointExplosions(series.pointExplosions, edit.pointExplosions)
           : series.pointExplosions
       const data = edit.series?.find((entry) => entry.index === index)
+      const seriesBase = { ...series }
+      if (data?.values !== undefined) delete seriesBase.blanks
       return {
-        ...series,
+        ...seriesBase,
         ...(color === undefined ? {} : { color }),
         ...(pointColors === undefined ? {} : { pointColors }),
         ...(pointExplosions === undefined ? {} : { pointExplosions }),

@@ -66,6 +66,16 @@ describe('applyChartStateEdit', () => {
     expect(next.series[0]?.categories).toEqual(['a', 'b'])
   })
 
+  it('drops stale blank markers when an edit replaces the values', () => {
+    const chart = base()
+    const first = chart.series[0]
+    if (first) first.blanks = [1]
+    const kept = applyChartStateEdit(chart, { series: [{ index: 0, name: 'R' }] })
+    expect(kept.series[0]?.blanks).toEqual([1])
+    const replaced = applyChartStateEdit(chart, { series: [{ index: 0, values: [5, 6] }] })
+    expect(replaced.series[0]?.blanks).toBeUndefined()
+  })
+
   it('merges slice explosions per point over the series default', () => {
     const pie = applyChartStateEdit(base(), { chartType: 'pie', explosionPct: 10 })
     expect(pie.chartTypes).toEqual(['pieChart'])
@@ -97,8 +107,8 @@ describe('withDefaultBarLabels', () => {
     return { ...chart, series: chart.series.slice(0, 1) }
   }
 
-  it('upgrades a single-series bar chart with labels off or unset', () => {
-    expect(withDefaultBarLabels({ ...single(), dataLabels: 'none' }).dataLabels).toBe('value')
+  it('upgrades a single-series bar chart only when the file has no label state', () => {
+    expect(withDefaultBarLabels({ ...single(), dataLabels: 'none' }).dataLabels).toBe('none')
     expect(withDefaultBarLabels(single()).dataLabels).toBe('value')
   })
 

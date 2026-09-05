@@ -77,6 +77,9 @@ and accounting syntax, instead of the reduced axis formatter.
 Value axes now use Excel-like 1/2/5 major units with a small automatic maximum headroom. Explicit
 `c:majorUnit`, minimum, maximum, and `c:numFmt` values survive browser parsing and drive the visible
 column, line, and area chart grid/tick labels.
+Chart data edits now discard obsolete blank-point indexes when values change, while retaining them
+for name-only edits. An explicit source-file `showVal="0"` remains off, and axis-bound edits retain
+the file's major unit and number format.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -148,7 +151,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,617 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,618 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
