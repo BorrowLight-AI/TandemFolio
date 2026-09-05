@@ -83,6 +83,7 @@ import { t } from './i18n/locale'
 import { mapProtectedRanges } from './protected-ranges'
 import { INDENT_STEP_PX } from './selection-format'
 import { CENTER_ACROSS_END_KEY } from './center-continuous'
+import { clampColorScaleStops } from './cf-thresholds'
 import {
   fileRangeToScreenRange,
   indexedThroughScreenRow,
@@ -3157,7 +3158,7 @@ export function applyConditionalRules(
   // Lower xlsx priority number = higher precedence; Univer applies rules in
   // insertion order, so add the most important rules first. Installing the
   // file's own rules must not mark the sheet's CF as edited.
-  const ordered = [...rules].sort((a, b) => a.priority - b.priority)
+  const ordered = [...dropShadowedPaintOnceRules(rules)].sort((a, b) => b.priority - a.priority)
   journalSuppression.active = true
   try {
     for (const rule of ordered) {
@@ -3171,6 +3172,33 @@ export function applyConditionalRules(
   } finally {
     journalSuppression.active = false
   }
+}
+
+const PAINT_ONCE_TYPES = new Set(['colorScale', 'dataBar', 'iconSet'])
+
+/** Drop lower-priority paint-once rules whose ranges are fully shadowed. */
+export function dropShadowedPaintOnceRules(
+  rules: WorkbookRangeResult['conditionalRules'],
+): WorkbookRangeResult['conditionalRules'] {
+  const covers = (
+    outer: (typeof rules)[number]['ranges'][number],
+    inner: (typeof rules)[number]['ranges'][number],
+  ): boolean =>
+    outer.startRow <= inner.startRow &&
+    outer.endRow >= inner.endRow &&
+    outer.startColumn <= inner.startColumn &&
+    outer.endColumn >= inner.endColumn
+  return rules.filter(
+    (rule) =>
+      !PAINT_ONCE_TYPES.has(rule.ruleType) ||
+      !rules.some(
+        (other) =>
+          other !== rule &&
+          other.ruleType === rule.ruleType &&
+          other.priority < rule.priority &&
+          rule.ranges.every((range) => other.ranges.some((cover) => covers(cover, range))),
+      ),
+  )
 }
 
 type CfHighlightBuilder = ReturnType<
@@ -3191,9 +3219,10 @@ export function buildConditionalRule(
   const builder = worksheet.newConditionalFormattingRule()
   if (rule.ruleType === 'colorScale') {
     if (rule.colors.length < 2 || rule.cfvos.length !== rule.colors.length) return null
+    const cfvos = clampColorScaleStops(rule.cfvos)
     return builder
       .setColorScale(
-        rule.cfvos.map((cfvo, index) => ({
+        cfvos.map((cfvo, index) => ({
           index,
           color: rule.colors[index] ?? '#FFFFFF',
           value: toCfValue(cfvo),
@@ -3246,7 +3275,14 @@ export function buildConditionalRule(
       .setRanges(ranges)
       .build()
   }
-  const highlight = buildHighlightCondition(builder, rule)
+  const coveredCells = ranges.reduce(
+    (sum, current) =>
+      sum +
+      (current.endRow - current.startRow + 1) *
+        (current.endColumn - current.startColumn + 1),
+    0,
+  )
+  const highlight = buildHighlightCondition(builder, rule, coveredCells)
   if (!highlight) return null
   return applyDxfFormat(highlight, dxfStyles, rule.dxfIndex).setRanges(ranges).build()
 }
@@ -3271,6 +3307,7 @@ function toCfValue(cfvo: { kind: string; value?: string | undefined }): IValueCo
 function buildHighlightCondition(
   builder: ReturnType<UniverWorksheet['newConditionalFormattingRule']>,
   rule: WorkbookRangeResult['conditionalRules'][number],
+  coveredCells: number,
 ): CfHighlightBuilder | null {
   const firstRange = rule.ranges[0]
   const anchor = firstRange ? formatAddress(firstRange.startRow, firstRange.startColumn) : 'A1'
@@ -3290,6 +3327,13 @@ function buildHighlightCondition(
         )
       }
       if (!Number.isFinite(firstNumber)) return null
+      if (
+        rule.operator !== undefined &&
+        coveredCells <= 20_000 &&
+        cellIsBlankDiverges(rule.operator, firstNumber, secondNumber)
+      ) {
+        return buildCellIsFormula(builder, rule.operator, anchor, firstNumber, secondNumber)
+      }
       switch (rule.operator) {
         case 'greaterThan':
           return builder.whenNumberGreaterThan(firstNumber)
@@ -3344,6 +3388,74 @@ function buildHighlightCondition(
           })
     case 'expression':
       return rule.formulas[0] ? builder.whenFormulaSatisfied(`=${rule.formulas[0]}`) : null
+    default:
+      return null
+  }
+}
+
+/** Whether Excel's blank-as-zero numeric comparison differs from Univer. */
+export function cellIsBlankDiverges(operator: string, first: number, second: number): boolean {
+  let excelBlank: boolean
+  switch (operator) {
+    case 'greaterThan':
+      excelBlank = 0 > first
+      break
+    case 'greaterThanOrEqual':
+      excelBlank = 0 >= first
+      break
+    case 'lessThan':
+      excelBlank = 0 < first
+      break
+    case 'lessThanOrEqual':
+      excelBlank = 0 <= first
+      break
+    case 'equal':
+      excelBlank = first === 0
+      break
+    case 'notEqual':
+      excelBlank = first !== 0
+      break
+    case 'between':
+      excelBlank = Math.min(first, second) <= 0 && 0 <= Math.max(first, second)
+      break
+    case 'notBetween':
+      excelBlank = !(Math.min(first, second) <= 0 && 0 <= Math.max(first, second))
+      break
+    default:
+      return false
+  }
+  const univerBlank = operator === 'notEqual' || operator === 'notBetween'
+  return excelBlank !== univerBlank
+}
+
+function buildCellIsFormula(
+  builder: ReturnType<UniverWorksheet['newConditionalFormattingRule']>,
+  operator: string,
+  anchor: string,
+  first: number,
+  second: number,
+): CfHighlightBuilder | null {
+  switch (operator) {
+    case 'equal':
+      return builder.whenFormulaSatisfied(`=${anchor}=${first}`)
+    case 'notEqual':
+      return builder.whenFormulaSatisfied(`=${anchor}<>${first}`)
+    case 'greaterThan':
+      return builder.whenFormulaSatisfied(`=${anchor}>${first}`)
+    case 'greaterThanOrEqual':
+      return builder.whenFormulaSatisfied(`=${anchor}>=${first}`)
+    case 'lessThan':
+      return builder.whenFormulaSatisfied(`=${anchor}<${first}`)
+    case 'lessThanOrEqual':
+      return builder.whenFormulaSatisfied(`=${anchor}<=${first}`)
+    case 'between':
+      return builder.whenFormulaSatisfied(
+        `=AND(${anchor}>=${Math.min(first, second)},${anchor}<=${Math.max(first, second)})`,
+      )
+    case 'notBetween':
+      return builder.whenFormulaSatisfied(
+        `=NOT(AND(${anchor}>=${Math.min(first, second)},${anchor}<=${Math.max(first, second)}))`,
+      )
     default:
       return null
   }
