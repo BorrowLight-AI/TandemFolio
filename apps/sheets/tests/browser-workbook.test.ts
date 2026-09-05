@@ -226,6 +226,31 @@ describe('browser XLSX workbook', () => {
     })
   })
 
+  it('preserves row customHeight separately from cached auto heights', async () => {
+    vi.stubGlobal('window', {})
+    const zip = await JSZip.loadAsync(await fixture())
+    const sheet = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      sheet
+        .replace('<row r="1">', '<row r="1" ht="30">')
+        .replace('<row r="2">', '<row r="2" ht="30" customHeight="1">'),
+    )
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await zip.generateAsync({ type: 'arraybuffer' }), 'rows.xlsx')
+    const range = await api.readWorkbookRange({
+      sessionId: file.sessionId,
+      sheetId: file.sheets[0]!.id,
+      range: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 1 },
+    })
+
+    expect(range.rows).toEqual([
+      expect.objectContaining({ row: 0, height: 30 }),
+      expect.objectContaining({ row: 1, height: 30, customHeight: true }),
+    ])
+    expect(range.rows[0]).not.toHaveProperty('customHeight')
+  })
+
   it('hydrates native conditional-format rules and differential styles', async () => {
     vi.stubGlobal('window', {})
     const zip = await JSZip.loadAsync(await fixture())

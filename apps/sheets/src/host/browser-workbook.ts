@@ -511,11 +511,13 @@ function parseSheet(
     const heightValue = Number(xmlAttribute(attributes, 'ht'))
     const outlineLevel = Number(xmlAttribute(attributes, 'outlineLevel'))
     const hidden = xmlAttribute(attributes, 'hidden')
+    const customHeight = xmlAttribute(attributes, 'customHeight')
     const collapsed = xmlAttribute(attributes, 'collapsed')
     const styleIndex = Number(xmlAttribute(attributes, 's'))
     rows.push({
       row: rowNumber - 1,
       hidden: hidden === '1' || hidden === 'true',
+      ...(customHeight === '1' || customHeight === 'true' ? { customHeight: true } : {}),
       ...(Number.isFinite(heightValue) && heightValue >= 0 ? { height: heightValue } : {}),
       ...(Number.isInteger(outlineLevel) && outlineLevel >= 1 && outlineLevel <= 7
         ? { outlineLevel }

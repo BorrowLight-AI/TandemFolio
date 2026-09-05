@@ -466,6 +466,7 @@ export const workbookRangeResultSchema = z
           .object({
             row: z.number().int().nonnegative(),
             height: z.number().nonnegative().optional(),
+            customHeight: z.boolean().optional(),
             hidden: z.boolean(),
             outlineLevel: z.number().int().min(1).max(7).optional(),
             collapsed: z.boolean().optional(),

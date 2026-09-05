@@ -122,6 +122,7 @@ import {
   BORDER_COMMAND_TYPES,
   CLOSURE_MAX_CELLS,
   journalSuppression,
+  loadAutoHeightSuppression,
   type LazyWorkbookState,
   type PinnedClosureCell,
   type UniverRuntime,
@@ -2027,7 +2028,7 @@ export async function ensureLazyRangeLoaded(
   return state === initialState && loaded !== undefined && containsRange(loaded, range)
 }
 
-function applyRowProperties(
+export function applyRowProperties(
   worksheet: UniverWorksheet,
   state: LazyWorkbookState,
   sheetId: string,
@@ -2040,7 +2041,11 @@ function applyRowProperties(
     state.appliedRowKeys.set(sheetId, applied)
   }
   journalSuppression.active = true
+  loadAutoHeightSuppression.active = true
   try {
+    const heights: { row: number; px: number }[] = []
+    const autoRows: number[] = []
+    const hiddenRows: number[] = []
     for (const row of rows) {
       const rowsOutline = sheetOutline(state, sheetId).rows
       // Session outline edits own the entry; file reads only seed it.
@@ -2051,7 +2056,7 @@ function applyRowProperties(
           hidden: row.hidden,
         })
       }
-      const key = `${row.row}:${row.height ?? ''}:${row.hidden}:${row.styleIndex ?? ''}`
+      const key = `${row.row}:${row.height ?? ''}:${row.customHeight ?? false}:${row.hidden}:${row.styleIndex ?? ''}`
       if (applied.has(key)) continue
       applied.add(key)
       if (row.styleIndex !== undefined) {
@@ -2059,19 +2064,38 @@ function applyRowProperties(
         if (style) worksheet.getSheet().setRowStyle(row.row, toUniverStyle(style))
       }
       if (row.height !== undefined) {
-        // The engine reports ht for every row that carries one, not just
-        // customHeight="1" rows: Excel stores its laid-out height (auto-fit
-        // included), and honoring it reproduces Excel's layout exactly.
-        // Re-measuring instead with whatever fonts the host OS substitutes
-        // clipped wrapped CJK rows on Windows. Forced = clip overflow and
-        // skip auto-height, exactly like Excel renders a freshly opened file.
-        worksheet.setRowHeightsForced(row.row, 1, Math.round((row.height * 96) / 72))
+        const px = Math.round((row.height * 96) / 72)
+        heights.push({ row: row.row, px })
+        const defaultPoints =
+          state.file.sheets.find((sheet) => sheet.id === sheetId)?.defaultRowHeight ?? 15
+        if (!row.customHeight && px >= Math.round((defaultPoints * 96) / 72)) {
+          autoRows.push(row.row)
+        }
       }
-      if (row.hidden) worksheet.hideRows(row.row, 1)
+      if (row.hidden) hiddenRows.push(row.row)
     }
+    for (const height of heights) worksheet.setRowHeightsForced(height.row, 1, height.px)
+    forEachRowRun(autoRows, (start, count) => worksheet.setRowAutoHeight(start, count))
+    forEachRowRun(hiddenRows, (start, count) => worksheet.hideRows(start, count))
   } finally {
     journalSuppression.active = false
+    loadAutoHeightSuppression.active = false
   }
+}
+
+function forEachRowRun(rows: number[], apply: (start: number, count: number) => void): void {
+  rows.sort((left, right) => left - right)
+  let start = -1
+  let count = 0
+  for (const row of rows) {
+    if (count > 0 && row === start + count) count += 1
+    else {
+      if (count > 0) apply(start, count)
+      start = row
+      count = 1
+    }
+  }
+  if (count > 0) apply(start, count)
 }
 
 export function sheetOutline(

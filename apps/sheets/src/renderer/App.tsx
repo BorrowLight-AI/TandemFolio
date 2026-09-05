@@ -25,6 +25,7 @@ import {
   univerDefinedNames,
 } from './univer-sync'
 import {
+  installLoadAutoHeightGate,
   journalSuppression,
   type ActiveWorkbook,
   type LazyWorkbookState,
@@ -1076,6 +1077,7 @@ export function App(): React.JSX.Element {
     installMergeBorderFix()
     installThickBorderFix()
     installCellClipAnchorFix()
+    installLoadAutoHeightGate()
     const clearSelectionKeydown = (event: KeyboardEvent): void => {
       if (!shouldInterceptClearSelection(event, editingCellRef.current)) return
       event.preventDefault()

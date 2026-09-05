@@ -5,6 +5,7 @@
  * helpers (univer-sync.ts).
  */
 import { BorderType, type IRange } from '@univerjs/core'
+import { SheetInterceptorService } from '@univerjs/sheets'
 
 import type { WorkbookFile, WorkbookPivotDefinition } from '../shared/desktop-api'
 import type { createUniver } from './create-univer'
@@ -107,6 +108,31 @@ export const CLOSURE_MAX_CELLS = 50_000
 /// content/layout instead of user edits.
 /// Shared mutable state between App.tsx and univer-sync.ts.
 export const journalSuppression = { active: false }
+
+export const loadAutoHeightSuppression = { active: false }
+
+let autoHeightGateInstalled = false
+
+export function installLoadAutoHeightGate(): void {
+  if (autoHeightGateInstalled) return
+  autoHeightGateInstalled = true
+  type AutoHeightMutations = {
+    preUndos: unknown[]
+    undos: unknown[]
+    preRedos: unknown[]
+    redos: unknown[]
+  }
+  const prototype = SheetInterceptorService.prototype as unknown as {
+    generateMutationsOfAutoHeight(context: unknown): AutoHeightMutations
+  }
+  const original = prototype.generateMutationsOfAutoHeight
+  prototype.generateMutationsOfAutoHeight = function (this: unknown, context: unknown) {
+    if (loadAutoHeightSuppression.active) {
+      return { preUndos: [], undos: [], preRedos: [], redos: [] }
+    }
+    return original.call(this, context)
+  }
+}
 
 export const BORDER_COMMAND_TYPES: Record<string, BorderType> = {
   all: BorderType.ALL,
