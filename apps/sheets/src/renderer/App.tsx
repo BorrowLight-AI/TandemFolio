@@ -222,6 +222,7 @@ import { installFormulaLexerFix } from './formula-lexer-fix'
 import { installSheetRenameFix } from './sheet-rename-fix'
 import { installSelectionWrapGuard } from './selection-wrap-fix'
 import { installMultiRowAutofit } from './autofit-multi-row'
+import { registerExcelShortcuts } from './excel-shortcuts'
 import { installCopyMaterialize } from './copy-materialize'
 import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
@@ -1191,6 +1192,12 @@ export function App(): React.JSX.Element {
     const selectionWrapGuardDisposable = installSelectionWrapGuard(runtime)
     // Row-header double-click autofits every selected row, like Excel.
     const multiRowAutofitDisposable = installMultiRowAutofit(runtime)
+    // Excel-standard worksheet navigation and whole-axis selection shortcuts.
+    registerExcelShortcuts(runtime, (sheetId) => {
+      const sheet = lazyWorkbookRef.current?.file.sheets.find((candidate) => candidate.id === sheetId)
+      if (!sheet || sheet.rowCount <= 0 || sheet.columnCount <= 0) return null
+      return { row: sheet.rowCount - 1, column: sheet.columnCount - 1 }
+    })
     // Empty-value formula results (IFERROR/IF/CHOOSE over blank refs)
     // display as 0 like Excel.
     const nullResultDisposable = installFormulaNullResultFix(runtime)

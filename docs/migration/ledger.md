@@ -207,9 +207,9 @@ resource/performance budgets.
 - Operation registry foundation: fixture and real multi-format product manifests pass deterministic
   `--check`. The generated Manifest contains 345 operations: 103 DOCX, 22 Markdown, 121 XLSX, 74
   PPTX, and 25 PDF. All five retained-command producer mappings have no missing entry.
-- Tests: the root workspaces execute 334 passing test files plus one environment-conditional skip,
-  for 4,348 passing assertions and one skipped assertion. Workspace assertions are Operation
-  Contract 24, Host Bridge 44, DOCX 1,680, Markdown 127, XLSX 1,650 plus one environment skip,
+- Tests: the root workspaces execute 335 passing test files plus one environment-conditional skip,
+  for 4,354 passing assertions and one skipped assertion. Workspace assertions are Operation
+  Contract 24, Host Bridge 44, DOCX 1,680, Markdown 127, XLSX 1,656 plus one environment skip,
   PPTX 184, PDF 284, and MCP server 385. The separate DOCX engine suite adds 996 passing and one
   skipped assertion. These include wakeable-poll/startup-
   trace lifecycle, five-format isolated/exact Session recovery, exclusive view-lease enforcement,
