@@ -140,7 +140,7 @@ describe('browser XLSX workbook', () => {
       'xl/styles.xml',
       '<styleSheet><fonts count="2"><font/><font><name val="Aptos"/><sz val="12"/><b/><color rgb="FF123456"/></font></fonts>' +
         '<fills count="1"><fill/></fills><borders count="1"><border/></borders><cellXfs count="4">' +
-        '<xf/><xf/><xf/><xf fontId="1" applyFont="1" applyAlignment="1"><alignment shrinkToFit="1" horizontal="right"/></xf>' +
+        '<xf/><xf/><xf/><xf fontId="1" applyFont="1" applyAlignment="1"><alignment shrinkToFit="1" horizontal="right" textRotation="135"/></xf>' +
         '</cellXfs></styleSheet>',
     )
     const source = await zip.generateAsync({ type: 'arraybuffer' })
@@ -155,6 +155,7 @@ describe('browser XLSX workbook', () => {
       fontColor: '#123456',
       horizontalAlignment: 'right',
       shrinkToFit: true,
+      textRotation: 135,
     })
   })
 

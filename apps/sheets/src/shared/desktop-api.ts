@@ -230,6 +230,8 @@ const cellStyleSchema = z
     verticalAlignment: z.string().optional(),
     /// OOXML alignment indent steps read from the xf; absent when 0.
     indent: z.number().int().nonnegative().optional(),
+    /// alignment/@textRotation: 1-90 ccw, 91-180 cw, 255 stacked.
+    textRotation: z.number().int().min(1).max(255).optional(),
     numberFormat: z.string().optional(),
     borderTop: borderEdgeSchema.optional(),
     borderBottom: borderEdgeSchema.optional(),

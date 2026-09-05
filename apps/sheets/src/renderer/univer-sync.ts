@@ -3366,7 +3366,7 @@ function applyDxfFormat(
   return styled
 }
 
-function toUniverStyle(style: WorkbookCellStyle): IStyleData {
+export function toUniverStyle(style: WorkbookCellStyle): IStyleData {
   const diagonal = style.borderDiagonal ? toUniverBorder(style.borderDiagonal) : undefined
   const borders = {
     ...(style.borderTop ? { t: toUniverBorder(style.borderTop) } : {}),
@@ -3383,16 +3383,12 @@ function toUniverStyle(style: WorkbookCellStyle): IStyleData {
     it: style.italic ? BooleanNumber.TRUE : BooleanNumber.FALSE,
     ...(style.underline ? { ul: { s: BooleanNumber.TRUE } } : {}),
     ...(style.strikethrough ? { st: { s: BooleanNumber.TRUE } } : {}),
-    ...(style.wrapText || style.horizontalAlignment === 'centerContinuous'
-      ? {
-          tb:
-            style.horizontalAlignment === 'centerContinuous'
-              ? WrapStrategy.OVERFLOW
-              : WrapStrategy.WRAP,
-        }
-      : {}),
+    tb:
+      style.wrapText && style.horizontalAlignment !== 'centerContinuous'
+        ? WrapStrategy.WRAP
+        : WrapStrategy.OVERFLOW,
     ...(style.fontColor ? { cl: { rgb: style.fontColor } } : {}),
-    ...(style.fillColor ? { bg: { rgb: style.fillColor } } : {}),
+    ...(style.fillColor ? { bg: { rgb: style.fillColor } } : { bg: { rgb: '' } }),
     ...(style.numberFormat ? { n: { pattern: style.numberFormat } } : {}),
     ...(Object.keys(borders).length > 0 ? { bd: borders } : {}),
     ...(mapHorizontalAlignment(style.horizontalAlignment) === undefined
@@ -3402,7 +3398,15 @@ function toUniverStyle(style: WorkbookCellStyle): IStyleData {
       ? {}
       : { vt: mapVerticalAlignment(style.verticalAlignment) }),
     ...(style.indent ? { pd: { l: style.indent * INDENT_STEP_PX } } : {}),
+    ...(style.textRotation ? { tr: ooxmlTextRotation(style.textRotation) } : {}),
   }
+}
+
+function ooxmlTextRotation(value: number): { a: number; v?: number } | undefined {
+  if (value === 255) return { a: 0, v: 1 }
+  if (value > 180) return undefined
+  if (value > 90) return { a: 90 - value }
+  return value > 0 ? { a: value } : undefined
 }
 
 function toUniverBorder(edge: NonNullable<WorkbookCellStyle['borderTop']>): {

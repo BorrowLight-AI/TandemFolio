@@ -44,6 +44,9 @@ styles. Native `alignment/@shrinkToFit` therefore reaches the mounted Univer ren
 its source font, color, alignment, number-format, fill, and border context. Overflowing text is
 measured against the live column or merged-cell width and receives an integer fitted font size;
 the original OOXML style stays untouched for save/reopen fidelity.
+Cell formats without a fill now carry an explicit renderer sentinel so row/column default fills do
+not bleed through a complete cell xf. OOXML counterclockwise, clockwise-encoded, and stacked text
+rotations are parsed and mapped to Univer's native rotation model.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -114,8 +117,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 118 passing files and one environment-conditional LibreOffice pivot
-suite; 1,554 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 120 passing files and one environment-conditional LibreOffice pivot
+suite; 1,558 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

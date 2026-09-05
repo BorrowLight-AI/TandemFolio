@@ -99,6 +99,7 @@ export class StylesheetEditor {
       const fontSize = positiveNumber(readChildAttribute(font, 'sz', 'val'))
       const fontScheme = readChildAttribute(font, 'scheme', 'val')
       const indent = nonnegativeInteger(readAttribute(alignment, 'indent'))
+      const textRotation = positiveInteger(readAttribute(alignment, 'textRotation'), 255)
       return {
         ...(fontFamily ? { fontFamily: decodeXmlAttribute(fontFamily) } : {}),
         ...(fontSize === undefined ? {} : { fontSize }),
@@ -122,6 +123,7 @@ export class StylesheetEditor {
           ? { verticalAlignment: readAttribute(alignment, 'vertical') }
           : {}),
         ...(indent === undefined ? {} : { indent }),
+        ...(textRotation === undefined ? {} : { textRotation }),
         numberFormat:
           customFormats.get(numFmtId) ?? BUILTIN_NUMBER_FORMATS_BY_ID.get(numFmtId) ?? 'General',
         ...readBorderCatalog(border),
@@ -286,6 +288,11 @@ function positiveNumber(value: string | undefined): number | undefined {
 function nonnegativeInteger(value: string | undefined): number | undefined {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined
+}
+
+function positiveInteger(value: string | undefined, maximum: number): number | undefined {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= maximum ? parsed : undefined
 }
 
 function readColorElement(
