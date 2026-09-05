@@ -70,7 +70,14 @@ export interface ChartVisualState {
   /// Value-axis major gridlines; absent on pie/doughnut.
   gridlines?: boolean | undefined
   /// Explicit value-axis bounds (`c:scaling`); absent keys mean auto.
-  valueAxis?: { min?: number | undefined; max?: number | undefined } | undefined
+  valueAxis?:
+    | {
+        min?: number | undefined
+        max?: number | undefined
+        majorUnit?: number | undefined
+        numFmt?: string | undefined
+      }
+    | undefined
   /// `c:numFmt` on the category/date axis.
   categoryAxisFormat?: string | undefined
   /// Bar family `c:gapWidth` (percent of one bar width between categories).
@@ -124,6 +131,44 @@ export function scatterAxisBounds(
   if (!(max > min)) max = min + 1
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((fraction) => min + fraction * (max - min))
   return { min, max, ticks }
+}
+
+export function valueAxisScale(
+  dataMax: number,
+  explicit?: { min?: number | undefined; max?: number | undefined; majorUnit?: number | undefined },
+): { min: number; max: number; ticks: number[] } {
+  const min = explicit?.min ?? 0
+  const target = explicit?.max ?? Math.max(dataMax, min)
+  const span = target - min
+  if (!(span > 0)) {
+    return { min, max: min + 1, ticks: [min, min + 0.5, min + 1] }
+  }
+  const bumped = explicit?.max === undefined ? span * 1.05 : span
+  const unit = explicit?.majorUnit ?? autoAxisUnit(bumped)
+  const max = explicit?.max ?? min + Math.ceil(bumped / unit - 1e-9) * unit
+  return { min, max: max > min ? max : min + unit, ticks: unitTicks(min, max, unit) }
+}
+
+function autoAxisUnit(span: number): number {
+  let exponent = Math.floor(Math.log10(span)) - 1
+  for (let guard = 0; guard < 6; guard += 1) {
+    for (const base of [1, 2, 5]) {
+      const unit = base * 10 ** exponent
+      if (span / unit <= 10 + 1e-9) return unit
+    }
+    exponent += 1
+  }
+  return 10 ** Math.ceil(Math.log10(span))
+}
+
+function unitTicks(min: number, max: number, unit: number): number[] {
+  const ticks: number[] = []
+  for (let index = 0; index < 25; index += 1) {
+    const tick = min + index * unit
+    if (tick > max + unit * 1e-6) break
+    ticks.push(Number(tick.toPrecision(12)))
+  }
+  return ticks.length >= 2 ? ticks : [min, max]
 }
 
 /// Smallest 1/2/2.5/5×10^n step whose multiple covers `value` within 9

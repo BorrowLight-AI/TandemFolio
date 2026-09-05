@@ -345,6 +345,8 @@ const visualObjectSchema = z
           .object({
             min: z.number().finite().optional(),
             max: z.number().finite().optional(),
+            majorUnit: z.number().finite().positive().optional(),
+            numFmt: z.string().optional(),
           })
           .strict()
           .optional(),

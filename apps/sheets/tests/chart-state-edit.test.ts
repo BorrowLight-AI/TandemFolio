@@ -7,6 +7,7 @@ import {
   refIntersects,
   scatterAxisBounds,
   splitSheetRef,
+  valueAxisScale,
   withDefaultBarLabels,
   type ChartVisualState,
 } from '../src/domain/chart-visual'
@@ -304,6 +305,37 @@ describe('scatterAxisBounds', () => {
     expect(scatterAxisBounds([])).toMatchObject({ min: 0, max: 1 })
     expect(scatterAxisBounds([0, 0])).toMatchObject({ min: 0, max: 1 })
     expect(scatterAxisBounds([Number.NaN])).toMatchObject({ min: 0, max: 1 })
+  })
+})
+
+describe('valueAxisScale', () => {
+  it('matches Excel defaults across small and large values', () => {
+    expect(valueAxisScale(11162)).toEqual({
+      min: 0,
+      max: 12000,
+      ticks: [0, 2000, 4000, 6000, 8000, 10000, 12000],
+    })
+    expect(valueAxisScale(3750).max).toBe(4000)
+    expect(valueAxisScale(13)).toEqual({ min: 0, max: 14, ticks: [0, 2, 4, 6, 8, 10, 12, 14] })
+    expect(valueAxisScale(877).max).toBe(1000)
+  })
+
+  it('leaves Excel-style auto maximum headroom', () => {
+    expect(valueAxisScale(18).max).toBe(20)
+    expect(valueAxisScale(148).ticks[1]).toBe(20)
+    expect(valueAxisScale(289753.76).max).toBe(350000)
+    expect(valueAxisScale(1000).max).toBe(1200)
+    expect(valueAxisScale(3490).ticks[1]).toBe(500)
+  })
+
+  it('honors explicit bounds and major unit', () => {
+    expect(valueAxisScale(999, { min: -180, max: 180, majorUnit: 60 }).ticks).toEqual([
+      -180, -120, -60, 0, 60, 120, 180,
+    ])
+  })
+
+  it('survives degenerate spans', () => {
+    expect(valueAxisScale(0).max).toBeGreaterThan(0)
   })
 })
 

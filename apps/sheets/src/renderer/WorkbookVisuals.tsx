@@ -12,6 +12,7 @@ import {
   formatCategoryLabel,
   scatterAxisBounds,
   splitSheetRef,
+  valueAxisScale,
 } from '../domain/chart-visual'
 import { parseAddress } from '../domain/cell-address'
 import { t } from './i18n/locale'
@@ -1789,7 +1790,7 @@ function BarChart({
   const categoryTotal = (index: number): number =>
     seriesList.reduce((sum, series) => sum + Math.max(0, series.values[index] ?? 0), 0)
   const bounds = isPercent
-    ? { min: 0, max: 1 }
+    ? { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1] }
     : axisBounds(
         isStacked
           ? Math.max(...Array.from({ length: visibleCount }, (_, index) => categoryTotal(index)), 0)
@@ -1943,7 +1944,8 @@ function BarChart({
       <VerticalAxis
         minimum={bounds.min}
         maximum={bounds.max}
-        numberFormat={axisNumberFormat}
+        ticks={bounds.ticks}
+        numberFormat={valueAxis?.numFmt ?? axisNumberFormat}
         showGridlines={gridlines !== false}
         onSelect={selectValueAxis}
       />
@@ -2306,12 +2308,14 @@ function formatAxisValue(value: number, numberFormat: string | undefined): strin
 function VerticalAxis({
   minimum = 0,
   maximum,
+  ticks,
   numberFormat,
   showGridlines = true,
   onSelect,
 }: {
   readonly minimum?: number
   readonly maximum: number
+  readonly ticks?: readonly number[] | undefined
   readonly numberFormat: string | undefined
   readonly showGridlines?: boolean
   readonly onSelect?: ((event: React.MouseEvent) => void) | undefined
@@ -2319,12 +2323,11 @@ function VerticalAxis({
   const span = maximum - minimum || 1
   return (
     <g onClick={onSelect}>
-      {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
-        const tick = minimum + fraction * span
-        const y = 280 - fraction * 240
+      {(ticks ?? [minimum, minimum + span * 0.25, minimum + span * 0.5, minimum + span * 0.75, maximum]).map((tick) => {
+        const y = 280 - ((tick - minimum) / span) * 240
         return (
-          <g key={fraction}>
-            {(showGridlines || fraction === 0) && (
+          <g key={tick}>
+            {(showGridlines || tick === minimum) && (
               <line x1="58" y1={y} x2="580" y2={y} stroke="#e3e3e3" strokeWidth="1" />
             )}
             <text x="54" y={y + 4} textAnchor="end" className="axis-label">
@@ -2340,10 +2343,11 @@ function VerticalAxis({
 type ChartValueAxis = ChartMetadata['valueAxis']
 
 /// Explicit axis bounds win; otherwise 0 up to a nice ceiling.
-function axisBounds(dataMax: number, valueAxis: ChartValueAxis): { min: number; max: number } {
-  const min = valueAxis?.min ?? 0
-  const max = valueAxis?.max ?? niceAxisMaximum(dataMax)
-  return max > min ? { min, max } : { min, max: min + 1 }
+function axisBounds(
+  dataMax: number,
+  valueAxis: ChartValueAxis,
+): { min: number; max: number; ticks: number[] } {
+  return valueAxisScale(dataMax, valueAxis)
 }
 
 function LineChart({
@@ -2393,7 +2397,7 @@ function LineChart({
     return isPercent ? totals.map((value, index) => value / (percentTotals[index] ?? 1)) : totals
   }
   const bounds = isPercent
-    ? { min: 0, max: 1 }
+    ? { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1] }
     : axisBounds(
         isStacked
           ? Math.max(...(stackTotals[stackTotals.length - 1] ?? [0]), 0)
@@ -2419,7 +2423,8 @@ function LineChart({
       <VerticalAxis
         minimum={bounds.min}
         maximum={bounds.max}
-        numberFormat={isPercent ? '0%' : primary.numberFormat}
+        ticks={isPercent ? undefined : bounds.ticks}
+        numberFormat={isPercent ? '0%' : (valueAxis?.numFmt ?? primary.numberFormat)}
         showGridlines={gridlines !== false}
         onSelect={
           onElement
@@ -2549,7 +2554,7 @@ function AreaChart({
       )
     : []
   const bounds = isPercent
-    ? { min: 0, max: 1 }
+    ? { min: 0, max: 1, ticks: [0, 0.25, 0.5, 0.75, 1] }
     : axisBounds(
         isStacked
           ? Math.max(...(stackBounds[stackBounds.length - 1] ?? [0]), 0)
@@ -2570,7 +2575,8 @@ function AreaChart({
       <VerticalAxis
         minimum={bounds.min}
         maximum={bounds.max}
-        numberFormat={isPercent ? '0%' : primary.numberFormat}
+        ticks={isPercent ? undefined : bounds.ticks}
+        numberFormat={isPercent ? '0%' : (valueAxis?.numFmt ?? primary.numberFormat)}
         showGridlines={gridlines !== false}
         onSelect={
           onElement

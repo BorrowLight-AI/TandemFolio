@@ -884,9 +884,17 @@ function chartMetadata(chartXml: string): NonNullable<WorkbookVisualObject['char
     valueAxis === undefined ? undefined : Number(elementAttribute(valueAxis, 'c:min', 'val'))
   const maxValue =
     valueAxis === undefined ? undefined : Number(elementAttribute(valueAxis, 'c:max', 'val'))
+  const majorUnit =
+    valueAxis === undefined ? undefined : Number(elementAttribute(valueAxis, 'c:majorUnit', 'val'))
+  const valueAxisFormat =
+    valueAxis === undefined ? undefined : elementAttribute(valueAxis, 'c:numFmt', 'formatCode')
   const valueAxisBounds = {
     ...(Number.isFinite(minValue) ? { min: minValue } : {}),
     ...(Number.isFinite(maxValue) ? { max: maxValue } : {}),
+    ...(typeof majorUnit === 'number' && Number.isFinite(majorUnit) && majorUnit > 0
+      ? { majorUnit }
+      : {}),
+    ...(valueAxisFormat === undefined ? {} : { numFmt: decodeXml(valueAxisFormat) }),
   }
   const rawGrouping = elementAttribute(plotArea, 'c:grouping', 'val')
   const grouping =

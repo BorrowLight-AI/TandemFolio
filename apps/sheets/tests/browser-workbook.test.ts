@@ -1071,6 +1071,10 @@ describe('browser XLSX workbook', () => {
           /<c:num(?:Cache|Lit)>[\s\S]*?<\/c:num(?:Cache|Lit)>/,
           '<c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="2"><c:v>30</c:v></c:pt></c:numLit>',
         )
+        .replace(
+          '<c:valAx>',
+          '<c:valAx><c:majorUnit val="5"/><c:numFmt formatCode="$#,##0" sourceLinked="0"/>',
+        )
         .replace('</c:chart>', '<c:dispBlanksAs val="gap"/></c:chart>'),
     )
 
@@ -1081,6 +1085,7 @@ describe('browser XLSX workbook', () => {
     expect(reopened.visuals[0]?.chart).toEqual(
       expect.objectContaining({
         dispBlanksAs: 'gap',
+        valueAxis: { majorUnit: 5, numFmt: '$#,##0' },
         series: [
           expect.objectContaining({
             values: [10, 0, 30],
