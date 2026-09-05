@@ -17,6 +17,7 @@ import {
 import type { HeaderFooterResult } from './HeaderFooterDialog'
 import { t } from './i18n/locale'
 import { buildSheetPrintPayload, type PrintWorksheet } from './print-html'
+import { resolveEffectivePageSetup } from './print-settings'
 import { pushWorkbookUndo } from './univer-sync'
 import { COLOR_SCHEMES, FONT_SCHEMES, rethemeStyles, THEME_PRESETS } from './themes'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
@@ -677,7 +678,30 @@ export async function handleExportPdf(ctx: PageLayoutContext): Promise<void> {
     return
   }
   try {
-    const pageSetup = state?.editJournal.pageSetup.get(worksheet.getSheetId()) ?? {}
+    const sheetId = worksheet.getSheetId()
+    const fileSheet = state?.file.sheets.find((sheet) => sheet.id === sheetId)
+    const filePageSetup = (
+      fileSheet as
+        | (typeof fileSheet & {
+            readonly pageSetup?: PageSetupJournalState
+          })
+        | undefined
+    )?.pageSetup
+    const pageSetup = resolveEffectivePageSetup(
+      state?.editJournal.pageSetup.get(sheetId) ?? {},
+      fileSheet?.printSettings ?? null,
+      filePageSetup
+        ? {
+            ...(typeof filePageSetup.printArea === 'string'
+              ? { printArea: filePageSetup.printArea }
+              : {}),
+            ...(typeof filePageSetup.printTitles === 'string'
+              ? { printTitles: filePageSetup.printTitles }
+              : {}),
+          }
+        : null,
+      state?.editJournal.structuralOps.get(sheetId) ?? [],
+    )
     const baseName = (state?.file.name ?? 'Book1').replace(/\.[^.]+$/, '')
     const payload = buildSheetPrintPayload(
       worksheet as unknown as PrintWorksheet,

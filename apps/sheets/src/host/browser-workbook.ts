@@ -74,6 +74,7 @@ import type { SheetPivotAddition } from '../gateway/xlsx-gateway'
 import type {
   WorkbookChartEdit,
   WorkbookFile,
+  WorkbookPagePrintSettings,
   WorkbookRangeResult,
   WorkbookStyleEdit,
   WorkbookVisualEdit,
@@ -171,6 +172,19 @@ function integerAttribute(xml: string, tag: string, name: string): number | unde
   if (value === undefined) return undefined
   const parsed = Number(value)
   return Number.isInteger(parsed) ? parsed : undefined
+}
+
+function numberAttribute(xml: string, tag: string, name: string): number | undefined {
+  const value = elementAttribute(xml, tag, name)
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function trueAttribute(xml: string, tag: string, name: string): boolean | undefined {
+  const value = elementAttribute(xml, tag, name)
+  if (value === undefined) return undefined
+  return value === '1' || value === 'true'
 }
 
 function decodeHeaderFooterParts(value: string | undefined): HeaderFooterParts | null {
@@ -1257,6 +1271,72 @@ export class BrowserWorkbook {
       sheet.name,
       this.sheets.indexOf(sheet),
     )
+  }
+
+  pagePrintSettings(sheetName: string): WorkbookPagePrintSettings {
+    const xml = this.#sheetXml.get(this.#sheet(sheetName).path)!
+    const orientation = elementAttribute(xml, 'pageSetup', 'orientation')
+    const margins = {
+      left: numberAttribute(xml, 'pageMargins', 'left'),
+      right: numberAttribute(xml, 'pageMargins', 'right'),
+      top: numberAttribute(xml, 'pageMargins', 'top'),
+      bottom: numberAttribute(xml, 'pageMargins', 'bottom'),
+      header: numberAttribute(xml, 'pageMargins', 'header'),
+      footer: numberAttribute(xml, 'pageMargins', 'footer'),
+    }
+    const completeMargins = Object.values(margins).every((value) => value !== undefined)
+    const header = (name: string): string | undefined => textContent(xml, name)
+    return {
+      ...(orientation === 'portrait' || orientation === 'landscape' ? { orientation } : {}),
+      ...(integerAttribute(xml, 'pageSetup', 'paperSize') === undefined
+        ? {}
+        : { paperSize: integerAttribute(xml, 'pageSetup', 'paperSize') }),
+      ...(integerAttribute(xml, 'pageSetup', 'scale') === undefined
+        ? {}
+        : { scale: integerAttribute(xml, 'pageSetup', 'scale') }),
+      ...(integerAttribute(xml, 'pageSetup', 'fitToWidth') === undefined
+        ? {}
+        : { fitToWidth: integerAttribute(xml, 'pageSetup', 'fitToWidth') }),
+      ...(integerAttribute(xml, 'pageSetup', 'fitToHeight') === undefined
+        ? {}
+        : { fitToHeight: integerAttribute(xml, 'pageSetup', 'fitToHeight') }),
+      ...(trueAttribute(xml, 'pageSetUpPr', 'fitToPage') === undefined
+        ? {}
+        : { fitToPage: trueAttribute(xml, 'pageSetUpPr', 'fitToPage') }),
+      ...(completeMargins
+        ? {
+            margins: margins as {
+              left: number
+              right: number
+              top: number
+              bottom: number
+              header: number
+              footer: number
+            },
+          }
+        : {}),
+      ...(trueAttribute(xml, 'printOptions', 'gridLines') === undefined
+        ? {}
+        : { printGridlines: trueAttribute(xml, 'printOptions', 'gridLines') }),
+      ...(trueAttribute(xml, 'printOptions', 'headings') === undefined
+        ? {}
+        : { printHeadings: trueAttribute(xml, 'printOptions', 'headings') }),
+      ...(header('oddHeader') === undefined ? {} : { oddHeader: header('oddHeader') }),
+      ...(header('oddFooter') === undefined ? {} : { oddFooter: header('oddFooter') }),
+      ...(trueAttribute(xml, 'headerFooter', 'differentOddEven') === undefined
+        ? {}
+        : { differentOddEven: trueAttribute(xml, 'headerFooter', 'differentOddEven') }),
+      ...(trueAttribute(xml, 'headerFooter', 'differentFirst') === undefined
+        ? {}
+        : { differentFirst: trueAttribute(xml, 'headerFooter', 'differentFirst') }),
+      ...(trueAttribute(xml, 'headerFooter', 'scaleWithDoc') === false
+        ? { headerFooterFixedSize: true }
+        : {}),
+      ...(header('evenHeader') === undefined ? {} : { evenHeader: header('evenHeader') }),
+      ...(header('evenFooter') === undefined ? {} : { evenFooter: header('evenFooter') }),
+      ...(header('firstHeader') === undefined ? {} : { firstHeader: header('firstHeader') }),
+      ...(header('firstFooter') === undefined ? {} : { firstFooter: header('firstFooter') }),
+    }
   }
 
   applyPageSetup(

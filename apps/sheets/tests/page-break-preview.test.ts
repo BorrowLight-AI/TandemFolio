@@ -21,6 +21,30 @@ describe('printablePagePt', () => {
     expect(page.width).toBeCloseTo((11 - 0.5) * 72, 5)
     expect(page.height).toBeCloseTo((8.5 - 1.5) * 72, 5)
   })
+
+  it('uses exact file margins from effective print settings', () => {
+    const page = printablePagePt({
+        orientation: 'portrait',
+        paperSize: 1,
+        scale: 100,
+        fitToWidth: 0,
+        fitToHeight: 0,
+        fitToPage: false,
+        margins: { left: 0.9, right: 0.8, top: 0.7, bottom: 0.6, header: 0.2, footer: 0.2 },
+        printGridlines: false,
+        printHeadings: false,
+        printAreas: [],
+        printTitles: null,
+        header: null,
+        footer: null,
+        firstPage: null,
+        evenPages: null,
+        headerFooterScaleWithDoc: true,
+        headerFooterPictures: [],
+      })
+    expect(page.width).toBeCloseTo((8.5 - 1.7) * 72, 8)
+    expect(page.height).toBeCloseTo((11 - 1.3) * 72, 8)
+  })
 })
 
 describe('computePageBoundaries', () => {

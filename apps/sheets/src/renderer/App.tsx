@@ -250,6 +250,7 @@ import {
   type PageLayoutContext,
 } from './page-layout-actions'
 import { effectivePageBreaks, installPageBreakPreview } from './page-break-preview'
+import { resolveEffectivePageSetup } from './print-settings'
 import {
   handleSave as handleSaveImpl,
   type SaveActionResult,
@@ -2226,7 +2227,17 @@ export function App(): React.JSX.Element {
         | (typeof fileSheet & { readonly pageSetup?: PageSetupJournalState })
         | undefined
     )?.pageSetup
-    const setup = { ...base, ...(state.editJournal.pageSetup.get(sheetId) ?? {}) }
+    const setup = resolveEffectivePageSetup(
+      state.editJournal.pageSetup.get(sheetId) ?? {},
+      fileSheet?.printSettings ?? null,
+      base
+        ? {
+            ...(typeof base.printArea === 'string' ? { printArea: base.printArea } : {}),
+            ...(typeof base.printTitles === 'string' ? { printTitles: base.printTitles } : {}),
+          }
+        : null,
+      state.editJournal.structuralOps.get(sheetId) ?? [],
+    )
     disposePageBreakLayers(sheetId)
     pageBreakIdRef.current += 1
     pageBreakLayersRef.current.set(

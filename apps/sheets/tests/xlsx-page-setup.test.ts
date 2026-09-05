@@ -184,6 +184,22 @@ describe('applyPageSetupState headerFooter', () => {
     expect(patched).not.toContain('Old')
   })
 
+  it('preserves header/footer attributes and untouched first/even variants', () => {
+    const xml =
+      '<worksheet><sheetData/><headerFooter differentOddEven="1" differentFirst="1" scaleWithDoc="0">' +
+      '<oddHeader>&amp;LOld</oddHeader><evenHeader>&amp;CEven</evenHeader>' +
+      '<firstFooter>&amp;RFirst</firstFooter></headerFooter></worksheet>'
+
+    const patched = applyPageSetupState(xml, { sheetName: 'S', header: { center: 'New' } })
+
+    expect(patched).toContain(
+      '<headerFooter differentOddEven="1" differentFirst="1" scaleWithDoc="0">',
+    )
+    expect(patched).toContain('<oddHeader>&amp;CNew</oddHeader>')
+    expect(patched).toContain('<evenHeader>&amp;CEven</evenHeader>')
+    expect(patched).toContain('<firstFooter>&amp;RFirst</firstFooter>')
+  })
+
   it('removes the element when header and footer both clear', () => {
     const xml =
       '<worksheet><sheetData/>' +

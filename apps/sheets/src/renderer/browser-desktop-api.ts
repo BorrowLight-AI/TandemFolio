@@ -185,10 +185,12 @@ export class BrowserWorkbookDesktopApi {
       sheetNames.set(id, sheet.name)
       sheetIds.set(sheet.name, id)
       const { sheetName: _sheetName, tabColor, ...pageSetup } = workbook.pageSetup(sheet.name)
+      const printSettings = workbook.pagePrintSettings(sheet.name)
       return {
         id,
         name: sheet.name,
         pageSetup,
+        printSettings,
         ...dimensions(sheet),
         columnWidths: sheet.columnWidths,
         defaultRowHeight: null,

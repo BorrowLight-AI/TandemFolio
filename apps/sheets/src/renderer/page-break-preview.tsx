@@ -2,6 +2,7 @@
 /** Page Break Preview boundaries anchored to the live Univer grid. */
 import type { PageSetupJournalState } from './edit-journal'
 import { t } from './i18n/locale'
+import type { EffectivePageSetup } from './print-settings'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'
 import { fileToScreen } from './view-transform'
 
@@ -30,12 +31,15 @@ const MARGIN_PRESETS = {
   narrow: { left: 0.25, right: 0.25, top: 0.75, bottom: 0.75 },
 } as const
 
-export function printablePagePt(pageSetup: PageSetupJournalState): {
+export function printablePagePt(pageSetup: PageSetupJournalState | EffectivePageSetup): {
   width: number
   height: number
 } {
   const paper = PAPER_INCHES[pageSetup.paperSize ?? 9] ?? PAPER_INCHES[9]!
-  const margins = MARGIN_PRESETS[pageSetup.margins ?? 'normal']
+  const margins =
+    typeof pageSetup.margins === 'string'
+      ? MARGIN_PRESETS[pageSetup.margins]
+      : (pageSetup.margins ?? MARGIN_PRESETS.normal)
   const landscape = pageSetup.orientation === 'landscape'
   const width = (landscape ? paper.height : paper.width) - margins.left - margins.right
   const height = (landscape ? paper.width : paper.height) - margins.top - margins.bottom
@@ -94,7 +98,7 @@ export function effectivePageBreaks(
 }
 
 function effectiveScale(
-  pageSetup: PageSetupJournalState,
+  pageSetup: PageSetupJournalState | EffectivePageSetup,
   contentWidthPt: number,
   printableWidthPt: number,
 ): number {
@@ -116,7 +120,7 @@ const MAX_COLUMNS = 2_000
 export function installPageBreakPreview(
   runtime: UniverRuntime,
   worksheet: UniverWorksheet,
-  pageSetup: PageSetupJournalState,
+  pageSetup: PageSetupJournalState | EffectivePageSetup,
   breaks: { rowBreaks: readonly number[]; colBreaks: readonly number[] },
   extent: { rows: number; columns: number },
   idPrefix: string,

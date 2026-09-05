@@ -11,6 +11,52 @@ const cellAreaSchema = z
     endColumn: z.number().int().nonnegative(),
   })
   .strict()
+const filePagePrintSettingsSchema = z
+  .object({
+    orientation: z.enum(['portrait', 'landscape']).optional(),
+    paperSize: z.number().int().min(1).max(256).optional(),
+    scale: z.number().int().min(10).max(400).optional(),
+    fitToWidth: z.number().int().min(0).max(32_767).optional(),
+    fitToHeight: z.number().int().min(0).max(32_767).optional(),
+    fitToPage: z.boolean().optional(),
+    margins: z
+      .object({
+        left: z.number().min(0).max(10),
+        right: z.number().min(0).max(10),
+        top: z.number().min(0).max(10),
+        bottom: z.number().min(0).max(10),
+        header: z.number().min(0).max(10),
+        footer: z.number().min(0).max(10),
+      })
+      .strict()
+      .optional(),
+    printGridlines: z.boolean().optional(),
+    printHeadings: z.boolean().optional(),
+    oddHeader: z.string().min(1).max(500).optional(),
+    oddFooter: z.string().min(1).max(500).optional(),
+    differentOddEven: z.boolean().optional(),
+    differentFirst: z.boolean().optional(),
+    headerFooterFixedSize: z.boolean().optional(),
+    evenHeader: z.string().min(1).max(500).optional(),
+    evenFooter: z.string().min(1).max(500).optional(),
+    firstHeader: z.string().min(1).max(500).optional(),
+    firstFooter: z.string().min(1).max(500).optional(),
+    headerFooterPictures: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(64),
+            position: z.string().regex(/^[LCR][HF](?:EVEN|FIRST)?$/),
+            widthPt: z.number().positive().max(2_000),
+            heightPt: z.number().positive().max(2_000),
+            mediaType: z.string().regex(/^image\//),
+          })
+          .strict(),
+      )
+      .max(18)
+      .optional(),
+  })
+  .strict()
 const worksheetMetadataSchema = z
   .object({
     id: z.string().min(1),
@@ -46,6 +92,8 @@ const worksheetMetadataSchema = z
     showGridLines: z.boolean(),
     /// sheetView/@showFormulas — the sheet opens in formula view.
     showFormulas: z.boolean().optional(),
+    /// Exact file-declared print geometry and page-specific header/footer variants.
+    printSettings: filePagePrintSettingsSchema.nullable().optional(),
     tables: z.array(
       z
         .object({
@@ -1786,6 +1834,7 @@ export const workbookMediaResultSchema = z
   .strict()
 
 export type WorkbookFile = z.infer<typeof workbookFileSchema>
+export type WorkbookPagePrintSettings = z.infer<typeof filePagePrintSettingsSchema>
 export type WorkbookStyleEdit = z.infer<typeof workbookStyleEditSchema>
 export type WorkbookCellEdit = z.infer<typeof workbookCellEditSchema>
 export type WorkbookStructuralOp = z.infer<typeof workbookStructuralOpSchema>
@@ -1848,6 +1897,22 @@ export const workbookExportPdfRequestSchema = z
       })
       .strict(),
     scale: z.number().min(0.1).max(2),
+    headerTemplate: z.string().min(1).max(20_000).optional(),
+    footerTemplate: z.string().min(1).max(20_000).optional(),
+    firstPage: z
+      .object({
+        headerTemplate: z.string().min(1).max(20_000).optional(),
+        footerTemplate: z.string().min(1).max(20_000).optional(),
+      })
+      .strict()
+      .optional(),
+    evenPages: z
+      .object({
+        headerTemplate: z.string().min(1).max(20_000).optional(),
+        footerTemplate: z.string().min(1).max(20_000).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 

@@ -460,6 +460,54 @@ describe('browser XLSX workbook', () => {
     )
   })
 
+  it('reads exact saved print settings and page-specific header/footer variants', async () => {
+    const zip = await JSZip.loadAsync(await fixture())
+    const sheetXml = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      sheetXml.replace(
+        '</worksheet>',
+        '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
+          '<printOptions gridLines="1" headings="1"/>' +
+          '<pageMargins left="0.98" right="0.98" top="5" bottom="0.79" header="0" footer="0.51"/>' +
+          '<pageSetup orientation="landscape" paperSize="1" scale="65"/>' +
+          '<headerFooter differentOddEven="1" differentFirst="1" scaleWithDoc="0">' +
+          '<oddFooter>&amp;CPage &amp;P of &amp;N</oddFooter><evenHeader>&amp;CEven</evenHeader>' +
+          '<firstFooter>&amp;RFirst &amp;D</firstFooter></headerFooter></worksheet>',
+      ),
+    )
+
+    const workbook = await openBrowserWorkbook(
+      await zip.generateAsync({ type: 'uint8array' }),
+      'print-settings.xlsx',
+    )
+
+    expect(workbook.pagePrintSettings('Budget')).toEqual({
+      orientation: 'landscape',
+      paperSize: 1,
+      scale: 65,
+      fitToPage: true,
+      margins: { left: 0.98, right: 0.98, top: 5, bottom: 0.79, header: 0, footer: 0.51 },
+      printGridlines: true,
+      printHeadings: true,
+      oddFooter: '&CPage &P of &N',
+      differentOddEven: true,
+      differentFirst: true,
+      headerFooterFixedSize: true,
+      evenHeader: '&CEven',
+      firstFooter: '&RFirst &D',
+    })
+
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await workbook.save(), 'print-settings.xlsx')
+    expect(file.sheets[0]?.printSettings).toMatchObject({
+      orientation: 'landscape',
+      margins: { left: 0.98, top: 5 },
+      differentFirst: true,
+      differentOddEven: true,
+    })
+  })
+
   it('sets and reopens native allow-edit ranges on a worksheet', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
     expect(workbook.protectedRanges('Budget')).toEqual([])

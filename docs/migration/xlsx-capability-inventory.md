@@ -32,6 +32,10 @@ save/reopen handling. Worksheet protection toggles now use that native Undo path
 The browser workbook reads and preserves `workbookPr/@date1904`; static calendar values render and
 feed pivot grouping with the 1462-day epoch shift, while formula results, time-only formats, and
 elapsed-time formats keep their native calculation semantics.
+The browser workbook now carries exact saved margins, fit/scale, print flags, multiple print areas,
+repeat-title rows, and odd/first/even header/footer variants into one effective print layout. Page
+Layout edits override only the fields they touch, structural edits remap file-space names, and
+editing the odd header/footer preserves the file's page variants.
 Page Layout manual row/column breaks and `xlsx.sheet.set_page_breaks` share one file-journal
 projection, renderer-owned Undo, structural-coordinate remapping, worksheet XML save/reopen state,
 and a bounded Univer canvas preview that distinguishes automatic and manual boundaries.
