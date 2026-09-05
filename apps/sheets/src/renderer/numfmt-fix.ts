@@ -14,14 +14,23 @@
  * color handling and render cache still run first; this pass only fixes up
  * the resulting value, comparing against the raw cell to see what Univer did.
  */
-import { CellValueType, InterceptorEffectEnum, isDefaultFormat, numfmt } from '@univerjs/core'
+import {
+  CellValueType,
+  InterceptorEffectEnum,
+  isDefaultFormat,
+  numfmt,
+  WrapStrategy,
+} from '@univerjs/core'
+import { FontCache, getFontStyleString } from '@univerjs/engine-render'
 import { INTERCEPTOR_POINT, SheetInterceptorService } from '@univerjs/sheets'
 
 import type { UniverRuntime } from './univer-state'
 import { getWorkbookMdw } from './app-constants'
 
+export const CELL_INSET_PX = 5
+
 export function generalCharBudget(columnWidthPx: number): number {
-  return Math.max(1, Math.floor((columnWidthPx - 5) / getWorkbookMdw()))
+  return Math.max(1, Math.floor((columnWidthPx - CELL_INSET_PX) / getWorkbookMdw()))
 }
 
 function toScientific(value: number, decimals: number): string {
@@ -60,6 +69,153 @@ function safeFormat(pattern: string, value: number | string): string | null {
   } catch {
     return null
   }
+}
+
+function patternSections(pattern: string): string[] {
+  const sections: string[] = []
+  let current = ''
+  let quoted = false
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index] ?? ''
+    if (character === '"') quoted = !quoted
+    if (character === ';' && !quoted) {
+      sections.push(current)
+      current = ''
+      continue
+    }
+    if (character === '\\' && !quoted) {
+      current += character + (pattern[index + 1] ?? '')
+      index += 1
+      continue
+    }
+    current += character
+  }
+  sections.push(current)
+  return sections
+}
+
+export function sectionFillToken(
+  section: string,
+): { start: number; end: number; fill: string } | null {
+  let token: { start: number; end: number; fill: string } | null = null
+  for (let index = 0; index < section.length; index += 1) {
+    const character = section[index]
+    if (character === '"') {
+      const end = section.indexOf('"', index + 1)
+      if (end === -1) return null
+      index = end
+      continue
+    }
+    if (character === '[') {
+      const end = section.indexOf(']', index + 1)
+      if (end === -1) return null
+      index = end
+      continue
+    }
+    if (character === '\\' || character === '_') {
+      index += 1
+      continue
+    }
+    if (character === '*') {
+      const codePoint = section.codePointAt(index + 1)
+      if (codePoint === undefined) break
+      const fill = String.fromCodePoint(codePoint)
+      token = { start: index, end: index + 1 + fill.length, fill }
+      index += fill.length
+    }
+  }
+  return token
+}
+
+function fillSentinel(sectionIndex: number): string {
+  return String.fromCharCode(0xe000 + sectionIndex)
+}
+
+const FILL_SENTINEL_RANGE = /[\uE000-\uE0FF]/g
+
+interface FillRewrite {
+  pattern: string
+  fills: (string | undefined)[]
+}
+
+const fillRewriteCache = new Map<string, FillRewrite | null>()
+
+export function fillRewriteForPattern(pattern: string): FillRewrite | null {
+  let rewrite = fillRewriteCache.get(pattern)
+  if (rewrite !== undefined) return rewrite
+  rewrite = null
+  if (pattern.includes('*')) {
+    const sections = patternSections(pattern)
+    const fills: (string | undefined)[] = []
+    const rewritten = sections.map((section, index) => {
+      const token = sectionFillToken(section)
+      fills.push(token?.fill)
+      if (!token) return section
+      return `${section.slice(0, token.start)}"${fillSentinel(index)}"${section.slice(token.end)}`
+    })
+    if (fills.some((fill) => fill !== undefined)) rewrite = { pattern: rewritten.join(';'), fills }
+  }
+  if (fillRewriteCache.size > 5_000) fillRewriteCache.clear()
+  fillRewriteCache.set(pattern, rewrite)
+  return rewrite
+}
+
+export function fillRepeatCount(
+  columnWidthPx: number,
+  textWidthPx: number,
+  fillWidthPx: number,
+): number {
+  if (!(fillWidthPx > 0)) return 0
+  return Math.max(0, Math.floor((columnWidthPx - CELL_INSET_PX - textWidthPx) / fillWidthPx))
+}
+
+export function expandAsteriskFill(
+  pattern: string,
+  value: number | string,
+  columnWidthPx: number,
+  measure: (text: string) => number,
+): string | null {
+  const rewrite = fillRewriteForPattern(pattern)
+  if (!rewrite) return null
+  const marked = safeFormat(rewrite.pattern, value)
+  if (marked === null) return null
+  const sentinels = marked.match(FILL_SENTINEL_RANGE)
+  if (sentinels === null || sentinels.length !== 1) return null
+  const sentinel = sentinels[0] as string
+  const sectionIndex = sentinel.charCodeAt(0) - 0xe000
+  const rawFill = rewrite.fills[sectionIndex]
+  if (rawFill === undefined) return null
+  const at = marked.indexOf(sentinel)
+  const head = marked.slice(0, at)
+  const tail = marked.slice(at + 1)
+  if (head + tail !== safeFormat(pattern, value)) return null
+  const fill = rawFill === ' ' ? '\u00a0' : rawFill
+  const count = fillRepeatCount(columnWidthPx, measure(head + tail), measure(fill))
+  if (count <= 0) return null
+  return head + fill.repeat(count) + tail
+}
+
+interface MergedSpanSheet {
+  getMergedCell(
+    row: number,
+    column: number,
+  ): { startColumn: number; endColumn: number } | null | undefined | void
+  getColumnWidth(column: number): number
+  getColVisible(column: number): boolean
+}
+
+export function mergedSpanWidth(
+  sheet: MergedSpanSheet,
+  row: number,
+  column: number,
+): number | null {
+  const merged = sheet.getMergedCell(row, column)
+  if (!merged) return null
+  let total = 0
+  for (let current = merged.startColumn; current <= merged.endColumn; current += 1) {
+    if (sheet.getColVisible(current)) total += sheet.getColumnWidth(current)
+  }
+  return total
 }
 
 const NBSP = /\u00a0/g
@@ -165,6 +321,38 @@ export function installNumberFormatFix(
         typeof raw === 'number' &&
         location.rawData?.f == null &&
         location.rawData?.si == null
+      if (
+        typeof pattern === 'string' &&
+        pattern.includes('*') &&
+        (typeof raw === 'number' || (typeof raw === 'string' && !raw.startsWith('#'))) &&
+        style?.tb !== WrapStrategy.WRAP &&
+        !style?.tr?.a &&
+        !style?.tr?.v
+      ) {
+        const fontString = getFontStyleString(style ?? undefined).fontString
+        const measure = (text: string): number => FontCache.getMeasureText(text, fontString).width
+        const width =
+          mergedSpanWidth(location.worksheet, location.row, location.col) ??
+          location.worksheet.getColumnWidth(location.col)
+        const fillValue =
+          date1904 && typeof raw === 'number' && isCalendarDatePattern(pattern)
+            ? raw + DATE_1904_OFFSET
+            : raw
+        const fillKey = `*\u0000${typeof fillValue}\u0000${pattern}\u0000${fillValue}\u0000${width}\u0000${fontString}`
+        let expanded = cache.get(fillKey)
+        if (expanded === undefined) {
+          expanded = expandAsteriskFill(pattern, fillValue, width, measure)
+          if (cache.size > 50_000) cache.clear()
+          cache.set(fillKey, expanded)
+        }
+        if (expanded !== null && expanded !== String(cell.v)) {
+          return next({
+            ...cell,
+            v: expanded,
+            t: typeof raw === 'string' ? CellValueType.STRING : CellValueType.NUMBER,
+          })
+        }
+      }
       const key = `${date1904 ? '1904' : '1900'}\u0000${pattern}\u0000${raw}\u0000${cell.v}`
       let text = cache.get(key)
       if (text === undefined) {

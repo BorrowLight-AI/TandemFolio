@@ -86,6 +86,9 @@ than being consumed as a category axis; completely nonnumeric selections still f
 Lazy worksheet streaming now distinguishes an explicit empty shared/inline string from a style-only
 cell. Empty strings retain string identity for copy and save, while style-only cells remain
 value-less so formula references coerce them to zero as Excel does.
+Number formats now honor their native `*x` fill token. The selected section's final valid token is
+expanded using live font metrics and the visible cell or merged-span width, restoring accounting
+alignment, leading/trailing fill runs, and text dot leaders without changing the stored value.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -157,7 +160,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,625 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,634 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
