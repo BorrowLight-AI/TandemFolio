@@ -230,6 +230,7 @@ export class BrowserWorkbookDesktopApi {
           }
         : {}),
       ...(workbookProtection ? { workbookProtection } : {}),
+      ...(workbook.date1904() ? { date1904: true } : {}),
       ...(handle ? {} : { needsSaveAs: true }),
     }
     this.#sessions.set(sessionId, { workbook, file, sheetNames, handle })

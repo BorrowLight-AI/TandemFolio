@@ -5,6 +5,7 @@
  * helpers applied against the live Univer runtime. Extracted from App.tsx;
  * every function receives its runtime and state explicitly.
  */
+import { isDefaultFormat, numfmt } from '@univerjs/core'
 import type {
   AddPivotOperation,
   AddTableColumnOperation,
@@ -40,6 +41,7 @@ import {
   nextSessionTableName,
 } from './univer-sync'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'
+import { DATE_1904_OFFSET, isCalendarDatePattern } from './numfmt-fix'
 
 export function applyWorkbookTableAdd(
   runtime: UniverRuntime,
@@ -221,6 +223,42 @@ export function applyAiTableColumnAdd(
   })
 }
 
+/**
+ * Reads pivot inputs from the model rather than the rendered grid. Rendered
+ * values can be clipped to #### or shortened to the column width. Calendar
+ * serials loaded from a 1904 workbook are shifted only when they are static;
+ * formula results already use Univer's 1900-based calculation epoch.
+ */
+export function readPivotSourceGrid(
+  range: {
+    getRawValues(): unknown[][]
+    getNumberFormats(): string[][]
+    getFormulas(): string[][]
+  },
+  date1904: boolean,
+): (string | number | boolean | null)[][] {
+  const patterns = range.getNumberFormats()
+  const formulas = date1904 ? range.getFormulas() : null
+  return (range.getRawValues() as (string | number | boolean | null)[][]).map((row, rowOffset) =>
+    row.map((value, columnOffset) => {
+      if (typeof value !== 'number') return value
+      const pattern = patterns[rowOffset]?.[columnOffset] ?? ''
+      if (pattern === '' || isDefaultFormat(pattern)) return value
+      const shift =
+        formulas !== null &&
+        isCalendarDatePattern(pattern) &&
+        (formulas[rowOffset]?.[columnOffset] ?? '') === ''
+          ? DATE_1904_OFFSET
+          : 0
+      try {
+        return numfmt.format(pattern, value + shift, { nbsp: true, throws: false })
+      } catch {
+        return value
+      }
+    }),
+  )
+}
+
 export function applyAiPivotAdd(
   runtime: UniverRuntime,
   state: LazyWorkbookState,
@@ -257,9 +295,10 @@ export function applyAiPivotAdd(
 
   // Univer's Nullable<CellValue> narrows to the scalar union we aggregate
   // over; undefined behaves like an empty cell throughout.
-  const grid = sourceSheet
-    .getRange(source.startRow, source.startColumn, sourceRows, sourceColumns)
-    .getValues() as (string | number | boolean | null)[][]
+  const grid = readPivotSourceGrid(
+    sourceSheet.getRange(source.startRow, source.startColumn, sourceRows, sourceColumns),
+    state.file.date1904 === true,
+  )
   const fieldNames = (grid[0] ?? []).map((value) => String(value ?? '').trim())
   if (fieldNames.some((name) => name.length === 0)) {
     throw new Error(t('appPivotHeaderBlank'))

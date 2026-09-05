@@ -100,6 +100,7 @@ export function fixFormattedValue(
   pattern: string,
   raw: string | number,
   displayed: string | number | boolean | undefined,
+  date1904 = false,
 ): string | null {
   if (typeof raw === 'string') {
     // Univer never formats plain-text cells: apply the text (4th) section.
@@ -107,8 +108,11 @@ export function fixFormattedValue(
     const text = safeFormat(pattern, raw)
     return text !== null && text !== raw ? text : null
   }
-  const text = safeFormat(pattern, raw)
+  const shiftDate1904 = date1904 && isCalendarDatePattern(pattern)
+  const formatValue = shiftDate1904 ? raw + DATE_1904_OFFSET : raw
+  const text = safeFormat(pattern, formatValue)
   if (text === null) return null
+  if (shiftDate1904) return text === String(displayed) ? null : text
   // Empty section (e.g. `#,##0;(#,##0);` for 0, or `;;;`): Univer fell back
   // to the raw value; Excel renders an empty cell.
   if (text === '') return displayed === '' ? null : ''
@@ -124,7 +128,10 @@ export function fixFormattedValue(
   return null
 }
 
-export function installNumberFormatFix(runtime: UniverRuntime): { dispose(): void } {
+export function installNumberFormatFix(
+  runtime: UniverRuntime,
+  isDate1904?: () => boolean,
+): { dispose(): void } {
   const injector = runtime.univer.__getInjector()
   const interceptorService = injector.get(SheetInterceptorService)
   const cache = new Map<string, string | null>()
@@ -155,10 +162,17 @@ export function installNumberFormatFix(runtime: UniverRuntime): { dispose(): voi
         if (text === null || text === String(cell.v)) return next(cell)
         return next({ ...cell, v: text, t: CellValueType.NUMBER })
       }
-      const key = `${pattern}\u0000${raw}\u0000${cell.v}`
+      // Formula results are produced by Univer's 1900-based calculation
+      // engine. Shift only static serials loaded from a 1904 workbook.
+      const date1904 =
+        isDate1904?.() === true &&
+        typeof raw === 'number' &&
+        location.rawData?.f == null &&
+        location.rawData?.si == null
+      const key = `${date1904 ? '1904' : '1900'}\u0000${pattern}\u0000${raw}\u0000${cell.v}`
       let text = cache.get(key)
       if (text === undefined) {
-        text = fixFormattedValue(pattern as string, raw, cell.v ?? undefined)
+        text = fixFormattedValue(pattern as string, raw, cell.v ?? undefined, date1904)
         if (cache.size > 50_000) cache.clear()
         cache.set(key, text)
       }

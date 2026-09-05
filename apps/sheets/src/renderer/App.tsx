@@ -1160,8 +1160,11 @@ export function App(): React.JSX.Element {
       lazyWorkbookRef,
     )
     // Excel-parity number-format display: empty sections, text section,
-    // _/* padding, General digit fitting.
-    const numberFormatFixDisposable = installNumberFormatFix(runtime)
+    // _/* padding, General digit fitting, and static 1904 date serials.
+    const numberFormatFixDisposable = installNumberFormatFix(
+      runtime,
+      () => lazyWorkbookRef.current?.file.date1904 === true,
+    )
     // CELL("filename") resolves the session's on-disk path; converted
     // imports (needsSaveAs) count as never-saved, like Excel.
     const cellFilenameDisposable = installCellFilenameFunction(runtime, () => {

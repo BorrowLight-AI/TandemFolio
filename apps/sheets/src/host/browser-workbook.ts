@@ -1220,6 +1220,14 @@ export class BrowserWorkbook {
     }
   }
 
+  date1904(): boolean {
+    const xml = this.#metadataXml.get('xl/workbook.xml')!
+    const attributes = /<workbookPr\b([^>]*)\/?\s*>/.exec(xml)?.[1]
+    if (attributes === undefined) return false
+    const value = xmlAttribute(attributes, 'date1904')
+    return value === '1' || value === 'true'
+  }
+
   setWorkbookProtection(lockStructure: boolean): void {
     const path = 'xl/workbook.xml'
     this.#metadataXml.set(

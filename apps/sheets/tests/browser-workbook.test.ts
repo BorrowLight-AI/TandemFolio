@@ -415,6 +415,28 @@ describe('browser XLSX workbook', () => {
     expect(reopened.workbookProtection()).toBeNull()
   })
 
+  it('reports and preserves the workbook 1904 date system', async () => {
+    const zip = await JSZip.loadAsync(await fixture())
+    const workbookXml = await zip.file('xl/workbook.xml')!.async('text')
+    zip.file(
+      'xl/workbook.xml',
+      workbookXml.replace('<workbook>', '<workbook><workbookPr date1904="1"/>'),
+    )
+    const workbook = await openBrowserWorkbook(
+      await zip.generateAsync({ type: 'uint8array' }),
+      'date-1904.xlsx',
+    )
+
+    expect(workbook.date1904()).toBe(true)
+    expect((await openBrowserWorkbook(await workbook.save(), 'date-1904.xlsx')).date1904()).toBe(
+      true,
+    )
+
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await workbook.save(), 'date-1904.xlsx')
+    expect(file.date1904).toBe(true)
+  })
+
   it('sets and reopens native allow-edit ranges on a worksheet', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
     expect(workbook.protectedRanges('Budget')).toEqual([])

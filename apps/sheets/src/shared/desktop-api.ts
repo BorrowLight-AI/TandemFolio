@@ -346,6 +346,8 @@ export const workbookFileSchema = z
       .object({ lockStructure: z.boolean(), hasPassword: z.boolean() })
       .strict()
       .optional(),
+    /// workbookPr/@date1904: serial dates count from 1904-01-01.
+    date1904: z.boolean().optional(),
   })
   .strict()
 

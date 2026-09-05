@@ -14,7 +14,7 @@ migration completes.
 
 The reviewed candidate is `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`.
 The first completed XLSX slices retain namespace-tolerant OOXML parsing, Rich Data passthrough,
-shared and future formula handling, theme and protection metadata helpers, 1904-date primitives,
+shared and future formula handling, theme and protection metadata helpers, 1904 date-system support,
 calculation mode/recalculation, Goal Seek, cached formula values, IFS empty-set behavior, quadratic-formula and
 structural-delete guards, center-continuous rendering, fit-to-page printing, numeric/date criteria
 comparison, Delete/Backspace selection clearing, browser CSV serialization, absolute A1 pivot
@@ -29,6 +29,9 @@ file journal, one native Undo item, and workbook.xml save/reopen state.
 Review's Allow Edit Ranges dialog and `xlsx.sheet.set_protected_ranges` share complete sheet-level
 state, structural-coordinate remapping, password-aware rejection, native Undo, and worksheet XML
 save/reopen handling. Worksheet protection toggles now use that native Undo path as well.
+The browser workbook reads and preserves `workbookPr/@date1904`; static calendar values render and
+feed pivot grouping with the 1462-day epoch shift, while formula results, time-only formats, and
+elapsed-time formats keep their native calculation semantics.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
