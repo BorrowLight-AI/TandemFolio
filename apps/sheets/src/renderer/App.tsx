@@ -223,6 +223,7 @@ import { installSheetRenameFix } from './sheet-rename-fix'
 import { installSelectionWrapGuard } from './selection-wrap-fix'
 import { installMultiRowAutofit } from './autofit-multi-row'
 import { registerExcelShortcuts } from './excel-shortcuts'
+import { registerExcelJumpNav } from './excel-jump-nav'
 import { installCopyMaterialize } from './copy-materialize'
 import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
@@ -1192,6 +1193,8 @@ export function App(): React.JSX.Element {
     const selectionWrapGuardDisposable = installSelectionWrapGuard(runtime)
     // Row-header double-click autofits every selected row, like Excel.
     const multiRowAutofitDisposable = installMultiRowAutofit(runtime)
+    // Ctrl/Cmd+Arrow treats formula cells as occupied even when they display blank.
+    registerExcelJumpNav(runtime)
     // Excel-standard worksheet navigation and whole-axis selection shortcuts.
     registerExcelShortcuts(runtime, (sheetId) => {
       const sheet = lazyWorkbookRef.current?.file.sheets.find((candidate) => candidate.id === sheetId)

@@ -100,7 +100,9 @@ offsets when notes or internal links reveal a cell. Heading visibility persists 
 The mounted sheet also registers Excel's native navigation bindings for adjacent visible tabs,
 Home/Ctrl+Home/Ctrl+End, whole-row and whole-column selection, and Ctrl+9/0 row/column hide or
 restore. Ctrl+End includes the file's used extent when a large workbook has only streamed its
-visible window, and Ctrl+Home skips frozen or hidden leading rows and columns.
+visible window, and Ctrl+Home skips frozen or hidden leading rows and columns. Ctrl/Cmd+Arrow and
+its Shift variant now use Excel's data-block boundary rule: formulas count as occupied even when
+their cached or displayed result is empty, while style-only cells remain gaps.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -171,8 +173,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 141 passing files and one environment-conditional LibreOffice pivot
-suite; 1,656 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 142 passing files and one environment-conditional LibreOffice pivot
+suite; 1,662 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
