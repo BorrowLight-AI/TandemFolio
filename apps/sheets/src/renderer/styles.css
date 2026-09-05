@@ -1228,6 +1228,38 @@ textarea:disabled {
   anchor-scope: --menu-select;
 }
 
+.sheets-color-pop {
+  position: fixed;
+  position-anchor: --menu-select;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks:
+    flip-inline,
+    flip-block,
+    flip-inline flip-block;
+  position-visibility: anchors-visible;
+  z-index: 60;
+}
+
+.sheets-color-pop-portal {
+  position: fixed;
+  z-index: 960;
+}
+
+.color-well {
+  width: 48px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.color-well:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* invisible trigger stretched over the host tool (old cover-select markup) */
 .menu-select-cover {
   position: absolute;
@@ -1744,15 +1776,6 @@ textarea:focus {
   border-radius: var(--radius-small);
   padding: 0 6px;
   font-size: 11px;
-}
-
-.chart-editor input[type='color'] {
-  width: 34px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-small);
-  background: none;
 }
 
 .chart-editor-series {
@@ -2480,15 +2503,6 @@ textarea:focus {
 
 .inline-tools .color-tool:hover {
   background: var(--ribbon-hover);
-}
-
-.inline-tools .color-tool input[type='color'] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
 }
 
 /* Format Cells dialog (⌘1) */

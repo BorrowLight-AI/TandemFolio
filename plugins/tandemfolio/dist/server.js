@@ -51280,6 +51280,172 @@ var operation_manifest_default = {
       visibility: "agent"
     },
     {
+      atomic: false,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "calculation",
+      format: "xlsx",
+      id: "xlsx.calculation.goal_seek",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          byCell: {
+            pattern: "^[A-Za-z]{1,3}[1-9][0-9]{0,6}$",
+            type: "string"
+          },
+          setCell: {
+            pattern: "^[A-Za-z]{1,3}[1-9][0-9]{0,6}$",
+            type: "string"
+          },
+          toValue: {
+            type: "number"
+          }
+        },
+        required: [
+          "setCell",
+          "toValue",
+          "byCell"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          found: {
+            type: "boolean"
+          },
+          iterations: {
+            maximum: 100,
+            minimum: 1,
+            type: "integer"
+          },
+          reached: {
+            type: "number"
+          },
+          solution: {
+            type: "number"
+          }
+        },
+        required: [
+          "found",
+          "reached",
+          "solution",
+          "iterations"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Solve one input cell so a formula cell reaches a numeric target.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "calculation",
+      format: "xlsx",
+      id: "xlsx.calculation.recalculate",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          scope: {
+            enum: [
+              "workbook",
+              "sheet"
+            ],
+            type: "string"
+          }
+        },
+        required: [
+          "scope"
+        ],
+        type: "object"
+      },
+      mutates: false,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          scope: {
+            enum: [
+              "workbook",
+              "sheet"
+            ],
+            type: "string"
+          }
+        },
+        required: [
+          "scope"
+        ],
+        type: "object"
+      },
+      risk: "low",
+      summary: "Recalculate the mounted XLSX workbook or active worksheet.",
+      undoable: false,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "calculation",
+      format: "xlsx",
+      id: "xlsx.calculation.set_mode",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          mode: {
+            enum: [
+              "automatic",
+              "manual"
+            ],
+            type: "string"
+          }
+        },
+        required: [
+          "mode"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          mode: {
+            enum: [
+              "automatic",
+              "manual"
+            ],
+            type: "string"
+          }
+        },
+        required: [
+          "mode"
+        ],
+        type: "object"
+      },
+      risk: "low",
+      summary: "Set automatic or manual calculation for the mounted XLSX workbook.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
       atomic: true,
       compatibilityAliases: [],
       context: [
@@ -53061,6 +53227,82 @@ var operation_manifest_default = {
       visibility: "agent"
     },
     {
+      atomic: false,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "defined_name",
+      format: "xlsx",
+      id: "xlsx.defined_name.create_from_selection",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          labels: {
+            enum: [
+              "top",
+              "left"
+            ],
+            type: "string"
+          },
+          range: {
+            type: "string"
+          },
+          sheet: {
+            type: "string"
+          }
+        },
+        required: [
+          "sheet",
+          "range",
+          "labels"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          created: {
+            minimum: 0,
+            type: "integer"
+          },
+          labels: {
+            enum: [
+              "top",
+              "left"
+            ],
+            type: "string"
+          },
+          range: {
+            type: "string"
+          },
+          sheet: {
+            type: "string"
+          },
+          skipped: {
+            minimum: 0,
+            type: "integer"
+          }
+        },
+        required: [
+          "sheet",
+          "range",
+          "labels",
+          "created",
+          "skipped"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Create workbook names from the top row or left column labels of one XLSX range.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
       atomic: true,
       compatibilityAliases: [],
       context: [
@@ -53284,6 +53526,127 @@ var operation_manifest_default = {
       risk: "medium",
       summary: "Save the active XLSX workbook.",
       undoable: false,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "document",
+      format: "xlsx",
+      id: "xlsx.document.set_protection",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          lockStructure: {
+            type: "boolean"
+          }
+        },
+        required: [
+          "lockStructure"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          lockStructure: {
+            type: "boolean"
+          }
+        },
+        required: [
+          "lockStructure"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Set the passwordless workbook structure-protection state.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "document",
+      format: "xlsx",
+      id: "xlsx.document.set_theme",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          mode: {
+            enum: [
+              "theme",
+              "theme-colors",
+              "theme-fonts"
+            ],
+            type: "string"
+          },
+          scheme: {
+            enum: [
+              "office",
+              "ember",
+              "indigo",
+              "forest",
+              "cream",
+              "rose",
+              "graphite",
+              "midnight",
+              "arial",
+              "georgia",
+              "candara",
+              "segoe",
+              "trebuchet"
+            ],
+            type: "string"
+          }
+        },
+        required: [
+          "mode",
+          "scheme"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          mode: {
+            enum: [
+              "theme",
+              "theme-colors",
+              "theme-fonts"
+            ],
+            type: "string"
+          },
+          name: {
+            type: "string"
+          },
+          scheme: {
+            type: "string"
+          }
+        },
+        required: [
+          "mode",
+          "scheme",
+          "name"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Apply a native workbook theme, color scheme, or font scheme.",
+      undoable: true,
       visibility: "agent"
     },
     {
@@ -58753,6 +59116,81 @@ var operation_manifest_default = {
       ],
       family: "sheet",
       format: "xlsx",
+      id: "xlsx.sheet.set_page_breaks",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          columns: {
+            items: {
+              pattern: "^[A-Za-z]{1,3}$",
+              type: "string"
+            },
+            maxItems: 1023,
+            type: "array"
+          },
+          rows: {
+            items: {
+              maximum: 1048576,
+              minimum: 2,
+              type: "integer"
+            },
+            maxItems: 1023,
+            type: "array"
+          },
+          sheet: {
+            type: "string"
+          }
+        },
+        required: [
+          "sheet",
+          "rows",
+          "columns"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          columns: {
+            items: {
+              type: "string"
+            },
+            type: "array"
+          },
+          rows: {
+            items: {
+              type: "integer"
+            },
+            type: "array"
+          },
+          sheet: {
+            type: "string"
+          }
+        },
+        required: [
+          "sheet",
+          "rows",
+          "columns"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Replace the manual row and column page breaks of an XLSX worksheet.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "sheet",
+      format: "xlsx",
       id: "xlsx.sheet.set_page_margins",
       inputSchema: {
         additionalProperties: false,
@@ -59205,6 +59643,79 @@ var operation_manifest_default = {
       ],
       family: "sheet",
       format: "xlsx",
+      id: "xlsx.sheet.set_protected_ranges",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          ranges: {
+            items: {
+              additionalProperties: false,
+              properties: {
+                name: {
+                  maxLength: 255,
+                  minLength: 1,
+                  type: "string"
+                },
+                sqref: {
+                  maxLength: 1024,
+                  minLength: 1,
+                  type: "string"
+                }
+              },
+              required: [
+                "name",
+                "sqref"
+              ],
+              type: "object"
+            },
+            maxItems: 1e3,
+            type: "array"
+          },
+          sheet: {
+            type: "string"
+          }
+        },
+        required: [
+          "sheet",
+          "ranges"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          ranges: {
+            maximum: 1e3,
+            minimum: 0,
+            type: "integer"
+          },
+          sheet: {
+            type: "string"
+          }
+        },
+        required: [
+          "sheet",
+          "ranges"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Replace the native allow-edit ranges of an XLSX worksheet.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "sheet",
+      format: "xlsx",
       id: "xlsx.sheet.set_protection",
       inputSchema: {
         additionalProperties: false,
@@ -59241,7 +59752,7 @@ var operation_manifest_default = {
       },
       risk: "high",
       summary: "Set the passwordless protection state of an XLSX worksheet.",
-      undoable: false,
+      undoable: true,
       visibility: "agent"
     },
     {
@@ -59861,6 +60372,84 @@ var operation_manifest_default = {
       summary: "Insert blank data rows into a session-created XLSX table.",
       undoable: true,
       visibility: "agent"
+    },
+    {
+      atomic: false,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "workbook",
+      format: "xlsx",
+      id: "xlsx.workbook.merge_staged",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          blobId: {
+            type: "string"
+          },
+          data: {
+            additionalProperties: false,
+            description: "Hydrated ArrayBuffer supplied by the live-session host bridge.",
+            properties: {},
+            required: [],
+            type: "object"
+          },
+          name: {
+            type: "string"
+          },
+          size: {
+            maximum: 268435456,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "blobId",
+          "name",
+          "size",
+          "data"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          fileName: {
+            type: "string"
+          },
+          importedSheets: {
+            minimum: 1,
+            type: "integer"
+          },
+          merged: {
+            type: "boolean"
+          },
+          sheetNames: {
+            items: {
+              type: "string"
+            },
+            maxItems: 1024,
+            minItems: 1,
+            type: "array"
+          }
+        },
+        required: [
+          "merged",
+          "fileName",
+          "importedSheets",
+          "sheetNames"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Append every worksheet from one hydrated staged XLSX file.",
+      undoable: true,
+      visibility: "internal"
     }
   ],
   schemaVersion: 1
@@ -59907,7 +60496,7 @@ var release_readiness_default = {
     pdf: false
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "80cbb154dbe748da501f8d31c8976eba80a3b041880062657d7f63472ba79433"
+  sourceFingerprint: "9e3f4e227232ed6fd475fa8757ff92205ae90947008bb917f1d7be451d7c1a0a"
 };
 
 // src/capabilities.ts
@@ -60377,6 +60966,9 @@ function stagedImageOperation(format, sourceOperation) {
 }
 function stagedCompareOperation() {
   return resolveRegisteredOperation("docx", "docx.document.compare_staged", "internal")?.id ?? "docx.document.compare_staged";
+}
+function stagedWorkbookMergeOperation() {
+  return resolveRegisteredOperation("xlsx", "xlsx.workbook.merge_staged", "internal")?.id ?? "xlsx.workbook.merge_staged";
 }
 function stagedPdfPageInsertOperation() {
   return resolveRegisteredOperation("pdf", "pdf.page.insert_staged", "internal")?.id ?? "pdf.page.insert_staged";
@@ -60956,6 +61548,44 @@ server.registerTool(
         await retireRecovery(session);
       });
       session.filePath = path;
+      return result({ ok: true, command, result: completion });
+    } catch (error51) {
+      return failure(error51);
+    } finally {
+      if (blobId) localFiles.release(blobId);
+    }
+  }
+);
+server.registerTool(
+  "office_merge_local_workbook",
+  {
+    title: "Merge local Excel workbook",
+    description: "Append every worksheet from one absolute local XLSX path into the mounted XLSX editor.",
+    inputSchema: {
+      sessionId: external_exports.string().min(1),
+      baseRevision: external_exports.number().int().nonnegative(),
+      path: external_exports.string().min(1)
+    }
+  },
+  async ({ sessionId, baseRevision, path }) => {
+    let blobId;
+    try {
+      const session = store.get(sessionId);
+      if (session.format !== "xlsx") {
+        throw new SessionError(
+          "invalid_arguments",
+          "office_merge_local_workbook requires an XLSX session."
+        );
+      }
+      const staged = await localFiles.stage(sessionId, "xlsx", path);
+      blobId = staged.blobId;
+      const command = store.enqueue(
+        sessionId,
+        baseRevision,
+        stagedWorkbookMergeOperation(),
+        { ...staged }
+      );
+      const completion = await store.waitForCommand(sessionId, command.commandId);
       return result({ ok: true, command, result: completion });
     } catch (error51) {
       return failure(error51);

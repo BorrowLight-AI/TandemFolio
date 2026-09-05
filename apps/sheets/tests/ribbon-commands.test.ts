@@ -84,7 +84,7 @@ function facadeHorizontalAlignment(value: string): HorizontalAlign {
 
 interface DispatchHarness {
   ctx: RibbonCommandContext
-  model: { ht?: HorizontalAlign; numberFormat?: string }
+  model: { ht?: HorizontalAlign; numberFormat?: string; fontColor?: string | null }
   messages: string[]
 }
 
@@ -98,6 +98,9 @@ function makeDispatchHarness(): DispatchHarness {
     },
     setNumberFormat: (pattern: string) => {
       model.numberFormat = pattern
+    },
+    setFontColor: (color: string | null) => {
+      model.fontColor = color
     },
   }
   const workbook = {
@@ -133,6 +136,14 @@ describe('handleRibbonCommand number format', () => {
     const { ctx, model } = makeDispatchHarness()
     handleRibbonCommand(ctx, 'format:h:mm:ss AM/PM')
     expect(model.numberFormat).toBe('h:mm:ss AM/PM')
+  })
+})
+
+describe('handleRibbonCommand font color', () => {
+  it('clears the explicit color when the Office palette chooses Automatic', () => {
+    const { ctx, model } = makeDispatchHarness()
+    handleRibbonCommand(ctx, 'font-color:auto')
+    expect(model.fontColor).toBeNull()
   })
 })
 

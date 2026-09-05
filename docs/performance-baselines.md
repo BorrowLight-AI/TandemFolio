@@ -27,17 +27,17 @@ presented as current evidence or used to fabricate a replacement approved bundle
 
 Run `npm run measure:assets` after `npm run build`. The command fails when a raw self-contained HTML resource exceeds its budget.
 
-| Format   | Raw bytes | Gzip bytes | Raw budget |
-| -------- | --------: | ---------: | ---------: |
-| DOCX     | 3,508,575 |    987,885 |  3,650,000 |
-| Markdown | 1,873,880 |    572,423 |  2,500,000 |
-| XLSX     | 12,818,734 | 4,804,389 | 21,000,000 |
-| PPTX     | 3,387,763 |    992,890 |  4,000,000 |
-| PDF      | 6,631,726 |  3,371,418 |  7,000,000 |
+| Format   |  Raw bytes | Gzip bytes | Raw budget |
+| -------- | ---------: | ---------: | ---------: |
+| DOCX     |  3,508,609 |    987,899 |  3,650,000 |
+| Markdown |  1,873,914 |    572,436 |  2,500,000 |
+| XLSX     | 20,867,055 |  8,532,458 | 21,000,000 |
+| PPTX     |  3,387,797 |    992,904 |  4,000,000 |
+| PDF      |  6,631,760 |  3,371,431 |  7,000,000 |
 
 The plugin is about 55 MB on disk because allowlisted document/PDF edit fonts remain external lazy
 assets (about 20 MB) rather than entering the initial renderer HTML. The bundled MCP server is
-1,804,055 bytes raw.
+1,862,950 bytes raw.
 
 The DOCX ceiling was rebaselined on 2026-09-05 for the audited upstream-native pagination, layout,
 font and dialog port; it keeps about 4% raw headroom without treating capability removal as an

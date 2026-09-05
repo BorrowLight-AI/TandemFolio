@@ -16,6 +16,7 @@ import {
   UndoIcon,
 } from './ribbon-icons'
 
+import { ColorDropdown } from './ColorDropdown'
 import { FormatCellsDialog } from './FormatCellsDialog'
 import { GoToDialog } from './GoToDialog'
 import { useI18n, type StringKey } from './i18n/locale'
@@ -191,11 +192,7 @@ interface ExcelShellProps {
   readonly onApplyFormula: (formula: string) => string | null
   readonly onCreateSubtotal: (config: SubtotalConfig) => string | null
   readonly onCreateConsolidate: (config: ConsolidateConfig) => string | null
-  readonly onGoalSeek: (
-    setCell: string,
-    toValue: number,
-    byCell: string,
-  ) => Promise<GoalSeekResult>
+  readonly onGoalSeek: (setCell: string, toValue: number, byCell: string) => Promise<GoalSeekResult>
   /// Prefill for the Consolidate reference input (current multi-cell selection).
   readonly onGetConsolidateDefault: () => string
   /// Header & Footer dialog OK; returns an error message, or null on success.
@@ -428,8 +425,7 @@ export function ExcelShell({
             const data = onGetDefinedNames()
             return data.names
               .filter(
-                (entry) =>
-                  entry.scopeSheetId === null || entry.scopeSheetId === data.activeSheetId,
+                (entry) => entry.scopeSheetId === null || entry.scopeSheetId === data.activeSheetId,
               )
               .map((entry) => entry.name)
           }}
@@ -2393,42 +2389,37 @@ function Ribbon({
             >
               <s>S</s>
             </button>
-            <label className="color-tool" data-tip={t('appFontColor')}>
-              <span className="swatch-letter">
-                A<i style={{ background: fontColor }} />
-              </span>
-              <input
-                type="color"
-                aria-label="Font color"
-                value={fontColor}
-                onChange={(event) => {
-                  setFontColor(event.target.value)
-                  onCommand(`font-color:${event.target.value}`)
-                }}
-              />
-            </label>
-            <label className="color-tool" data-tip={t('appFillColor')}>
-              <span className="swatch-letter">
-                <ToolSymbol symbol="◧" />
-                <i style={{ background: fillColor }} />
-              </span>
-              <input
-                type="color"
-                aria-label="Fill color"
-                value={fillColor}
-                onChange={(event) => {
-                  setFillColor(event.target.value)
-                  onCommand(`fill:${event.target.value}`)
-                }}
-              />
-            </label>
-            <button
-              data-tip={t('dlgFcNoFill')}
-              aria-label={t('dlgFcNoFill')}
-              onClick={() => onCommand('fill:none')}
-            >
-              <ToolSymbol symbol="∅" />
-            </button>
+            <ColorDropdown
+              label={t('appFontColor')}
+              data-tip={t('appFontColor')}
+              display={
+                <span className="swatch-letter">
+                  A<i style={{ background: fontColor }} />
+                </span>
+              }
+              value={fontColor}
+              auto={t('appAutomaticColor')}
+              onPick={(hex) => {
+                setFontColor(hex ?? '#000000')
+                onCommand(hex ? `font-color:${hex}` : 'font-color:auto')
+              }}
+            />
+            <ColorDropdown
+              label={t('appFillColor')}
+              data-tip={t('appFillColor')}
+              display={
+                <span className="swatch-letter">
+                  <ToolSymbol symbol="◧" />
+                  <i style={{ background: fillColor }} />
+                </span>
+              }
+              value={fillColor}
+              auto={t('dlgFcNoFill')}
+              onPick={(hex) => {
+                if (hex) setFillColor(hex)
+                onCommand(hex ? `fill:${hex}` : 'fill:none')
+              }}
+            />
             <MenuSelect
               className="select-like compact"
               label="Borders"
@@ -2450,18 +2441,20 @@ function Ribbon({
               ]}
               onPick={(value) => onCommand(`border:${value}:${borderColor}`)}
             />
-            <label className="color-tool" data-tip={t('appBorderColor')}>
-              <span className="swatch-letter">
-                <ToolSymbol symbol="⊡" />
-                <i style={{ background: borderColor }} />
-              </span>
-              <input
-                type="color"
-                aria-label="Border color"
-                value={borderColor}
-                onChange={(event) => setBorderColor(event.target.value)}
-              />
-            </label>
+            <ColorDropdown
+              label={t('appBorderColor')}
+              data-tip={t('appBorderColor')}
+              display={
+                <span className="swatch-letter">
+                  <ToolSymbol symbol="⊡" />
+                  <i style={{ background: borderColor }} />
+                </span>
+              }
+              value={borderColor}
+              onPick={(hex) => {
+                if (hex) setBorderColor(hex)
+              }}
+            />
           </div>
         </div>
       </RibbonGroup>

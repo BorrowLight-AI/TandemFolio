@@ -16,6 +16,7 @@ const expectedTools = [
   'office_get_context',
   'office_execute',
   'office_open_local_file',
+  'office_merge_local_workbook',
   'office_editor_poll',
   'office_editor_handoff',
   'office_editor_reset_document',

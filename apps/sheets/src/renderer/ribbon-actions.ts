@@ -1154,7 +1154,7 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         range.setBackground((argument === 'none' ? null : argument) as unknown as string)
         break
       case 'font-color':
-        range.setFontColor(argument)
+        range.setFontColor((argument === 'auto' ? null : argument) as unknown as string)
         break
       case 'sort': {
         if (range.getHeight() < 2) {

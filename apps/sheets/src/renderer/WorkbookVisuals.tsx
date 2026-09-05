@@ -17,6 +17,7 @@ import {
 } from '../domain/chart-visual'
 import { parseAddress } from '../domain/cell-address'
 import { t } from './i18n/locale'
+import { ColorDropdown } from './ColorDropdown'
 import { oleCaption, oleFrameStyle, oleRenderKind } from './ole-visual'
 import { VisualDeleteButton } from './VisualDeleteButton'
 import { shouldShowVisualDeleteButton } from './visual-delete-button'
@@ -1732,12 +1733,13 @@ function ChartEditor({
         chart.series.slice(0, 6).map((series, index) => (
           <label key={index}>
             {truncateLabel(series.name || t('appSeriesN', { n: index + 1 }), 14)}
-            <input
-              type="color"
+            <ColorDropdown
+              label={series.name || t('appSeriesN', { n: index + 1 })}
               value={colors[String(index)] ?? seriesColor(series, index)}
-              onChange={(event) =>
-                setColors((previous) => ({ ...previous, [String(index)]: event.target.value }))
-              }
+              portal
+              onPick={(hex) => {
+                if (hex) setColors((previous) => ({ ...previous, [String(index)]: hex }))
+              }}
             />
           </label>
         ))}
@@ -1745,12 +1747,13 @@ function ChartEditor({
         chart.series[0]?.categories.slice(0, 12).map((category, index) => (
           <label key={`slice-${index}`}>
             {truncateLabel(category || t('appSliceN', { n: index + 1 }), 14)}
-            <input
-              type="color"
+            <ColorDropdown
+              label={category || t('appSliceN', { n: index + 1 })}
               value={sliceColors[String(index)] ?? pieSliceColor(chart.series[0] ?? {}, index)}
-              onChange={(event) =>
-                setSliceColors((previous) => ({ ...previous, [String(index)]: event.target.value }))
-              }
+              portal
+              onPick={(hex) => {
+                if (hex) setSliceColors((previous) => ({ ...previous, [String(index)]: hex }))
+              }}
             />
           </label>
         ))}
@@ -2425,7 +2428,15 @@ function VerticalAxis({
   const span = maximum - minimum || 1
   return (
     <g onClick={onSelect}>
-      {(ticks ?? [minimum, minimum + span * 0.25, minimum + span * 0.5, minimum + span * 0.75, maximum]).map((tick) => {
+      {(
+        ticks ?? [
+          minimum,
+          minimum + span * 0.25,
+          minimum + span * 0.5,
+          minimum + span * 0.75,
+          maximum,
+        ]
+      ).map((tick) => {
         const y = 280 - ((tick - minimum) / span) * 240
         return (
           <g key={tick}>
@@ -2579,11 +2590,7 @@ function LineChart({
           x={60 + (index / count) * 500}
           label={categories[index] ?? String(index + 1)}
           slotWidth={500 / Math.max(1, count)}
-          stride={categoryTickStride(
-            categories,
-            primary.values.length,
-            500 / Math.max(1, count),
-          )}
+          stride={categoryTickStride(categories, primary.values.length, 500 / Math.max(1, count))}
           index={index}
           onClick={
             onElement
@@ -2746,11 +2753,7 @@ function AreaChart({
           x={60 + (index / count) * 500}
           label={categories[index] ?? String(index + 1)}
           slotWidth={500 / Math.max(1, count)}
-          stride={categoryTickStride(
-            categories,
-            primary.values.length,
-            500 / Math.max(1, count),
-          )}
+          stride={categoryTickStride(categories, primary.values.length, 500 / Math.max(1, count))}
           index={index}
         />
       ))}

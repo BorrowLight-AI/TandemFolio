@@ -2,17 +2,21 @@
 
 - Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Renderer-source status: complete for the permitted pinned community source set
-- Capability status: 123 XLSX registry operations (120 Agent-visible, three internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, create-names-from-selection, and staged workbook merging while retaining the audited baseline command surface
-- Product readiness: candidate-native migration is in progress and requires a new source-current
-  release capture; capability discovery therefore remains fail-closed
+- Capability status: candidate-native migration complete; 123 XLSX registry operations (120 Agent-visible, three internal) cover every retained state-changing command, including calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, create-names-from-selection, and staged workbook merging
+- Product readiness: a new source-current release capture is still required; capability discovery
+  therefore remains fail-closed
 
-This file separates renderer-source restoration from product completion. Both the format-local
-work and the shared ADR 0003/ADR 0005 release evidence must be recaptured after the candidate-native
-migration completes.
+This file separates renderer-source restoration from product completion. The format-local migration
+is complete; the shared ADR 0003/ADR 0005 release evidence must be recaptured against this source.
 
 ## 2026-09-05 candidate-native migration
 
 The reviewed candidate is `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`.
+The final source-diff audit found no remaining browser-safe, non-AI XLSX-native capability outside
+this inventory. Candidate-only bulk-fill undo belongs to the removed AI batch planner; desktop
+recovery and large-save staging belong to Electron/IPC. The split locale catalogs and shared font
+list are structural moves with equivalent local implementations. All remaining candidate-only
+renderer files are AI panels, tools, prompts, and assets.
 The completed XLSX slices retain namespace-tolerant OOXML parsing, Rich Data passthrough,
 shared and future formula handling, theme and protection metadata helpers, 1904 date-system support,
 calculation mode/recalculation, Goal Seek, cached formula values, IFS empty-set behavior, quadratic-formula and
@@ -132,9 +136,8 @@ the row or column default. Existing load-time row-height suppression and style-o
 coercion are now covered by the candidate regression suites.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
-telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
-their native UI, typed MCP route where state changes, Undo, persistence evidence, and focused tests
-are all connected.
+telemetry, and enterprise areas are excluded. No admitted XLSX-native slice remains pending; formal
+product readiness still waits for source-current release evidence.
 
 ## Pinned renderer source accounting
 
@@ -149,7 +152,7 @@ browser-safe candidate-native modules recorded in `provenance.md`.
 | Prohibited `renderer/ai/**` files                         |    20 | AI planners, prompts, tools, and product workflow.                                                |
 | Prohibited AI composer assets                             |    14 | Attach/file/send/stop/app assets used only by the removed AI panel.                               |
 | Prohibited AI locale catalog                              |     1 | `renderer/i18n/strings-ai.ts`.                                                                    |
-| TandemFolio-only renderer host/operation files                   |    11 | Browser/operation adapters and focused shared action modules; none replaces the mounted renderer. |
+| TandemFolio-only renderer host/operation files            |    11 | Browser/operation adapters and focused shared action modules; none replaces the mounted renderer. |
 
 The 13 adapted pinned files are:
 
@@ -200,8 +203,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 169 passing files and one environment-conditional LibreOffice pivot
-suite; 1,967 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 174 passing files and one environment-conditional LibreOffice pivot
+suite; 1,984 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -268,6 +271,13 @@ EMF/WMF previews; unsupported or damaged previews degrade to a read-only icon-an
 Objects never enter the picture/shape mutation pipeline. Ordinary edits preserve the embedding,
 VML, relationships, and preview bytes, while structural row/column operations shift worksheet OLE,
 VML fallback, drawing, table, and chart coordinates together before save.
+
+Every native color entry point now uses the Office palette instead of a browser-only color input.
+Ribbon font/fill/border colors, Format Cells font/border/background colors, chart series and data
+point fills, and the floating chart editor share theme colors, five tint/shade rows, standard
+colors, Automatic/No Fill where applicable, and the system More Colors picker. Palette actions
+continue through the existing Univer formatting commands, native history, journal, and XLSX
+save/reopen route; the menu itself is read-only UI state and adds no MCP operation.
 
 The quick-access toolbar now exposes Save As independently from dirty-state Save. Any open
 file-backed workbook can choose a new browser file target even when clean, while the in-memory demo
@@ -336,10 +346,10 @@ requires the real worksheet canvas, so an outer shell with a blank renderer cann
 | AutoFilter          | `xlsx.range.set_filter`, `xlsx.range.clear_filter_criteria`, `xlsx.range.set_filter_values`, `xlsx.range.set_custom_filter`                                                                                                                                                                                               | Explicit range/final-state and bounded value/custom criteria through shared native commands, Undo, declarative save, and reopen.                                                                                     |
 | Checkbox validation | `xlsx.range.set_checkbox`                                                                                                                                                                                                                                                                                                 | Explicit bounded final state through native DV/Undo, declarative base-OOXML save, and checkbox hydration on reopen.                                                                                                  |
 | Aggregate formulas  | `xlsx.formula.insert_aggregate`                                                                                                                                                                                                                                                                                           | Shared AutoSum-family formula placement with streamed-target protection.                                                                                                                                             |
-| Calculation         | `xlsx.calculation.set_mode`, `xlsx.calculation.recalculate`, `xlsx.calculation.goal_seek`                                                                                                                                                                                                                               | Mounted Univer calculation state and formula engine; Goal Seek applies guesses through native range writes so one native Undo restores the original changing cell.                                                                                                               |
-| Workbook theme      | `xlsx.document.set_theme`                                                                                                                                                                                                                                                                                                 | Page Layout theme/color/font presets and Agent calls share the live file state, renderer-owned Undo journal, native theme1.xml writer, and browser save/reopen parser.                                                                                                               |
-| Workbook protection | `xlsx.document.set_protection`                                                                                                                                                                                                                                                                                            | Review UI and Agent calls share password-aware structure-lock state, renderer-owned Undo, and native workbook.xml save/reopen handling.                                                                                                                                            |
-| Allow-edit ranges   | `xlsx.sheet.set_protected_ranges`                                                                                                                                                                                                                                                                                          | Review UI and Agent calls replace a complete sheet range set, reject password/permission-protected metadata, enter one native Undo item, and persist through worksheet XML.                                                                                                         |
+| Calculation         | `xlsx.calculation.set_mode`, `xlsx.calculation.recalculate`, `xlsx.calculation.goal_seek`                                                                                                                                                                                                                                 | Mounted Univer calculation state and formula engine; Goal Seek applies guesses through native range writes so one native Undo restores the original changing cell.                                                   |
+| Workbook theme      | `xlsx.document.set_theme`                                                                                                                                                                                                                                                                                                 | Page Layout theme/color/font presets and Agent calls share the live file state, renderer-owned Undo journal, native theme1.xml writer, and browser save/reopen parser.                                               |
+| Workbook protection | `xlsx.document.set_protection`                                                                                                                                                                                                                                                                                            | Review UI and Agent calls share password-aware structure-lock state, renderer-owned Undo, and native workbook.xml save/reopen handling.                                                                              |
+| Allow-edit ranges   | `xlsx.sheet.set_protected_ranges`                                                                                                                                                                                                                                                                                         | Review UI and Agent calls replace a complete sheet range set, reject password/permission-protected metadata, enter one native Undo item, and persist through worksheet XML.                                          |
 | History             | `xlsx.history.undo`, `xlsx.history.redo`                                                                                                                                                                                                                                                                                  | Exact empty-input operations over the mounted Univer native history shared with visible UI controls.                                                                                                                 |
 | Flash Fill          | `xlsx.range.flash_fill`                                                                                                                                                                                                                                                                                                   | Shared example inference, bounded probing, and one native range write.                                                                                                                                               |
 | Text to Columns     | `xlsx.range.text_to_columns`                                                                                                                                                                                                                                                                                              | Shared native split command with four exact delimiter modes and undo.                                                                                                                                                |
