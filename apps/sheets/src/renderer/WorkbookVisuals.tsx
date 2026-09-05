@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import { numfmt } from '@univerjs/core'
 import { shapePreviewPath } from '@genoffice/ui'
 
 import type { createUniver } from './create-univer'
@@ -2177,6 +2178,24 @@ type ChartLabelPosition = ChartMetadata['dataLabelPosition']
 
 /// Minimal formatCode support for data labels (percent / thousands / fixed
 /// decimals); anything fancier falls back to the axis heuristics.
+function formatPieValue(value: number, formatCode: string | undefined): string {
+  if (formatCode && formatCode !== 'General') {
+    try {
+      return numfmt.format(formatCode, value, { throws: false }).trim()
+    } catch {
+      // Fall through to the plain rendering for an invalid format code.
+    }
+  }
+  return formatLabelValue(value, formatCode, undefined)
+}
+
+export function formatPiePercent(share: number, formatCode: string | undefined): string {
+  if (formatCode !== undefined && formatCode.includes('%')) {
+    return formatLabelValue(share, formatCode, undefined)
+  }
+  return `${Math.round(share * 100)}%`
+}
+
 function formatLabelValue(
   value: number,
   formatCode: string | undefined,
@@ -2895,11 +2914,11 @@ function pieSliceLabels(
     const mid = (cursor + share / 2) * 2 * Math.PI
     cursor += share
     if (share < 0.02) continue
-    const percentText = `${(share * 100).toFixed(share >= 0.1 ? 0 : 1)}%`
+    const percentText = formatPiePercent(share, formatCode)
     const lines =
       mode === 'category-percent'
         ? [truncateLabel(categories[index] ?? '', 12), percentText]
-        : [mode === 'value' ? formatLabelValue(value, formatCode, undefined) : percentText]
+        : [mode === 'value' ? formatPieValue(value, formatCode) : percentText]
     const sin = Math.sin(mid)
     const cos = Math.cos(mid)
     // An exploded slice carries its label out with it.

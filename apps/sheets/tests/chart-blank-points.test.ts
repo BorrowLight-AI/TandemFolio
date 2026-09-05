@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { lineSegments } from '../src/renderer/WorkbookVisuals'
+import { formatPiePercent, lineSegments } from '../src/renderer/WorkbookVisuals'
 
 describe('lineSegments', () => {
   it('plots one run when there are no blanks or the mode keeps zeros', () => {
@@ -22,5 +22,19 @@ describe('lineSegments', () => {
   it('bridges blank cells for dispBlanksAs=span', () => {
     expect(lineSegments(6, [2, 3], 'span')).toEqual([[0, 1, 4, 5]])
     expect(lineSegments(2, [0, 1], 'span')).toEqual([])
+  })
+})
+
+describe('formatPiePercent', () => {
+  it('rounds to whole percents by default', () => {
+    expect(formatPiePercent(0.094, undefined)).toBe('9%')
+    expect(formatPiePercent(0.095, undefined)).toBe('10%')
+    expect(formatPiePercent(0.004, undefined)).toBe('0%')
+    expect(formatPiePercent(0.094, '#,##0')).toBe('9%')
+  })
+
+  it('honors an explicit percent format on data labels', () => {
+    expect(formatPiePercent(0.094, '0.0%')).toBe('9.4%')
+    expect(formatPiePercent(0.094, '0%')).toBe('9%')
   })
 })
