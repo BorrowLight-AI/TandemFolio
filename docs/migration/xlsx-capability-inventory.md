@@ -65,6 +65,9 @@ Sparse chart numeric caches now keep blank indexes aligned with their categories
 `c:dispBlanksAs` reaches the mounted SVG chart preview. Line charts break at blanks for `gap`, bridge
 them for `span`, and retain zero fillers for `zero` and stacked calculations; save keeps the original
 chart part and reopen reproduces the same mode.
+Column, line, and area chart category axes now wrap space-delimited labels into two lines and
+calculate an overlap-aware tick stride. Wide slots retain every label; dense native category sets
+display every nth label instead of painting unreadable text over adjacent ticks.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -136,7 +139,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,601 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,606 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

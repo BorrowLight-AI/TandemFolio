@@ -1899,6 +1899,7 @@ function BarChart({
   }
 
   const columnWidth = 480 / visibleCount
+  const tickStride = categoryTickStride(categories, visibleCount, columnWidth)
   const barWidth = Math.max(
     2,
     isStacked ? columnWidth / (1 + gap) : columnWidth / (seriesList.length + gap),
@@ -1976,14 +1977,14 @@ function BarChart({
                   </text>
                 )
               })()}
-            <text
+            <CategoryTick
               x={62 + columnWidth * index + columnWidth / 2}
-              y="298"
-              textAnchor="middle"
+              label={categories[index] ?? String(index + 1)}
+              slotWidth={columnWidth}
+              stride={tickStride}
+              index={index}
               onClick={selectCategoryAxis}
-            >
-              {truncateLabel(categories[index] ?? String(index + 1), 5)}
-            </text>
+            />
           </g>
         )
       })}
@@ -2150,6 +2151,73 @@ function TruncationNote({
   return (
     <text x="580" y="14" textAnchor="end" className="axis-label" opacity="0.75">
       {t('appTruncationNote', { shown, total })}
+    </text>
+  )
+}
+
+const AXIS_LABEL_CHAR_UNITS = 5.4
+
+export function categoryTickLines(label: string, slotWidth: number): readonly string[] {
+  const fits = (text: string): boolean => text.length * AXIS_LABEL_CHAR_UNITS <= slotWidth
+  if (fits(label) || !label.includes(' ')) return [label]
+  const words = label.split(/\s+/)
+  let first = words[0] ?? ''
+  let index = 1
+  while (index < words.length && fits(`${first} ${words[index]}`)) {
+    first = `${first} ${words[index]}`
+    index += 1
+  }
+  const rest = words.slice(index).join(' ')
+  return rest ? [first, rest] : [first]
+}
+
+export function categoryTickStride(
+  labels: readonly string[],
+  count: number,
+  slotWidth: number,
+): number {
+  if (!(slotWidth > 0)) return 1
+  let widest = 0
+  for (let index = 0; index < count; index += 1) {
+    for (const line of categoryTickLines(labels[index] ?? String(index + 1), slotWidth)) {
+      widest = Math.max(widest, Math.min(line.length, 16) * AXIS_LABEL_CHAR_UNITS)
+    }
+  }
+  return Math.max(1, Math.ceil((widest + 2) / slotWidth))
+}
+
+function CategoryTick({
+  x,
+  label,
+  slotWidth,
+  stride,
+  index,
+  onClick,
+}: {
+  readonly x: number
+  readonly label: string
+  readonly slotWidth: number
+  readonly stride: number
+  readonly index: number
+  readonly onClick?: ((event: React.MouseEvent) => void) | undefined
+}): React.JSX.Element | null {
+  if (index % stride !== 0) return null
+  const budget = Math.max(5, Math.min(16, Math.floor((slotWidth * stride) / AXIS_LABEL_CHAR_UNITS)))
+  const lines = categoryTickLines(label, slotWidth * stride)
+  return (
+    <text x={x} y={lines.length === 1 ? 298 : 292} textAnchor="middle" onClick={onClick}>
+      {lines.length === 1 ? (
+        truncateLabel(lines[0] ?? '', budget)
+      ) : (
+        <>
+          <tspan x={x} dy="0">
+            {truncateLabel(lines[0] ?? '', budget)}
+          </tspan>
+          <tspan x={x} dy="11">
+            {truncateLabel(lines[1] ?? '', budget)}
+          </tspan>
+        </>
+      )}
     </text>
   )
 }
@@ -2325,11 +2393,17 @@ function LineChart({
         ) : null,
       )}
       {primary.values.map((_, index) => (
-        <text
+        <CategoryTick
           key={index}
           x={60 + (index / count) * 500}
-          y="300"
-          textAnchor="middle"
+          label={categories[index] ?? String(index + 1)}
+          slotWidth={500 / Math.max(1, count)}
+          stride={categoryTickStride(
+            categories,
+            primary.values.length,
+            500 / Math.max(1, count),
+          )}
+          index={index}
           onClick={
             onElement
               ? (event) => {
@@ -2338,9 +2412,7 @@ function LineChart({
                 }
               : undefined
           }
-        >
-          {truncateLabel(categories[index] ?? String(index + 1), 5)}
-        </text>
+        />
       ))}
       {dataLabels === 'value' &&
         displayValues(0).map((displayed, index) =>
@@ -2487,9 +2559,18 @@ function AreaChart({
         )
       })}
       {primary.values.map((_, index) => (
-        <text key={index} x={60 + (index / count) * 500} y="300" textAnchor="middle">
-          {truncateLabel(categories[index] ?? String(index + 1), 5)}
-        </text>
+        <CategoryTick
+          key={index}
+          x={60 + (index / count) * 500}
+          label={categories[index] ?? String(index + 1)}
+          slotWidth={500 / Math.max(1, count)}
+          stride={categoryTickStride(
+            categories,
+            primary.values.length,
+            500 / Math.max(1, count),
+          )}
+          index={index}
+        />
       ))}
       {dataLabels === 'value' &&
         primary.values.map((value, index) => (
