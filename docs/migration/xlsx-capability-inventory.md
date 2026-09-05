@@ -200,8 +200,15 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 157 passing files and one environment-conditional LibreOffice pivot
-suite; 1,825 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 159 passing files and one environment-conditional LibreOffice pivot
+suite; 1,830 assertions pass and one is skipped when `soffice` is not available.
+
+The formula-reliability slice rechecks structural edits after every asynchronous closure range
+read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
+workbook in its cached-value fallback state. Browser-open metadata now carries the original package
+byte count; the formula fallback stays disabled above 64 MiB or 2,000,000 declared grid cells, and a
+truncated formula index permanently trips the same session-local guard. This bounds formula-engine
+memory without changing Univer ownership, the edit journal, or ordinary-workbook calculation.
 
 ## Executable browser evidence
 

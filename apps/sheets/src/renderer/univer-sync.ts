@@ -1250,6 +1250,10 @@ export async function activateFormulaClosure(
         return giveUp()
       }
       if (lazyWorkbookRef.current !== state) return
+      if (state.editJournal.structuralOps.size > 0) {
+        state.closure.pinned.clear()
+        return giveUp()
+      }
       const wanted = result.cells.filter((cell) => cells.has(cellKey(cell.row, cell.column)))
       patchWorksheetRange(
         worksheet,
@@ -1677,9 +1681,18 @@ export async function readChartRangeVector(
 const RECALC_DEBOUNCE_MS = 600
 const RECALC_READ_BUDGET = 20_000
 const RECALC_MAX_EDITS = 10_000
+export const RECALC_MAX_FILE_BYTES = 64 * 1024 * 1024
+export const RECALC_MAX_GRID_CELLS = 2_000_000
 /// transient sidecar hiccups retry on the next edit; repeated rejection of
 /// this workbook disables the fallback for the session
 export const RECALC_MAX_FAILURES = 3
+
+export function recalcOverBudgetAtOpen(
+  fileBytes: number | undefined,
+  gridCellCount: number,
+): boolean {
+  return (fileBytes ?? 0) > RECALC_MAX_FILE_BYTES || gridCellCount > RECALC_MAX_GRID_CELLS
+}
 
 /// IronCalc fallback: when closure mode gave up on a streamed workbook, the
 /// pending edits still recalculate — in the sidecar, against the on-disk
@@ -1691,6 +1704,7 @@ export function queueFormulaRecalc(
 ): void {
   const state = lazyWorkbookRef.current
   if (!state || state.formulaMode || state.closure.status !== 'unavailable') return
+  if (state.recalc.engineOverBudget) return
   if (state.recalc.failures >= RECALC_MAX_FAILURES) return
   // The engine loads the file from disk; session structural edits would
   // desync every coordinate — fail soft to cached values.
@@ -1717,6 +1731,7 @@ async function recalcFormulaCellKeys(
     sheetId,
   })
   if (result.truncated) {
+    state.recalc.engineOverBudget = true
     state.recalc.formulaCells.set(sheetId, new Set())
     return null
   }

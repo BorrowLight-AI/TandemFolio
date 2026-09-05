@@ -20,6 +20,7 @@ import {
   queueFormulaRecalc,
   queueSparklineInstall,
   RECALC_MAX_FAILURES,
+  recalcOverBudgetAtOpen,
   queueVisualInstall,
   sheetOutline,
   univerDefinedNames,
@@ -2448,6 +2449,10 @@ export function App(): React.JSX.Element {
     demoVisualDisposablesRef.current = []
     for (const sheetId of pageBreakLayersRef.current.keys()) disposePageBreakLayers(sheetId)
     setPageBreakPreviewSheets(new Set())
+    const gridCellCount = selected.sheets.reduce(
+      (sum, sheet) => sum + sheet.rowCount * sheet.columnCount,
+      0,
+    )
     const state: LazyWorkbookState = {
       file: selected,
       generation: Date.now(),
@@ -2471,9 +2476,7 @@ export function App(): React.JSX.Element {
       showFormulaSheets: new Set(
         selected.sheets.filter((sheet) => sheet.showFormulas).map((sheet) => sheet.id),
       ),
-      formulaMode:
-        selected.sheets.reduce((sum, sheet) => sum + sheet.rowCount * sheet.columnCount, 0) <=
-        FORMULA_MODE_MAX_CELLS,
+      formulaMode: gridCellCount <= FORMULA_MODE_MAX_CELLS,
       editJournal: createEditJournal(),
       flags: { preloadComplete: false },
       closure: { status: 'idle', pinned: new Map() },
@@ -2484,6 +2487,7 @@ export function App(): React.JSX.Element {
       recalc: {
         timer: null,
         generation: 0,
+        engineOverBudget: recalcOverBudgetAtOpen(selected.fileBytes, gridCellCount),
         failures: 0,
         formulaCells: new Map(),
         overlay: new Map(),

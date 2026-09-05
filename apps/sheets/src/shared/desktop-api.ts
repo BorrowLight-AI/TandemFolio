@@ -455,6 +455,9 @@ export const workbookFileSchema = z
     path: z.string().min(1).optional(),
     sha256: z.string().length(64),
     entryCount: z.number().int().nonnegative(),
+    /// Original package size. Browser sessions populate this from the opened
+    /// blob so formula fallback can avoid loading oversized workbooks.
+    fileBytes: z.number().int().nonnegative().optional(),
     sheets: z.array(worksheetMetadataSchema).min(1),
     styles: z.array(cellStyleSchema),
     dxfStyles: z.array(cellStyleSchema),

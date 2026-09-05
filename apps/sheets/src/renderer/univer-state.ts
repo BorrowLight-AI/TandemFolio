@@ -92,6 +92,9 @@ export interface LazyWorkbookState {
   readonly recalc: {
     timer: ReturnType<typeof setTimeout> | null
     generation: number
+    /// True when opening or indexing proves this workbook is too large for
+    /// the in-process formula fallback. The streamed renderer remains usable.
+    engineOverBudget: boolean
     /// consecutive engine failures; a success resets it
     failures: number
     readonly formulaCells: Map<string, ReadonlySet<number>>

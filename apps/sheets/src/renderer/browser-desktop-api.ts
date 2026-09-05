@@ -219,6 +219,7 @@ export class BrowserWorkbookDesktopApi {
       name,
       sha256: await sha256(data),
       entryCount: 0,
+      fileBytes: data.byteLength,
       sheets,
       styles: styleCatalog(workbook),
       dxfStyles: workbook.dxfCatalog(),
