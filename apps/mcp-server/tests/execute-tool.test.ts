@@ -1450,7 +1450,7 @@ describe('office_execute', () => {
     expect(capabilities.discovery.operations).toHaveLength(20)
     expect(capabilities.discovery.pagination).toEqual({
       limit: 20,
-      total: 119,
+      total: 120,
       nextCursor: expect.any(String),
     })
     for (const operation of capabilities.discovery.operations) {

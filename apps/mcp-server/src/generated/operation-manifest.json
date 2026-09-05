@@ -21235,6 +21235,82 @@
       "visibility": "agent"
     },
     {
+      "atomic": false,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "defined_name",
+      "format": "xlsx",
+      "id": "xlsx.defined_name.create_from_selection",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "labels": {
+            "enum": [
+              "top",
+              "left"
+            ],
+            "type": "string"
+          },
+          "range": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sheet",
+          "range",
+          "labels"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "labels": {
+            "enum": [
+              "top",
+              "left"
+            ],
+            "type": "string"
+          },
+          "range": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string"
+          },
+          "skipped": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sheet",
+          "range",
+          "labels",
+          "created",
+          "skipped"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Create workbook names from the top row or left column labels of one XLSX range.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
       "atomic": true,
       "compatibilityAliases": [],
       "context": [

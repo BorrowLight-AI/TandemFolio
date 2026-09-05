@@ -166,6 +166,7 @@ interface ExcelShellProps {
   readonly onGetDefinedNames: () => {
     names: DefinedNameRow[]
     sheets: { id: string; name: string }[]
+    activeSheetId: string | null
   }
   readonly onDefinedNameAction: (action: DefinedNameAction) => string | null
   /// Field choices for the Pivot dialog, read from the selection's header row.
@@ -423,6 +424,15 @@ export function ExcelShell({
           calcManual={calcManual}
           crossHighlightVisible={crossHighlightVisible}
           selectedChart={selectedChart}
+          onListNames={() => {
+            const data = onGetDefinedNames()
+            return data.names
+              .filter(
+                (entry) =>
+                  entry.scopeSheetId === null || entry.scopeSheetId === data.activeSheetId,
+              )
+              .map((entry) => entry.name)
+          }}
           onRefreshPivot={onRefreshPivot}
           onIsSelectionInPivot={onIsSelectionInPivot}
           onCommand={(command) => {
@@ -1012,6 +1022,7 @@ function Ribbon({
   calcManual,
   crossHighlightVisible,
   selectedChart,
+  onListNames,
   onCommand,
   onRefreshPivot,
   onIsSelectionInPivot,
@@ -1024,6 +1035,7 @@ function Ribbon({
   readonly calcManual: boolean
   readonly crossHighlightVisible: boolean
   readonly selectedChart: SelectedChartRibbon | null
+  readonly onListNames: () => readonly string[]
   readonly onCommand: (command: string) => void
   readonly onRefreshPivot: () => string | null
   readonly onIsSelectionInPivot: () => boolean
@@ -1711,6 +1723,7 @@ function Ribbon({
   }
 
   if (activeTab === 'Formulas') {
+    const definedNames = onListNames()
     // Category buttons all open the same catalog dialog; the per-category
     // menus funnel into Insert Function.
     // Each button opens the catalog filtered to its own category; 'All'
@@ -1783,14 +1796,34 @@ function Ribbon({
               {t('appDefineName')}
               <CaretIcon />
             </button>
-            <span className="styles-row reserved" data-tip={t('appNotAvailableYet')}>
+            <span className="styles-row" data-tip={t('appUseInFormulaTitle')}>
               <ToolSymbol symbol="ƒ" />
               {t('appUseInFormula')}
               <CaretIcon />
+              <MenuSelect
+                cover
+                label={t('appUseInFormula')}
+                options={
+                  definedNames.length > 0
+                    ? definedNames.map((name) => ({ value: `use-in-formula:${name}`, label: name }))
+                    : [{ value: 'name-manager-open', label: t('appNoNamesYet') }]
+                }
+                onPick={onCommand}
+              />
             </span>
-            <span className="styles-row reserved" data-tip={t('appNotAvailableYet')}>
+            <span className="styles-row" data-tip={t('appCreateFromSelectionTitle')}>
               <ToolSymbol symbol="⊞" />
               {t('appCreateFromSelection')}
+              <CaretIcon />
+              <MenuSelect
+                cover
+                label={t('appCreateFromSelection')}
+                options={[
+                  { value: 'create-names:top', label: t('appCreateNamesTopRow') },
+                  { value: 'create-names:left', label: t('appCreateNamesLeftCol') },
+                ]}
+                onPick={onCommand}
+              />
             </span>
           </div>
         </RibbonGroup>

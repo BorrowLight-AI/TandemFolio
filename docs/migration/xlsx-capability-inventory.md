@@ -2,7 +2,7 @@
 
 - Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Renderer-source status: complete for the permitted pinned community source set
-- Capability status: 121 XLSX registry operations (119 Agent-visible, two internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, and manual page breaks while retaining the audited baseline command surface
+- Capability status: 122 XLSX registry operations (120 Agent-visible, two internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, and create-names-from-selection while retaining the audited baseline command surface
 - Product readiness: candidate-native migration is in progress and requires a new source-current
   release capture; capability discovery therefore remains fail-closed
 
@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 165 passing files and one environment-conditional LibreOffice pivot
-suite; 1,937 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 167 passing files and one environment-conditional LibreOffice pivot
+suite; 1,948 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -242,6 +242,13 @@ The quick-access toolbar now exposes Save As independently from dirty-state Save
 file-backed workbook can choose a new browser file target even when clean, while the in-memory demo
 keeps the command disabled. The command reuses the existing `handleSave('save-as')` package route
 and has a distinct localized label and floppy/pencil glyph.
+
+Formulas now exposes Use in Formula plus Create from Selection for top-row and left-column labels.
+Labels use formatted display text, Unicode-safe Excel name normalization, case-insensitive duplicate
+protection, and the file's used extent when lazy cells have not materialized. Each name is inserted
+through Univer's native defined-name history and the existing OOXML defined-name serializer. The
+typed `xlsx.defined_name.create_from_selection` operation accepts an explicit sheet/range/direction
+and shares the same kernel; `xlsx.cell.set_formula` remains the typed counterpart for Use in Formula.
 
 ## Executable browser evidence
 

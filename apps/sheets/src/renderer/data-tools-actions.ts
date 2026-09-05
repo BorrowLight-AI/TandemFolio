@@ -5,6 +5,7 @@
  * fresh per call so refs and state never go stale.
  */
 import { ILayoutService } from '@univerjs/preset-sheets-core'
+import type { IRange } from '@univerjs/core'
 
 import { columnLabel } from '../domain/cell-address'
 import { decodeCsvBuffer, isNumericCell, parseCsv } from '../gateway/csv-import'
@@ -29,6 +30,8 @@ import {
 } from './outline-actions'
 import { appendSymbol } from './SymbolDialog'
 import {
+  a1RangeRef,
+  a1RowRangeRef,
   advancedFilterColumnOptions,
   applyWorkbookCellValue,
   applyWorkbookCellMatrix,
@@ -212,6 +215,111 @@ export function handleApplyFormula(ctx: DataToolsContext, formula: string): stri
   }
   ctx.setMessage(t('appFormulaSet', { cell: activeCellLabel(ctx) }))
   return null
+}
+
+/** Turn a label into an Excel-compatible defined name. */
+export function definedNameFromLabel(label: string): string | null {
+  const cleaned = label.trim().replace(/[^\p{L}\p{N}_.]/gu, '_')
+  if (!cleaned || /^\.+$/.test(cleaned)) return null
+  const named = /^[\p{L}_]/u.test(cleaned) ? cleaned : `_${cleaned}`
+  const cellLike = /^[A-Za-z]{1,3}\d+$/.test(named) || /^[Rr]\d*([Cc]\d*)?$/.test(named)
+  return cellLike ? `_${named}` : named
+}
+
+/**
+ * Formulas → Create from Selection: create one name per selected column from
+ * its top label, or one per row from its left label. Each insert uses
+ * Univer's native defined-name command and therefore its own history entry.
+ */
+export function handleCreateNamesFromSelection(ctx: DataToolsContext, mode: 'top' | 'left'): void {
+  const runtime = ctx.univerRef.current
+  const workbook = runtime?.univerAPI.getActiveWorkbook()
+  const worksheet = workbook?.getActiveSheet()
+  const selection = workbook?.getActiveRange()?.getRange()
+  if (!runtime || !workbook || !worksheet || !selection) {
+    ctx.setMessage(t('appSelectCellFirst'))
+    return
+  }
+  const result = createWorkbookNamesFromSelection(
+    runtime,
+    ctx.lazyWorkbookRef.current,
+    worksheet,
+    selection,
+    mode,
+  )
+  if (result === 'needs_data') {
+    ctx.setMessage(t('appCreateNamesNeedsData'))
+    return
+  }
+  ctx.setMessage(
+    result.skipped > 0
+      ? t('appNamesCreatedSkipped', { count: result.created, skipped: result.skipped })
+      : t('appNamesCreated', { count: result.created }),
+  )
+}
+
+/** Shared kernel for the Ribbon and typed XLSX operation. */
+export function createWorkbookNamesFromSelection(
+  runtime: UniverRuntime,
+  state: LazyWorkbookState | null,
+  worksheet: UniverWorksheet,
+  selection: IRange,
+  mode: 'top' | 'left',
+): { readonly created: number; readonly skipped: number } | 'needs_data' {
+  const workbook = runtime.univerAPI.getActiveWorkbook()
+  if (!workbook) return 'needs_data'
+  const { startRow, endRow, startColumn, endColumn } = selection
+  if (mode === 'top' ? endRow <= startRow : endColumn <= startColumn) {
+    return 'needs_data'
+  }
+  const fileSheet = state?.file.sheets.find(
+    (sheet) => sheet.id === worksheet.getSheetId(),
+  )
+  const labelEndRow = Math.min(
+    endRow,
+    Math.max(worksheet.getLastRow(), (fileSheet?.rowCount ?? 0) - 1),
+  )
+  const labelEndColumn = Math.min(
+    endColumn,
+    Math.max(worksheet.getLastColumn(), (fileSheet?.columnCount ?? 0) - 1),
+  )
+  const sheetName = worksheet.getSheetName()
+  const entries: { label: string; ref: string }[] = []
+  if (mode === 'top') {
+    for (let column = startColumn; column <= labelEndColumn; column += 1) {
+      entries.push({
+        label: worksheet.getRange(startRow, column, 1, 1).getDisplayValue() ?? '',
+        ref: a1RangeRef(sheetName, column, startRow + 1, endRow),
+      })
+    }
+  } else {
+    for (let row = startRow; row <= labelEndRow; row += 1) {
+      entries.push({
+        label: worksheet.getRange(row, startColumn, 1, 1).getDisplayValue() ?? '',
+        ref: a1RowRangeRef(sheetName, row, startColumn + 1, endColumn),
+      })
+    }
+  }
+  const taken = new Set(
+    univerDefinedNames(runtime).map((defined) => defined.getName().toLowerCase()),
+  )
+  let created = 0
+  let skipped = 0
+  for (const entry of entries) {
+    const name = definedNameFromLabel(entry.label)
+    if (!name || taken.has(name.toLowerCase())) {
+      skipped += 1
+      continue
+    }
+    try {
+      workbook.insertDefinedName(name, entry.ref)
+      taken.add(name.toLowerCase())
+      created += 1
+    } catch {
+      skipped += 1
+    }
+  }
+  return { created, skipped }
 }
 
 /// The Symbol dialog's click: appends the picked character to the active

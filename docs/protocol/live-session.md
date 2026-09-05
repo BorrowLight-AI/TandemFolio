@@ -699,10 +699,11 @@ are in [`../migration/markdown-capability-inventory.md`](../migration/markdown-c
 | `xlsx.outline.set_detail_visibility`       | `{ "sheet", "axis", "start", "count", "hidden" }`                                     | Sets final detail visibility and the following summary item's collapsed state as one undo unit.                                     |
 | `xlsx.defined_name.set`                    | `{ "name", "formula", "scopeSheet"?, "previousName"? }`                               | Upserts or atomically renames one workbook- or named-sheet-scoped Defined Name through native history.                              |
 | `xlsx.defined_name.remove`                 | `{ "name", "scopeSheet"? }`                                                           | Removes one explicitly scoped Defined Name through the same native model and declarative save route.                                |
+| `xlsx.defined_name.create_from_selection`  | `{ "sheet", "range", "labels": "top" / "left" }`                                      | Creates workbook-scoped names from top-row or left-column labels, skipping invalid or duplicate labels as one native-history action. |
 | `xlsx.document.load_staged` internal       | `{ blobId, name, size, data }`                                                        | Loads host-hydrated `.xlsx` bytes through the retained workbook-open path without a recovery checkpoint.                            |
 | `xlsx.document.save`                       | `{}`                                                                                  | Saves a workbook copy through the source-preserving worksheet patcher.                                                              |
 
-The ninety public fully qualified XLSX operations and two internal staged operations are generated
+The 120 public fully qualified XLSX operations and two internal staged operations are generated
 registry operations. R6-09 retires all twenty-two public-era XLSX aliases; `open_local_file`
 remains only as the internal staged-load transport alias. Save success returns
 `{ "saved": true, "fileName": string }`; cancellation or write failure returns `execution_failed`.
@@ -836,7 +837,7 @@ command gaps.
   not a save. Inside an MCP Apps iframe, all five formats use the lease-checked internal atomic
   persistence protocol, not `ui/download-file`. Save As writes a collision-safe file under the
   configured output root; there is no arbitrary-path picker in the embedded protocol.
-- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 120 format-owned operations cover the audited mutation surface plus explicit calculation mode, recalculation, Goal Seek, native workbook themes, workbook structure protection, and allow-edit ranges through shared Univer/file-journal and browser save/reopen routes. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. Candidate-native migration invalidates the earlier release capture until the source-current gate is recaptured.
+- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 122 format-owned operations cover the audited mutation surface plus explicit calculation mode, recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, and selection-derived Defined Names through shared Univer/file-journal and browser save/reopen routes. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. Candidate-native migration invalidates the earlier release capture until the source-current gate is recaptured.
 - PPTX's 74-operation Registry covers every retained state-changing producer through its complete
   browser API, native history, recovery, and package save seam.
 - PDF's 25-operation Registry covers every retained state-changing producer. Browser PDFium handles

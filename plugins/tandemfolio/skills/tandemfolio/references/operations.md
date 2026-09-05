@@ -228,6 +228,7 @@ cover its retained producer baseline. Markdown is included in the passing R6-01 
 - `xlsx.shape.add`, `xlsx.shape.update`, and `xlsx.shape.remove`: create, update, or remove bounded shapes/text boxes by explicit sheet/anchor or stable shape identity through shared visual history.
 - `xlsx.image.move { imageId, anchorCell }` / `xlsx.image.remove { imageId }`: move or remove a stable session/reopened image identity through shared visual history. Internal `xlsx.image.add_staged` carries broker-staged bytes and is not Agent-discoverable.
 - `xlsx.defined_name.set { name, formula, scope?, previousName? }` / `xlsx.defined_name.remove { name, scope? }`: upsert, rename, or remove workbook/sheet-scoped Defined Names through native model history and declarative save.
+- `xlsx.defined_name.create_from_selection { sheet, range, labels }`: create workbook-scoped names from the selected range's `top` row or `left` column labels, skip invalid or duplicate labels, and retain the mutation through native history and save/reopen.
 - `xlsx.document.save {}`: run the retained XLSX save assembler. Standalone browsers write and reopen
   a granted file handle; Codex-embedded editors atomically commit the generated package through the
   Session-bound local protocol. Success returns `{ saved: true, fileName }` only after the active
@@ -238,10 +239,11 @@ operation and its `open_local_file` transport alias are hidden from capability d
 be called through `office_execute`; success returns `{ opened: true, fileName }` after the mounted
 renderer accepts the hydrated workbook bytes.
 
-Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 119 public
+Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 120 public
 XLSX operations include the audited retained command surface and candidate-native calculation mode,
 recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges,
-and manual page breaks; two internal operations carry staged workbook/image bytes. The current
+manual page breaks, and selection-derived Defined Names; two internal operations carry staged
+workbook/image bytes. The current
 candidate-native migration keeps source-current release readiness fail-closed until recapture.
 
 ## PPTX

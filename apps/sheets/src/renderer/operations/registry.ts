@@ -190,6 +190,13 @@ export interface XlsxOperationServices {
     readonly matchCase: boolean
     readonly wholeCell: boolean
   }) => number | Promise<number>
+  readonly createNamesFromSelection?: (input: {
+    readonly sheetId: string
+    readonly range: string
+    readonly labels: 'top' | 'left'
+  }) =>
+    | { readonly created: number; readonly skipped: number }
+    | Promise<{ readonly created: number; readonly skipped: number }>
   readonly createSubtotals?: (input: {
     readonly sheetId: string
     readonly range: string
@@ -1973,6 +1980,29 @@ const handlers = {
       ok: true,
       output: { changed: 1, name, scope: scopeSheet ?? 'workbook' },
     }
+  },
+  'xlsx.defined_name.create_from_selection': async (arguments_, services) => {
+    const sheet = arguments_.sheet as string
+    const range = normalizeXlsxCellRange(arguments_.range as string)
+    const labels = arguments_.labels as 'top' | 'left'
+    if (!range || !['top', 'left'].includes(labels)) {
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message:
+          'xlsx.defined_name.create_from_selection requires one valid range and top/left labels.',
+      }
+    }
+    const worksheet = xlsxWorksheet(services.runtime(), sheet)
+    if (!services.createNamesFromSelection) {
+      throw new Error('xlsx.defined_name.create_from_selection is unavailable in this renderer.')
+    }
+    const result = await services.createNamesFromSelection({
+      sheetId: worksheet.getSheetId(),
+      range,
+      labels,
+    })
+    return { ok: true, output: { sheet, range, labels, ...result } }
   },
   'xlsx.note.set': async (arguments_, services) => {
     const sheet = arguments_.sheet as string

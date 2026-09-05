@@ -1199,6 +1199,14 @@ Format-local retained-command parity is closed for all five formats, and approve
 closes the shared cross-format release gates. Readiness is generated from that evidence rather than
 inferred from registry completeness alone.
 
+The source-current XLSX migration adds
+`xlsx.defined_name.create_from_selection { sheet, range, labels }`. `labels` selects the top row or
+left column as labels, while the remaining cells become absolute workbook-scoped references.
+Invalid, cell-like, or case-insensitively duplicate labels are skipped deterministically. The
+visible Formulas menu and Registry share the same Univer Defined Name/history action; saved and
+reopened workbooks retain the generated names. The generated Manifest now contains 346 operations,
+including 122 XLSX operations (120 Agent-visible and two internal).
+
 ## Module map
 
 ```text
@@ -1500,6 +1508,7 @@ The migration is a strangler replacement, not a second permanent command path.
 | XLSX table/protection commands                 | Rejected in favor of explicit range/sheet operations.                                           | Registry and browser package save/reopen complete through R2-81.                       |
 | XLSX sparkline commands                        | Rejected in favor of `xlsx.sparkline.add`.                                                      | Complete in R2-82 with shared Undo and x14 save/reopen.                                |
 | XLSX outline commands                          | Rejected in favor of two absolute final-state outline operations.                               | Complete in R2-83 with one Undo unit and browser save/reopen hydration.                |
+| XLSX Create from Selection                     | Rejected in favor of `xlsx.defined_name.create_from_selection`.                                 | Complete in the source-current migration with shared native history and save/reopen.   |
 | XLSX checkbox command                          | Rejected in favor of `xlsx.range.set_checkbox`.                                                 | Complete in R2-84 with native Undo and browser DV save/reopen.                         |
 | XLSX Conditional Formatting panel command      | Rejected in favor of explicit `xlsx.conditional_format.*` operations.                           | Comparison lifecycle complete in R2-102; remaining rule families are tracked.          |
 | XLSX Symbol dialog command                     | Rejected in favor of explicit `xlsx.cell.set_value`.                                            | Complete in R2-85; retained as a UI picker over the shared cell action.                |

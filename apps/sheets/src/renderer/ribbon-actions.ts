@@ -24,6 +24,8 @@ import {
   CHART_TYPE_COMMANDS,
 } from './app-constants'
 import {
+  handleApplyFormula,
+  handleCreateNamesFromSelection,
   handleFormatAsTable,
   handleImportCsv,
   handleOutline,
@@ -170,6 +172,34 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
   }
   if (command.startsWith('error:')) {
     ctx.setMessage(command.slice('error:'.length))
+    return
+  }
+  if (command.startsWith('use-in-formula:')) {
+    const workbook = runtime.univerAPI.getActiveWorkbook()
+    const worksheet = workbook?.getActiveSheet()
+    const active = workbook?.getActiveRange()
+    if (!workbook || !worksheet || !active) {
+      ctx.setMessage(t('appSelectCellFirst'))
+      return
+    }
+    const cell = worksheet.getRange(active.getRow(), active.getColumn(), 1, 1)
+    const value = cell.getValue()
+    if (cell.getFormula() || (value != null && value !== '')) {
+      ctx.setMessage(t('appUseInFormulaNeedsEmptyCell'))
+      return
+    }
+    const error = handleApplyFormula(
+      ctx.dataToolsContext(),
+      `=${command.slice('use-in-formula:'.length)}`,
+    )
+    if (error) ctx.setMessage(error)
+    return
+  }
+  if (command === 'create-names:top' || command === 'create-names:left') {
+    handleCreateNamesFromSelection(
+      ctx.dataToolsContext(),
+      command === 'create-names:top' ? 'top' : 'left',
+    )
     return
   }
   if (command === 'chart-select-data' || command === 'chart-format-pane') {

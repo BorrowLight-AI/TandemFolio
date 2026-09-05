@@ -209,6 +209,7 @@ import {
   goToReference as goToReferenceImpl,
   handleApplyAdvancedFilter as handleApplyAdvancedFilterImpl,
   handleApplyFormula as handleApplyFormulaImpl,
+  createWorkbookNamesFromSelection,
   handleCreateConsolidate as handleCreateConsolidateImpl,
   handleCreateSubtotal as handleCreateSubtotalImpl,
   handleInsertSymbol as handleInsertSymbolImpl,
@@ -618,6 +619,27 @@ export function App(): React.JSX.Element {
                 matchCase,
                 wholeCell,
               })
+            },
+            createNamesFromSelection: ({ sheetId, range, labels }) => {
+              const runtime = univerRef.current
+              const state = lazyWorkbookRef.current
+              const worksheet = runtime?.univerAPI
+                .getActiveWorkbook()
+                ?.getSheetBySheetId(sheetId)
+              if (!runtime || !state || !worksheet) {
+                throw new Error('Open a file-backed XLSX workbook first.')
+              }
+              const result = createWorkbookNamesFromSelection(
+                runtime,
+                state,
+                worksheet,
+                worksheet.getRange(range).getRange(),
+                labels,
+              )
+              if (result === 'needs_data') {
+                throw new Error('The selected range must include labels and data.')
+              }
+              return result
             },
             createSubtotals: ({ sheetId, range, groupColumn, valueColumn, aggregation }) => {
               const worksheet = univerRef.current?.univerAPI
@@ -3110,6 +3132,7 @@ export function App(): React.JSX.Element {
   function definedNameRows(): {
     names: DefinedNameRow[]
     sheets: { id: string; name: string }[]
+    activeSheetId: string | null
   } {
     const workbook = univerRef.current?.univerAPI.getActiveWorkbook()
     const sheets =
@@ -3128,7 +3151,7 @@ export function App(): React.JSX.Element {
         scopeLabel: scoped ? (sheetNames.get(localSheetId) ?? localSheetId) : t('appScopeWorkbook'),
       }
     })
-    return { names, sheets }
+    return { names, sheets, activeSheetId: workbook?.getActiveSheet()?.getSheetId() ?? null }
   }
 
   function handleDefinedNameAction(action: DefinedNameAction): string | null {
