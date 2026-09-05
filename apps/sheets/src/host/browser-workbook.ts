@@ -27,6 +27,8 @@ import { applySheetNotes, readSheetNotes, type SheetNote } from '../gateway/xlsx
 import {
   applySheetProtection as applySheetProtectionToXml,
   applyWorkbookProtection as applyWorkbookProtectionToXml,
+  applyProtectedRanges as applyProtectedRangesToXml,
+  type ProtectedRangeState,
 } from '../gateway/xlsx-protection'
 import {
   applyThemeState,
@@ -104,6 +106,7 @@ export interface BrowserSheet {
   pivotRanges: WorkbookFile['sheets'][number]['pivotRanges']
   pivotTables: WorkbookFile['sheets'][number]['pivotTables']
   sheetProtection: { readonly protected: boolean; readonly hasPassword: boolean } | null
+  protectedRanges: Array<ProtectedRangeState & { readonly hasPassword: boolean }>
 }
 
 export interface BrowserDefinedName {
@@ -455,6 +458,24 @@ function parseSheet(
             xmlAttribute(protectionAttributes, 'password') !== undefined ||
             xmlAttribute(protectionAttributes, 'hashValue') !== undefined,
         }
+  const protectedRanges = [...xml.matchAll(/<protectedRange\b([^>]*)\/?\s*>/g)].flatMap(
+    (match) => {
+      const attributes = match[1] ?? ''
+      const name = xmlAttribute(attributes, 'name')
+      const sqref = xmlAttribute(attributes, 'sqref')
+      if (!name || !sqref) return []
+      return [
+        {
+          name: decodeXml(name),
+          sqref: decodeXml(sqref),
+          hasPassword:
+            xmlAttribute(attributes, 'password') !== undefined ||
+            xmlAttribute(attributes, 'hashValue') !== undefined ||
+            xmlAttribute(attributes, 'securityDescriptor') !== undefined,
+        },
+      ]
+    },
+  )
   const sparklines: WorkbookFile['sheets'][number]['sparklines'] = []
   for (const groupMatch of xml.matchAll(
     /<x14:sparklineGroup\b([^>]*)>([\s\S]*?)<\/x14:sparklineGroup>/g,
@@ -498,6 +519,7 @@ function parseSheet(
     pivotRanges: pivots.pivotRanges,
     pivotTables: pivots.pivotTables,
     sheetProtection,
+    protectedRanges,
   }
 }
 
@@ -1269,6 +1291,29 @@ export class BrowserWorkbook {
   setSheetProtection(sheetName: string, protected_: boolean): void {
     const sheet = this.#sheet(sheetName)
     const xml = applySheetProtectionToXml(this.#sheetXml.get(sheet.path)!, protected_)
+    this.#sheetXml.set(sheet.path, xml)
+    const index = this.sheets.indexOf(sheet)
+    this.sheets[index] = parseSheet(
+      xml,
+      sheet.name,
+      sheet.path,
+      this.#sharedStrings,
+      this.#metadataXml.get(worksheetRelationshipsPath(sheet.path)) ?? null,
+      sheet.tables,
+      sheet.comments,
+      { pivotRanges: sheet.pivotRanges, pivotTables: sheet.pivotTables },
+      sheet.hidden,
+    )
+    this.#dirtyPaths.add(sheet.path)
+  }
+
+  protectedRanges(sheetName: string): Array<ProtectedRangeState & { readonly hasPassword: boolean }> {
+    return this.#sheet(sheetName).protectedRanges.map((range) => ({ ...range }))
+  }
+
+  setProtectedRanges(sheetName: string, ranges: readonly ProtectedRangeState[]): void {
+    const sheet = this.#sheet(sheetName)
+    const xml = applyProtectedRangesToXml(this.#sheetXml.get(sheet.path)!, ranges)
     this.#sheetXml.set(sheet.path, xml)
     const index = this.sheets.indexOf(sheet)
     this.sheets[index] = parseSheet(

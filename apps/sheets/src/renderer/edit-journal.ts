@@ -137,6 +137,8 @@ export interface EditJournal {
   }
   /// Desired workbook structure lock (null = untouched).
   readonly workbookProtection: { desired: boolean | null }
+  /// Sheets whose complete allow-edit-range set changed.
+  readonly protectedRangesDirty: Set<string>
   /// The defined-name set changed; the save snapshots the full model.
   readonly definedNames: { dirty: boolean }
   /// sheetId → "row:column" → link target ('#Sheet!A1' internal, URL
@@ -241,6 +243,7 @@ export function createEditJournal(): EditJournal {
     sheetProtection: new Map(),
     theme: {},
     workbookProtection: { desired: null },
+    protectedRangesDirty: new Set(),
     definedNames: { dirty: false },
     hyperlinks: new Map(),
     pageSetup: new Map(),
@@ -328,6 +331,10 @@ export function recordWorkbookProtection(
   original: boolean,
 ): void {
   journal.workbookProtection.desired = desired === original ? null : desired
+}
+
+export function recordProtectedRangesChange(journal: EditJournal, sheetId: string): void {
+  journal.protectedRangesDirty.add(sheetId)
 }
 
 export function recordSheetProtection(
@@ -1749,6 +1756,9 @@ export function journalSize(journal: EditJournal): number {
   if (journal.theme.colors !== undefined) total += 1
   if (journal.theme.fonts !== undefined) total += 1
   if (journal.workbookProtection.desired !== null) total += 1
+  for (const sheetId of journal.protectedRangesDirty) {
+    if (!isSheetRemoved(journal, sheetId)) total += 1
+  }
   for (const [sheetId, state] of journal.pageSetup) {
     if (!isSheetRemoved(journal, sheetId) && Object.keys(state).length > 0) total += 1
   }

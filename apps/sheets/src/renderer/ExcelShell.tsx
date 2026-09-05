@@ -39,6 +39,7 @@ import { HeaderFooterDialog, type HeaderFooterResult } from './HeaderFooterDialo
 import type { HeaderFooterParts } from './header-footer-types'
 import { GoalSeekDialog } from './GoalSeekDialog'
 import type { GoalSeekResult } from './goal-seek'
+import { AllowEditRangesDialog, type AllowEditRange } from './AllowEditRangesDialog'
 
 // No File tab: file commands live in the macOS
 // application menu (File → Open/Save/Save As) and the toolbar icons.
@@ -155,6 +156,8 @@ interface ExcelShellProps {
   /// Effective protection of the active sheet (null = unknown / demo).
   readonly onGetSheetProtection: () => boolean | null
   readonly onGetWorkbookProtection: () => boolean | null
+  readonly onGetProtectedRanges: () => { ranges: readonly AllowEditRange[]; error: string | null }
+  readonly onApplyProtectedRanges: (ranges: readonly AllowEditRange[]) => string | null
   /// Name Manager data + actions (actions return an error message or null).
   readonly onGetDefinedNames: () => {
     names: DefinedNameRow[]
@@ -222,6 +225,8 @@ export function ExcelShell({
   onGetSortColumns,
   onGetSheetProtection,
   onGetWorkbookProtection,
+  onGetProtectedRanges,
+  onApplyProtectedRanges,
   onGetDefinedNames,
   onDefinedNameAction,
   onGetPivotFields,
@@ -272,6 +277,7 @@ export function ExcelShell({
   const [showSubtotalDialog, setShowSubtotalDialog] = useState(false)
   const [showConsolidateDialog, setShowConsolidateDialog] = useState(false)
   const [showGoalSeekDialog, setShowGoalSeekDialog] = useState(false)
+  const [showAllowEditRanges, setShowAllowEditRanges] = useState(false)
   const [showGoTo, setShowGoTo] = useState(false)
   const [showHeaderFooter, setShowHeaderFooter] = useState(false)
   /// Non-null while the Chart Design → Add Chart Element text prompt is open.
@@ -414,6 +420,7 @@ export function ExcelShell({
             else if (command === 'subtotal-open') setShowSubtotalDialog(true)
             else if (command === 'consolidate-open') setShowConsolidateDialog(true)
             else if (command === 'goal-seek-open') setShowGoalSeekDialog(true)
+            else if (command === 'allow-edit-ranges-open') setShowAllowEditRanges(true)
             else if (command === 'goto-open') setShowGoTo(true)
             else if (command === 'header-footer-open') setShowHeaderFooter(true)
             else if (command === 'chart-element-title') setChartTextTarget('title')
@@ -581,6 +588,14 @@ export function ExcelShell({
           initialSetCell={onGetActiveCell()}
           onSolve={onGoalSeek}
           onClose={() => setShowGoalSeekDialog(false)}
+        />
+      )}
+      {showAllowEditRanges && (
+        <AllowEditRangesDialog
+          ranges={onGetProtectedRanges().ranges}
+          defaultRef={onGetActiveCell()}
+          onApply={onApplyProtectedRanges}
+          onClose={() => setShowAllowEditRanges(false)}
         />
       )}
       {showGoTo && (
@@ -2126,7 +2141,13 @@ function Ribbon({
             symbol={workbookProtected ? '🔓' : '🔐'}
             onClick={() => onCommand('workbook-protect')}
           />
-          <RibbonReserved large label={t('appAllowEditRanges')} symbol="⬚" />
+          <RibbonButton
+            large
+            label={t('appAllowEditRanges')}
+            detail={t('appNoPassword')}
+            symbol="⬚"
+            onClick={() => onCommand('allow-edit-ranges-open')}
+          />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupInk')}>
           <RibbonReserved large menu label={t('appHideInk')} symbol="✒" />

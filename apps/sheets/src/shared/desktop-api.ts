@@ -450,6 +450,19 @@ export const workbookRangeResultSchema = z
       })
       .strict()
       .nullable(),
+    /// Native worksheet allow-edit ranges; delivered complete-only.
+    protectedRanges: z
+      .array(
+        z
+          .object({
+            name: z.string().min(1),
+            sqref: z.string().min(1),
+            hasPassword: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(1_000)
+      .default([]),
     indexedThroughRow: z.number().int().nonnegative().nullable(),
     indexingComplete: z.boolean(),
   })
@@ -1499,6 +1512,27 @@ export const workbookSaveRequestSchema = z
       .strict()
       .nullable()
       .default(null),
+    /// Full allow-edit-range snapshots for sheets changed this session.
+    protectedRangeStates: z
+      .array(
+        z
+          .object({
+            sheetId: z.string().min(1),
+            ranges: z
+              .array(
+                z
+                  .object({
+                    name: z.string().min(1).max(255),
+                    sqref: z.string().min(1).max(1_024),
+                  })
+                  .strict(),
+              )
+              .max(1_000),
+          })
+          .strict(),
+      )
+      .max(1_000)
+      .default([]),
   })
   .strict()
   .refine(
@@ -1523,6 +1557,7 @@ export const workbookSaveRequestSchema = z
       request.definedNamesState !== null ||
       request.themeState !== null ||
       request.workbookProtectionState !== null ||
+      request.protectedRangeStates.length > 0 ||
       request.visualAdditions.length > 0 ||
       request.tableAdditions.length > 0 ||
       request.pivotAdditions.length > 0 ||

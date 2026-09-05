@@ -29,6 +29,10 @@ export interface LazyWorkbookState {
   readonly appliedDvSheets: Set<string>
   /// File-side worksheet protection, known once a sheet finishes indexing.
   readonly sheetProtections: Map<string, { protected: boolean; hasPassword: boolean }>
+  readonly sheetProtectedRanges: Map<
+    string,
+    Array<{ name: string; sqref: string; hasPassword: boolean }>
+  >
   /// Defined names the Univer engine rejected at install — preserved verbatim
   /// by the declarative defined-names save.
   readonly uninstalledDefinedNames: Set<string>

@@ -68,4 +68,15 @@ describe('workbookSaveRequestSchema', () => {
       }),
     ).not.toThrow()
   })
+
+  it('accepts an allow-edit-range-only ordinary save', () => {
+    expect(() =>
+      workbookSaveRequestSchema.parse({
+        ...emptyRequest('save'),
+        protectedRangeStates: [
+          { sheetId: 'sheet-1', ranges: [{ name: 'Inputs', sqref: 'B2:B10' }] },
+        ],
+      }),
+    ).not.toThrow()
+  })
 })

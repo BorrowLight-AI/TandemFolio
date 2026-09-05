@@ -350,12 +350,17 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         ctx.setMessage(t('appProtectedWithPassword'))
         return
       }
-      const guard = applyWorkbookSheetProtection(state, sheetId, !current)
+      const guard = applyWorkbookSheetProtection(
+        state,
+        sheetId,
+        !current,
+        runtime,
+        ctx.setPendingEdits,
+      )
       if (guard) {
         ctx.setMessage(guard)
         return
       }
-      ctx.setPendingEdits(journalSize(state.editJournal))
       ctx.setMessage(!current ? t('appProtectionWillWrite') : t('appProtectionWillRemove'))
       return
     }

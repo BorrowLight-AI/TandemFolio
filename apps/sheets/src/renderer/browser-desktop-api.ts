@@ -205,6 +205,7 @@ export class BrowserWorkbookDesktopApi {
       }
     })
     const theme = workbook.theme()
+    const workbookProtection = workbook.workbookProtection()
     const file: WorkbookFile = {
       sessionId,
       name,
@@ -228,9 +229,7 @@ export class BrowserWorkbookDesktopApi {
             },
           }
         : {}),
-      ...(workbook.workbookProtection()
-        ? { workbookProtection: workbook.workbookProtection()! }
-        : {}),
+      ...(workbookProtection ? { workbookProtection } : {}),
       ...(handle ? {} : { needsSaveAs: true }),
     }
     this.#sessions.set(sessionId, { workbook, file, sheetNames, handle })
@@ -298,6 +297,7 @@ export class BrowserWorkbookDesktopApi {
       autoFilter: sheet.autoFilterRef ? parseRange(sheet.autoFilterRef) : null,
       dataValidations: sheet.dataValidations,
       sheetProtection: sheet.sheetProtection,
+      protectedRanges: sheet.protectedRanges,
       indexedThroughRow,
       indexingComplete: true,
     }
@@ -397,6 +397,9 @@ export class BrowserWorkbookDesktopApi {
     }
     for (const state of request.sheetProtections) {
       workbook.setSheetProtection(this.#sheetName(session, state.sheetId), state.protected)
+    }
+    for (const state of request.protectedRangeStates ?? []) {
+      workbook.setProtectedRanges(this.#sheetName(session, state.sheetId), state.ranges)
     }
     const sparklineAdditions = new Map<
       string,

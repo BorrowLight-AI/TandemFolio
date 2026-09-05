@@ -104,6 +104,8 @@ import { installThickBorderFix } from './thick-border-fix'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { solveGoalSeek } from './goal-seek'
 import { workbookStructureLocked } from './workbook-protection'
+import { applyWorkbookProtectedRanges } from './protected-range-actions'
+import { mapProtectedRanges } from './protected-ranges'
 import {
   CLEAR_SELECTION_CONTENT_COMMAND,
   shouldInterceptClearSelection,
@@ -1689,6 +1691,13 @@ export function App(): React.JSX.Element {
             )
           })
           refreshLazyVisuals(state)
+          const protectedRanges = state.sheetProtectedRanges.get(structuralSheetId)
+          if (protectedRanges && protectedRanges.length > 0) {
+            state.sheetProtectedRanges.set(
+              structuralSheetId,
+              mapProtectedRanges(protectedRanges, [structuralOp]),
+            )
+          }
           // Univer shifted its installed cells itself, but the loaded-range
           // bookkeeping and frozen strip are now stale — refetch the viewport
           // through the updated coordinate mapping. Moves are exempt: they
@@ -2344,6 +2353,7 @@ export function App(): React.JSX.Element {
       appliedMerges: new Map(),
       appliedRowKeys: new Map(),
       sheetProtections: new Map(),
+      sheetProtectedRanges: new Map(),
       uninstalledDefinedNames: new Set(),
       appliedCfSheets: new Set(),
       appliedFilterSheets: new Set(),
@@ -2761,6 +2771,25 @@ export function App(): React.JSX.Element {
         onGetWorkbookProtection={() => {
           const state = lazyWorkbookRef.current
           return state ? workbookStructureLocked(state) : null
+        }}
+        onGetProtectedRanges={() => {
+          const state = lazyWorkbookRef.current
+          const sheetId = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getSheetId()
+          if (!state || !sheetId) return { ranges: [], error: t('appProtectionNeedsFile') }
+          const ranges = state.sheetProtectedRanges.get(sheetId)
+          if (ranges) return { ranges, error: null }
+          if (state.editJournal.sheets.added.has(sheetId)) return { ranges: [], error: null }
+          return { ranges: [], error: t('appProtectionNeedsIndexed') }
+        }}
+        onApplyProtectedRanges={(ranges) => {
+          const state = lazyWorkbookRef.current
+          const runtime = univerRef.current
+          const sheetId = runtime?.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getSheetId()
+          if (!state || !runtime || !sheetId) return t('appProtectionNeedsFile')
+          if (!state.sheetProtectedRanges.has(sheetId) && state.editJournal.sheets.added.has(sheetId)) {
+            state.sheetProtectedRanges.set(sheetId, [])
+          }
+          return applyWorkbookProtectedRanges(runtime, state, sheetId, ranges, setPendingEdits)
         }}
         onGetDefinedNames={definedNameRows}
         onDefinedNameAction={handleDefinedNameAction}

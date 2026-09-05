@@ -27500,6 +27500,79 @@
       ],
       "family": "sheet",
       "format": "xlsx",
+      "id": "xlsx.sheet.set_protected_ranges",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ranges": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "sqref": {
+                  "maxLength": 1024,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "sqref"
+              ],
+              "type": "object"
+            },
+            "maxItems": 1000,
+            "type": "array"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sheet",
+          "ranges"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ranges": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sheet",
+          "ranges"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Replace the native allow-edit ranges of an XLSX worksheet.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "sheet",
+      "format": "xlsx",
       "id": "xlsx.sheet.set_protection",
       "inputSchema": {
         "additionalProperties": false,
@@ -27536,7 +27609,7 @@
       },
       "risk": "high",
       "summary": "Set the passwordless protection state of an XLSX worksheet.",
-      "undoable": false,
+      "undoable": true,
       "visibility": "agent"
     },
     {

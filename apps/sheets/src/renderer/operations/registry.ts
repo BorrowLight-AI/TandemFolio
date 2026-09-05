@@ -122,6 +122,7 @@ import {
 import { applyWorkbookTableAdd } from '../workbook-ops'
 import { structuralDeleteFormulaError } from '../structural-delete-guard'
 import { applyWorkbookStructureProtection } from '../workbook-protection'
+import { applyWorkbookProtectedRanges } from '../protected-range-actions'
 import {
   BORDER_COMMAND_TYPES,
   type ActiveWorkbook,
@@ -165,6 +166,7 @@ export interface XlsxOperationServices {
             | 'outline'
             | 'appliedCfSheets'
             | 'appliedDvSheets'
+            | 'sheetProtectedRanges'
           >
         >)
     | null
@@ -655,6 +657,7 @@ function xlsxOperationState(
       | 'outline'
       | 'appliedCfSheets'
       | 'appliedDvSheets'
+      | 'sheetProtectedRanges'
     >
   > {
   const state = services.state?.()
@@ -1177,6 +1180,24 @@ function normalizeXlsxComparisonOperand(
 }
 
 const handlers = {
+  'xlsx.sheet.set_protected_ranges': (arguments_, services) => {
+    const runtime = services.runtime()
+    const state = xlsxOperationState(services)
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    if (!state.sheetProtectedRanges) throw new Error('Open a file-backed XLSX workbook first.')
+    const sheet = arguments_.sheet as string
+    const worksheet = xlsxWorksheet(runtime, sheet)
+    const ranges = arguments_.ranges as Array<{ name: string; sqref: string }>
+    const error = applyWorkbookProtectedRanges(
+      runtime,
+      { editJournal: state.editJournal, sheetProtectedRanges: state.sheetProtectedRanges },
+      worksheet.getSheetId(),
+      ranges,
+      services.setPendingEdits,
+    )
+    if (error) return { ok: false, error: 'execution_failed', message: error }
+    return { ok: true, output: { sheet, ranges: ranges.length } }
+  },
   'xlsx.document.set_protection': (arguments_, services) => {
     const runtime = services.runtime()
     if (!runtime) throw new Error('Open an XLSX workbook first.')
@@ -4692,7 +4713,14 @@ const handlers = {
     const state = xlsxOperationState(services)
     const worksheet = xlsxWorksheet(services.runtime(), sheet)
     const sheetId = worksheet.getSheetId()
-    const guard = applyWorkbookSheetProtection(state, sheetId, nextProtected)
+    const runtime = services.runtime()
+    const guard = applyWorkbookSheetProtection(
+      state,
+      sheetId,
+      nextProtected,
+      runtime ?? undefined,
+      services.setPendingEdits,
+    )
     if (guard) {
       return {
         ok: false,
@@ -4700,7 +4728,6 @@ const handlers = {
         message: guard,
       }
     }
-    services.setPendingEdits?.(journalSize(state.editJournal))
     return { ok: true, output: { sheet, protected: nextProtected } }
   },
   'xlsx.row.delete': async (arguments_, services) => {

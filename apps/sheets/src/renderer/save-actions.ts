@@ -149,6 +149,15 @@ export async function handleSave(
     state.editJournal.workbookProtection.desired === null
       ? null
       : { lockStructure: state.editJournal.workbookProtection.desired }
+  const protectedRangeStates = [...state.editJournal.protectedRangesDirty]
+    .filter((sheetId) => !isSheetRemoved(state.editJournal, sheetId))
+    .map((sheetId) => ({
+      sheetId,
+      ranges: (state.sheetProtectedRanges.get(sheetId) ?? []).map(({ name, sqref }) => ({
+        name,
+        sqref,
+      })),
+    }))
   // Recalculated formula results: the engine's values are on screen but
   // deliberately kept out of the journal (they must not become literals). Send them
   // separately so the save refreshes each formula cell's cached <v>, keeping its <f>.
@@ -204,6 +213,7 @@ export async function handleSave(
     (definedNamesState === null ? 0 : 1) +
     (themeState === null ? 0 : 1) +
     (workbookProtectionState === null ? 0 : 1) +
+    protectedRangeStates.length +
     visualAdditions.length +
     visualEdits.length +
     tableAdditions.length +
@@ -251,6 +261,7 @@ export async function handleSave(
     definedNamesState,
     themeState,
     workbookProtectionState,
+    protectedRangeStates,
   }
   if (mode === 'recovery') {
     // Best-effort; a failure only means this tick's copy is skipped
@@ -287,6 +298,7 @@ export async function handleSave(
       definedNamesState: splitSave ? null : definedNamesState,
       themeState,
       workbookProtectionState,
+      protectedRangeStates,
     })
     if (ctx.lazyWorkbookRef.current !== state) return
     if (result.canceled) {
@@ -333,6 +345,7 @@ export async function handleSave(
         definedNamesState: heldNames,
         themeState: null,
         workbookProtectionState: null,
+        protectedRangeStates: [],
       })
       if (ctx.lazyWorkbookRef.current !== state) return
       if (second.canceled) {

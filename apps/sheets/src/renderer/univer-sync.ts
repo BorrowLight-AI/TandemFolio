@@ -59,6 +59,7 @@ import type {
 import {
   fromNeutralStyle,
   isSheetRemoved,
+  journalSize,
   journalEntriesInRange,
   recordHyperlinkEdit,
   recordNeutralStyleEdit,
@@ -79,6 +80,7 @@ import {
 import { isPlainArithmeticFormula } from './formula-cached-fallback'
 import { extractFunctionNames } from './formula-functions'
 import { t } from './i18n/locale'
+import { mapProtectedRanges } from './protected-ranges'
 import { INDENT_STEP_PX } from './selection-format'
 import { CENTER_ACROSS_END_KEY } from './center-continuous'
 import {
@@ -381,11 +383,25 @@ export function applyWorkbookSheetProtection(
   state: Pick<LazyWorkbookState, 'editJournal' | 'sheetProtections'>,
   sheetId: string,
   nextProtected: boolean,
+  runtime?: UniverRuntime,
+  setPendingEdits?: (count: number) => void,
 ): string | null {
   const guard = protectSheetGuard(state, sheetId, nextProtected)
   if (guard) return guard
   const original = state.sheetProtections.get(sheetId)?.protected ?? false
+  const before = state.editJournal.sheetProtection.get(sheetId)
   recordSheetProtection(state.editJournal, sheetId, nextProtected, original)
+  const after = state.editJournal.sheetProtection.get(sheetId)
+  setPendingEdits?.(journalSize(state.editJournal))
+  const activeWorkbook = runtime?.univerAPI.getActiveWorkbook() as { getId?: () => string } | null
+  if (runtime && typeof activeWorkbook?.getId === 'function' && before !== after) {
+    const install = (value: boolean | undefined): void => {
+      if (value === undefined) state.editJournal.sheetProtection.delete(sheetId)
+      else state.editJournal.sheetProtection.set(sheetId, value)
+      setPendingEdits?.(journalSize(state.editJournal))
+    }
+    pushWorkbookUndo(runtime, { undo: () => install(before), redo: () => install(after) })
+  }
   return null
 }
 
@@ -1849,6 +1865,12 @@ async function loadRange(
         result.sheetProtection ?? { protected: false, hasPassword: false },
       )
     }
+    if (result.indexingComplete && !state.sheetProtectedRanges.has(sheetId)) {
+      state.sheetProtectedRanges.set(
+        sheetId,
+        mapProtectedRanges(result.protectedRanges, state.editJournal.structuralOps.get(sheetId) ?? []),
+      )
+    }
     const sheet = sheetMeta
     if (!result.indexingComplete) {
       // Poll until the stream finishes: merged-cell ranges and trailing row
@@ -2587,6 +2609,12 @@ export async function preloadEntireWorkbook(
         state.sheetProtections.set(
           sheetId,
           result.sheetProtection ?? { protected: false, hasPassword: false },
+        )
+      }
+      if (result.indexingComplete && !state.sheetProtectedRanges.has(sheetId)) {
+        state.sheetProtectedRanges.set(
+          sheetId,
+          mapProtectedRanges(result.protectedRanges, state.editJournal.structuralOps.get(sheetId) ?? []),
         )
       }
     }

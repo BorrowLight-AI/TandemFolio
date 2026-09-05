@@ -415,6 +415,20 @@ describe('browser XLSX workbook', () => {
     expect(reopened.workbookProtection()).toBeNull()
   })
 
+  it('sets and reopens native allow-edit ranges on a worksheet', async () => {
+    const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
+    expect(workbook.protectedRanges('Budget')).toEqual([])
+    workbook.setProtectedRanges('Budget', [
+      { name: 'Inputs', sqref: 'B2:B10' },
+      { name: 'Rates', sqref: 'D2 D4:D8' },
+    ])
+    const reopened = await openBrowserWorkbook(await workbook.save(), 'budget.xlsx')
+    expect(reopened.protectedRanges('Budget')).toEqual([
+      { name: 'Inputs', sqref: 'B2:B10', hasPassword: false },
+      { name: 'Rates', sqref: 'D2 D4:D8', hasPassword: false },
+    ])
+  })
+
   it('writes and reopens native sparklines through the browser boundary', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
 
