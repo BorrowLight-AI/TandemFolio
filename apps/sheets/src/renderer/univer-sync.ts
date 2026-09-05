@@ -336,6 +336,12 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
             columnCount: Math.max(MINIMUM_SHEET_COLUMN_COUNT, sheet.columnCount, visualColumnCount),
             hidden: sheet.hidden ? BooleanNumber.TRUE : BooleanNumber.FALSE,
             showGridlines: sheet.showGridLines ? BooleanNumber.TRUE : BooleanNumber.FALSE,
+            ...(sheet.showHeadings === false
+              ? {
+                  rowHeader: { width: 46, hidden: BooleanNumber.TRUE },
+                  columnHeader: { height: 20, hidden: BooleanNumber.TRUE },
+                }
+              : {}),
             ...(sheet.tabColor === null ? {} : { tabColor: sheet.tabColor }),
             ...(sheet.defaultRowHeight === null
               ? {}
@@ -927,6 +933,51 @@ export function applyAiDataValidation(
 }
 
 /// Jumps to an internal link target like `Sheet1!A1` or `'My Sheet'!B2`.
+let revealGeneration = 0
+
+/**
+ * Compensate for Univer's frozen-pane scroll offset until the requested cell
+ * is fully visible. A newer navigation cancels the older correction loop.
+ */
+export async function revealCellBelowFreeze(
+  sheet: {
+    scrollToCell(row: number, column: number): unknown
+    getVisibleRange(): IRange | null
+  },
+  row: number,
+  column: number,
+): Promise<void> {
+  const generation = ++revealGeneration
+  const aimRow = Math.max(0, row - 1)
+  let scrollRow = aimRow
+  let scrollColumn = column
+  let lastStartRow = -1
+  let lastStartColumn = -1
+  sheet.scrollToCell(scrollRow, scrollColumn)
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 60))
+    if (generation !== revealGeneration) return
+    let visible: IRange | null
+    try {
+      visible = sheet.getVisibleRange()
+    } catch {
+      return
+    }
+    if (!visible) return
+    const overRows = Math.max(0, visible.startRow - aimRow)
+    const underRows = Math.max(0, row - visible.endRow)
+    const overColumns = Math.max(0, visible.startColumn - column)
+    const underColumns = Math.max(0, column - visible.endColumn)
+    if (overRows === 0 && overColumns === 0 && underRows === 0 && underColumns === 0) return
+    if (visible.startRow === lastStartRow && visible.startColumn === lastStartColumn) return
+    lastStartRow = visible.startRow
+    lastStartColumn = visible.startColumn
+    scrollRow = Math.max(0, scrollRow - overRows + underRows)
+    scrollColumn = Math.max(0, scrollColumn - overColumns + underColumns)
+    sheet.scrollToCell(scrollRow, scrollColumn)
+  }
+}
+
 export function navigateToAnchor(
   runtime: UniverRuntime,
   location: string,
@@ -946,7 +997,7 @@ export function navigateToAnchor(
   try {
     workbook.setActiveSheet(sheet)
     const coordinates = parseAddress(match[2].replace(/\$/g, ''))
-    sheet.scrollToCell(coordinates.row, coordinates.column)
+    void revealCellBelowFreeze(sheet, coordinates.row, coordinates.column)
   } catch {
     setMessage(t('appLinkJumpFailed', { location }))
   }

@@ -201,6 +201,8 @@ export interface PageSetupJournalState {
   showGridlines?: boolean
   /// sheetView/@showFormulas: the sheet renders formulas instead of values.
   showFormulas?: boolean
+  /// sheetView/@showRowColHeaders: row and column heading strips.
+  showHeadings?: boolean
   /// A1 range to print, or null to clear the print area.
   printArea?: string | null
   /// Rows repeated at the top of every page ("1:2"), or null to clear.

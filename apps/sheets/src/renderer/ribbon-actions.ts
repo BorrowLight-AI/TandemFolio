@@ -11,6 +11,8 @@ import {
   type ICellData,
   type IStyleData,
 } from '@univerjs/core'
+import { IRenderManagerService, SHEET_VIEWPORT_KEY } from '@univerjs/engine-render'
+import { SheetSkeletonManagerService } from '@univerjs/preset-sheets-core'
 import { columnLabel } from '../domain/cell-address'
 import { transposeChartSeries, type ChartSeriesVisualState } from '../domain/chart-visual'
 import type { WorkbookChartEdit, WorkbookVisualObject } from '../shared/desktop-api'
@@ -30,7 +32,7 @@ import {
 } from './data-tools-actions'
 import { applyWorkbookCheckbox } from './data-validation-actions'
 import { dedupeRows } from './dedupe'
-import { isSheetRemoved, journalSize } from './edit-journal'
+import { isSheetRemoved, journalSize, recordPageSetup } from './edit-journal'
 import {
   applyWorkbookFilter,
   clearWorkbookFilterCriteria,
@@ -61,6 +63,7 @@ import {
   normalizeLinkTarget,
   pushWorkbookUndo,
   queueSparklineInstall,
+  revealCellBelowFreeze,
   workbookTextToColumnsDelimiterFromFlag,
 } from './univer-sync'
 import { applyWorkbookStructureProtection, workbookStructureLocked } from './workbook-protection'
@@ -127,6 +130,9 @@ function selectionStyle(
 /// the argument, because arguments like number-format patterns
 /// ("h:mm:ss AM/PM") legitimately contain colons.
 const EXTRA_SEGMENT_COMMANDS = new Set(['cellprot', 'sort-custom', 'border'])
+
+const DEFAULT_ROW_HEADER_WIDTH = 46
+const DEFAULT_COLUMN_HEADER_HEIGHT = 20
 
 /// ST_BorderStyle names accepted by the Format Cells line-style picker.
 const BORDER_LINE_STYLE_TYPES: Record<string, BorderStyleTypes> = {
@@ -509,7 +515,7 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
             notes[notes.length - 1])
       if (!target) return
       sheet.getRange(target.row, target.col, 1, 1).activate()
-      sheet.scrollToCell(target.row, target.col)
+      void revealCellBelowFreeze(sheet, target.row, target.col)
       void runtime.univerAPI.executeCommand('sheet.operation.add-note-popup')
       return
     }
@@ -527,6 +533,91 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
           : Math.min(4, Math.max(0.5, worksheet.getZoom() + (command === 'zoom-in' ? 0.1 : -0.1)))
       worksheet.zoom(Number(next.toFixed(2)))
       ctx.setMessage(t('appZoom', { percent: Math.round(next * 100) }))
+      return
+    }
+    case 'zoom-to-selection': {
+      const workbook = runtime.univerAPI.getActiveWorkbook()
+      const selection = workbook?.getActiveRange()?.getRange()
+      if (!workbook || !worksheet || !selection) {
+        ctx.setMessage(t('appSelectCellFirst'))
+        return
+      }
+      const render = runtime.univer
+        .__getInjector()
+        .get(IRenderManagerService)
+        .getRenderById(workbook.getId())
+      const skeleton = render?.with(SheetSkeletonManagerService).getCurrentSkeleton()
+      if (!render || !skeleton) return
+      const rows = skeleton.rowHeightAccumulation
+      const columns = skeleton.columnWidthAccumulation
+      const top = selection.startRow > 0 ? (rows[selection.startRow - 1] ?? 0) : 0
+      const bottom = rows[Math.min(selection.endRow, rows.length - 1)] ?? 0
+      const left = selection.startColumn > 0 ? (columns[selection.startColumn - 1] ?? 0) : 0
+      const right = columns[Math.min(selection.endColumn, columns.length - 1)] ?? 0
+      const viewWidth = render.engine.width - skeleton.rowHeaderWidthAndMarginLeft
+      const viewHeight = render.engine.height - skeleton.columnHeaderHeightAndMarginTop
+      if (right <= left || bottom <= top || viewWidth <= 0 || viewHeight <= 0) return
+      const ratio = Math.min(
+        4,
+        Math.max(0.5, Math.min(viewWidth / (right - left), viewHeight / (bottom - top))),
+      )
+      void runtime.univerAPI
+        .executeCommand('sheet.command.set-zoom-ratio', {
+          unitId: workbook.getId(),
+          subUnitId: worksheet.getSheetId(),
+          zoomRatio: Number(ratio.toFixed(2)),
+        })
+        .then(() =>
+          runtime.univerAPI.executeCommand('sheet.command.scroll-to-cell', {
+            range: selection,
+            forceTop: true,
+            forceLeft: true,
+          }),
+        )
+      ctx.setMessage(t('appZoom', { percent: Math.round(ratio * 100) }))
+      return
+    }
+    case 'toggle-headings': {
+      const workbook = runtime.univerAPI.getActiveWorkbook()
+      if (!workbook || !worksheet) return
+      const sheetId = worksheet.getSheetId()
+      const config = worksheet.getSheet().getConfig()
+      const nextHidden = config.rowHeader.hidden !== BooleanNumber.TRUE
+      config.rowHeader.hidden = nextHidden ? BooleanNumber.TRUE : BooleanNumber.FALSE
+      config.columnHeader.hidden = nextHidden ? BooleanNumber.TRUE : BooleanNumber.FALSE
+      const unitId = workbook.getId()
+      const render = runtime.univer.__getInjector().get(IRenderManagerService).getRenderById(unitId)
+      const scene = render?.scene
+      const skeleton = render?.with(SheetSkeletonManagerService).getCurrentSkeleton()
+      const viewMain = scene?.getViewport(SHEET_VIEWPORT_KEY.VIEW_MAIN)
+      const viewColumnRight = scene?.getViewport(SHEET_VIEWPORT_KEY.VIEW_COLUMN_RIGHT)
+      const nextWidth = nextHidden ? 0 : DEFAULT_ROW_HEADER_WIDTH
+      const shift = skeleton ? nextWidth - skeleton.rowHeaderWidth : 0
+      const mainLeft = (viewMain?.left ?? 0) + shift
+      const columnRightLeft = (viewColumnRight?.left ?? 0) + shift
+      void Promise.all([
+        runtime.univerAPI.executeCommand('sheet.command.set-row-header-width', {
+          unitId,
+          subUnitId: sheetId,
+          size: nextWidth,
+        }),
+        runtime.univerAPI.executeCommand('sheet.command.set-col-header-height', {
+          unitId,
+          subUnitId: sheetId,
+          size: nextHidden ? 0 : DEFAULT_COLUMN_HEADER_HEIGHT,
+        }),
+      ]).then(() => {
+        if (!viewMain || viewMain.left === mainLeft) return
+        viewMain.left = mainLeft
+        viewColumnRight?.setViewportSize({ left: columnRightLeft })
+        scene?.makeDirty(true)
+      })
+      const state = ctx.lazyWorkbookRef.current
+      if (state && !isSheetRemoved(state.editJournal, sheetId)) {
+        recordPageSetup(state.editJournal, sheetId, { showHeadings: !nextHidden })
+        ctx.setPendingEdits(journalSize(state.editJournal))
+      }
+      ctx.setMessage(t('appHeadings'))
       return
     }
     case 'freeze-top-row':

@@ -30,6 +30,7 @@ export interface SheetPageSetupState {
   readonly printHeadings?: boolean | undefined
   readonly showGridlines?: boolean | undefined
   readonly showFormulas?: boolean | undefined
+  readonly showHeadings?: boolean | undefined
   readonly printArea?: string | null | undefined
   readonly printTitles?: string | null | undefined
   readonly frozenRows?: number | undefined
@@ -348,6 +349,11 @@ export function applyPageSetupState(worksheetXml: string, state: SheetPageSetupS
   if (state.showFormulas !== undefined) {
     // showFormulas defaults to false; drop the attribute to restore it.
     xml = setSheetViewAttr(xml, 'showFormulas', state.showFormulas ? '1' : null)
+  }
+
+  if (state.showHeadings !== undefined) {
+    // showRowColHeaders defaults to true; write "0" only for the hidden state.
+    xml = setSheetViewAttr(xml, 'showRowColHeaders', state.showHeadings ? null : '0')
   }
 
   const printOptions: Record<string, string | null> = {}

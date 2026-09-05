@@ -254,6 +254,7 @@ function readPageSetupState(
   const printGridlines = elementAttribute(worksheetXml, 'printOptions', 'gridLines')
   const printHeadings = elementAttribute(worksheetXml, 'printOptions', 'headings')
   const showGridlines = elementAttribute(worksheetXml, 'sheetView', 'showGridLines')
+  const showHeadings = elementAttribute(worksheetXml, 'sheetView', 'showRowColHeaders')
   const tabColorArgb = elementAttribute(worksheetXml, 'tabColor', 'rgb')
   const manualBreaks = (tag: 'rowBreaks' | 'colBreaks'): number[] => {
     const section = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`).exec(worksheetXml)?.[1]
@@ -287,6 +288,7 @@ function readPageSetupState(
     ...(printGridlines === undefined ? {} : { printGridlines: printGridlines === '1' }),
     ...(printHeadings === undefined ? {} : { printHeadings: printHeadings === '1' }),
     showGridlines: showGridlines !== '0',
+    showHeadings: showHeadings !== '0',
     printArea: sheetScopedRange(workbookXml, '_xlnm.Print_Area', sheetIndex),
     printTitles: sheetScopedRange(workbookXml, '_xlnm.Print_Titles', sheetIndex),
     header: decodeHeaderFooterParts(textContent(worksheetXml, 'oddHeader')),

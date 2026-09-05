@@ -93,6 +93,10 @@ Numeric, date/time, and Boolean displays now use those same live font metrics to
 `#####` width overflow. Wrapped or rotated cells remain readable, merged cells use their complete
 visible span, negative 1900-system dates fail closed to hashes, and known substituted workbook fonts
 use Excel digit-width calibration without inflating a locally installed face.
+Native view commands now fit the active selection into the available canvas before scrolling, hide
+and restore both heading strips without shifting the grid underneath them, and compensate frozen-pane
+offsets when notes or internal links reveal a cell. Heading visibility persists through
+`sheetView/@showRowColHeaders` and is restored when the workbook reopens.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -163,8 +167,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 137 passing files and one environment-conditional LibreOffice pivot
-suite; 1,643 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 140 passing files and one environment-conditional LibreOffice pivot
+suite; 1,650 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
