@@ -32,6 +32,7 @@ import {
   type LazyWorkbookState,
   type UniverRuntime,
 } from './univer-state'
+import { consumePendingUndoCarry } from './undo-carry'
 import {
   applyAiPivotAdd,
   applyAiTableColumnAdd,
@@ -2565,21 +2566,58 @@ export function App(): React.JSX.Element {
         // Register existing file tables so Univer renders filter dropdowns
         // and banding. This is visual-only (the journal is empty for file
         // tables), so failures are swallowed — the data is still usable.
+        const tableInstalls: Promise<unknown>[] = []
         for (const sheet of selected.sheets) {
           if (sheet.tables.length === 0) continue
           const ws = workbook.getSheetBySheetId(sheet.id)
           if (!ws) continue
           for (let index = 0; index < sheet.tables.length; index += 1) {
             const table = sheet.tables[index]!
+            // Univer would synthesize header labels over the first data row
+            // when a native table explicitly has no header row.
+            if (table.headerRowCount === 0) continue
             const tableId = `file-table-${sheet.id}-${index}`
             const tableName = `Table${index + 1}_${sheet.id.slice(0, 6)}`
             try {
-              void ws.addTable(tableName, table.range, tableId)
+              const columnOptions = table.columns?.length
+                ? {
+                    columns: table.columns.map((name, columnIndex) => ({
+                      id: `${tableId}-col-${columnIndex}`,
+                      displayName: name,
+                    })),
+                  }
+                : undefined
+              const added = ws.addTable(
+                tableName,
+                table.range,
+                tableId,
+                columnOptions as never,
+              ) as unknown
+              // Cell fills already carry the file's exact table style. Mute
+              // Univer's default lavender theme after registration.
+              tableInstalls.push(
+                Promise.resolve(added)
+                  .then(() =>
+                    (
+                      ws as unknown as {
+                        addTableTheme(id: string, theme: { name: string }): unknown
+                      }
+                    ).addTableTheme(tableId, { name: `plain-${tableId}` }),
+                  )
+                  .catch(() => undefined),
+              )
             } catch {
               // Best-effort: skip if Univer rejects (e.g. overlapping ranges)
             }
           }
         }
+        // Registration is asynchronous and creates decoration-only history.
+        // Wait until it settles before replacing those entries with the user
+        // undo/redo suffix captured across a save.
+        void Promise.allSettled(tableInstalls).then(() => {
+          if (lazyWorkbookRef.current !== state) return
+          consumePendingUndoCarry(runtime, workbook.getId())
+        })
         const worksheet = workbook.getActiveSheet()
         if (!worksheet) {
           resolveInitialWorkbookLoad()

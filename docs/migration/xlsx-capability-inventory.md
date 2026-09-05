@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 159 passing files and one environment-conditional LibreOffice pivot
-suite; 1,830 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 160 passing files and one environment-conditional LibreOffice pivot
+suite; 1,861 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -209,6 +209,13 @@ workbook in its cached-value fallback state. Browser-open metadata now carries t
 byte count; the formula fallback stays disabled above 64 MiB or 2,000,000 declared grid cells, and a
 truncated formula index permanently trips the same session-local guard. This bounds formula-engine
 memory without changing Univer ownership, the edit journal, or ordinary-workbook calculation.
+
+Native cell/style undo and redo now survive the save-triggered browser Session replacement. The
+renderer rewrites the saved unit identity, inlines styles referenced by old-unit mutations, drops
+history at renderer-owned closure steps, waits for asynchronous file-table decoration, and removes
+decoration-only history before installing the carried suffix. Sheet-identity changes and two-phase
+structural saves intentionally start with a clean stack. File tables also retain their real column
+labels and cell-rendered table style instead of Univer's synthesized header/default theme.
 
 ## Executable browser evidence
 

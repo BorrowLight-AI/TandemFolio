@@ -108,6 +108,7 @@ import {
   screenRangeToFileRange,
 } from './view-transform'
 import type { AdvancedFilterColumn } from './AdvancedFilterDialog'
+import { VISUAL_UNDO_COMMAND_ID } from './undo-carry'
 import {
   installSparklines,
   installWorkbookVisuals,
@@ -1403,7 +1404,7 @@ interface WorkbookUndoStep {
   redo(): void
 }
 
-const WORKBOOK_UNDO_COMMAND_ID = 'sheets.mutation.workbook-edit-step'
+const WORKBOOK_UNDO_COMMAND_ID = VISUAL_UNDO_COMMAND_ID
 const workbookUndoRegistry = new Map<number, WorkbookUndoStep>()
 let workbookUndoSequence = 0
 const workbookUndoRuntimes = new WeakSet<object>()

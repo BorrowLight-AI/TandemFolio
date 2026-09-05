@@ -24,6 +24,7 @@ import {
 } from './edit-journal'
 import { t } from './i18n/locale'
 import { showToast } from './toast-bus'
+import { captureUndoCarry, hasPendingUndoCarry, stashUndoCarry } from './undo-carry'
 import {
   collectCfStates,
   collectDefinedNamesState,
@@ -307,6 +308,13 @@ export async function handleSave(
       return { ok: false, message: canceled }
     }
     if (!splitSave) {
+      // Saving replaces the workbook unit. Carry serializable native history
+      // to the reopened unit when sheet identities remain stable.
+      stashUndoCarry(
+        sheetOps.length === 0 && !hasPendingUndoCarry()
+          ? captureUndoCarry(ctx.univerRef.current, result.file.sha256)
+          : null,
+      )
       ctx.openLazyWorkbook(result.file)
       const saved = t('appSaved', {
         name: result.file.name,
@@ -317,6 +325,9 @@ export async function handleSave(
       if (!quiet) showToast(saved)
       return { ok: true, fileName: result.file.name }
     }
+    // Two-phase saves reopen across structural changes, so their coordinates
+    // and assigned sheet ids cannot safely carry history.
+    stashUndoCarry(null)
     try {
       const second = await window.desktopApi.saveWorkbookEdits({
         sessionId: result.file.sessionId,
