@@ -10557,6 +10557,44 @@ describe('XLSX operation registry', () => {
     expect(saveCalls).toBe(1)
   })
 
+  it('replaces manual page breaks through xlsx.sheet.set_page_breaks', async () => {
+    const editJournal = createEditJournal()
+    const worksheet = { getSheetName: () => 'Budget', getSheetId: () => 'sheet-1' }
+    const workbook = {
+      getId: () => undefined,
+      getSheets: () => [worksheet],
+      setActiveSheet: () => undefined,
+    }
+    const runtime = { univerAPI: { getActiveWorkbook: () => workbook } }
+    const state = {
+      editJournal,
+      file: { sheets: [{ id: 'sheet-1', name: 'Budget', pageSetup: {} }] },
+    }
+
+    await expect(
+      executeXlsxOperation(
+        {
+          operation: 'xlsx.sheet.set_page_breaks',
+          arguments: { sheet: 'Budget', rows: [11, 6, 6], columns: ['D', 'C'] },
+        },
+        {
+          runtime: () => runtime,
+          state: () => state,
+          loadStaged: async () => undefined,
+          save: async () => ({ ok: true, fileName: 'budget.xlsx' }),
+        },
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      ok: true,
+      output: { sheet: 'Budget', rows: [6, 11], columns: ['C', 'D'] },
+    })
+    expect(editJournal.pageSetup.get('sheet-1')).toMatchObject({
+      rowBreaks: [5, 10],
+      colBreaks: [2, 3],
+    })
+  })
+
   it('reports a canceled workbook save as execution_failed', async () => {
     await expect(
       executeXlsxOperation(

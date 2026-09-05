@@ -27048,6 +27048,81 @@
       ],
       "family": "sheet",
       "format": "xlsx",
+      "id": "xlsx.sheet.set_page_breaks",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "pattern": "^[A-Za-z]{1,3}$",
+              "type": "string"
+            },
+            "maxItems": 1023,
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "maximum": 1048576,
+              "minimum": 2,
+              "type": "integer"
+            },
+            "maxItems": 1023,
+            "type": "array"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sheet",
+          "rows",
+          "columns"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sheet",
+          "rows",
+          "columns"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Replace the manual row and column page breaks of an XLSX worksheet.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "sheet",
+      "format": "xlsx",
       "id": "xlsx.sheet.set_page_margins",
       "inputSchema": {
         "additionalProperties": false,

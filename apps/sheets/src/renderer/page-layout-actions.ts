@@ -151,6 +151,8 @@ type PageSetupPresetValues = {
   readonly printTitles: string | null
   readonly header: HeaderFooterParts | null
   readonly footer: HeaderFooterParts | null
+  readonly rowBreaks: number[]
+  readonly colBreaks: number[]
 }
 
 type PageSetupPresetState = Pick<LazyWorkbookState, 'editJournal'> &
@@ -406,6 +408,24 @@ export function applyWorkbookHeaderFooter(
   )
 }
 
+/** Replaces both manual page-break axes as one renderer-owned undo unit. */
+export function applyWorkbookPageBreaks(
+  runtime: UniverRuntime,
+  state: PageSetupPresetState,
+  sheetId: string,
+  rowBreaks: readonly number[],
+  colBreaks: readonly number[],
+  setPendingEdits?: (count: number) => void,
+): void {
+  applyWorkbookPageSetupPatch(
+    runtime,
+    state,
+    sheetId,
+    { rowBreaks: [...rowBreaks], colBreaks: [...colBreaks] },
+    setPendingEdits,
+  )
+}
+
 function isWorkbookPaperSize(value: number): value is WorkbookPaperSize {
   return (WORKBOOK_PAPER_SIZES as readonly number[]).includes(value)
 }
@@ -535,6 +555,58 @@ export function handlePageLayoutCommand(ctx: PageLayoutContext, rest: string): v
         `:${columnLabel(startColumn + range.getWidth() - 1)}${startRow + range.getHeight()}`
       applyWorkbookPrintArea(runtime, state, sheetId, area, ctx.setPendingEdits)
       ctx.setMessage(t('appPageSetupRecorded', { note: t('appPrintAreaNote', { area }) }))
+      return
+    }
+    case 'breaks': {
+      if (value !== 'insert' && value !== 'remove' && value !== 'reset') return
+      const currentRows = effectivePageSetupValue(state, sheetId, 'rowBreaks') ?? []
+      const currentColumns = effectivePageSetupValue(state, sheetId, 'colBreaks') ?? []
+      if (value === 'reset') {
+        applyWorkbookPageBreaks(runtime, state, sheetId, [], [], ctx.setPendingEdits)
+        ctx.setMessage(t('appPageSetupRecorded', { note: t('appBreaksReset') }))
+        return
+      }
+      const range = runtime.univerAPI.getActiveWorkbook()?.getActiveRange()
+      if (!range || !worksheet) {
+        ctx.setMessage(t('appBreaksNeedCell'))
+        return
+      }
+      const row = range.getRow()
+      const column = range.getColumn()
+      const fullRow = range.getWidth() >= worksheet.getMaxColumns()
+      const fullColumn = range.getHeight() >= worksheet.getMaxRows()
+      const wantRow = !fullColumn && row > 0
+      const wantColumn = !fullRow && column > 0
+      if (value === 'insert' && !wantRow && !wantColumn) {
+        ctx.setMessage(t('appBreaksNeedCell'))
+        return
+      }
+      const rowBreaks =
+        value === 'insert'
+          ? wantRow
+            ? [...new Set([...currentRows, row])].sort((a, b) => a - b)
+            : currentRows
+          : currentRows.filter((id) => !(wantRow && id === row))
+      const colBreaks =
+        value === 'insert'
+          ? wantColumn
+            ? [...new Set([...currentColumns, column])].sort((a, b) => a - b)
+            : currentColumns
+          : currentColumns.filter((id) => !(wantColumn && id === column))
+      if (
+        value === 'remove' &&
+        rowBreaks.length === currentRows.length &&
+        colBreaks.length === currentColumns.length
+      ) {
+        ctx.setMessage(t('appBreakNoneHere'))
+        return
+      }
+      applyWorkbookPageBreaks(runtime, state, sheetId, rowBreaks, colBreaks, ctx.setPendingEdits)
+      ctx.setMessage(
+        t('appPageSetupRecorded', {
+          note: t(value === 'insert' ? 'appBreakInserted' : 'appBreakRemoved'),
+        }),
+      )
       return
     }
     case 'print-titles': {

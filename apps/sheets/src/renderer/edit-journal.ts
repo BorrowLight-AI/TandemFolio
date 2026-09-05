@@ -211,6 +211,9 @@ export interface PageSetupJournalState {
   /// Printed header/footer, or null to clear; saved as <headerFooter>.
   header?: HeaderFooterParts | null
   footer?: HeaderFooterParts | null
+  /// Manual breaks before these 0-based row/column indexes; [] clears all.
+  rowBreaks?: number[]
+  colBreaks?: number[]
 }
 
 interface CellRange {
@@ -1165,6 +1168,21 @@ export function recordStructuralOp(
       shiftedLinks.set(next, target)
     }
     journal.hyperlinks.set(sheetId, shiftedLinks)
+  }
+  // A journaled break set uses live screen coordinates. Breaks inside a
+  // deleted span disappear; later breaks shift with the edited axis.
+  const pageSetup = journal.pageSetup.get(sheetId)
+  const breaksKey = axis === 'row' ? 'rowBreaks' : 'colBreaks'
+  const breaks = pageSetup?.[breaksKey]
+  if (pageSetup && breaks !== undefined) {
+    const moved = [
+      ...new Set(
+        breaks
+          .map(movePosition)
+          .filter((position): position is number => position !== null && position > 0),
+      ),
+    ].sort((a, b) => a - b)
+    journal.pageSetup.set(sheetId, { ...pageSetup, [breaksKey]: moved })
   }
   // Session visuals and pending chart edits follow the same shift: the save
   // appends/applies them after the file's own structural pass, so they must

@@ -4242,6 +4242,48 @@ export const xlsxOperationCatalog = {
       compatibilityAliases: [],
     },
     {
+      id: 'xlsx.sheet.set_page_breaks',
+      format: 'xlsx',
+      family: 'sheet',
+      summary: 'Replace the manual row and column page breaks of an XLSX worksheet.',
+      visibility: 'agent',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          sheet: { type: 'string' },
+          rows: {
+            type: 'array',
+            items: { type: 'integer', minimum: 2, maximum: 1_048_576 },
+            maxItems: 1_023,
+          },
+          columns: {
+            type: 'array',
+            items: { type: 'string', pattern: '^[A-Za-z]{1,3}$' },
+            maxItems: 1_023,
+          },
+        },
+        required: ['sheet', 'rows', 'columns'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          sheet: { type: 'string' },
+          rows: { type: 'array', items: { type: 'integer' } },
+          columns: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['sheet', 'rows', 'columns'],
+        additionalProperties: false,
+      },
+      risk: 'medium',
+      context: ['document'],
+      effects: ['document'],
+      mutates: true,
+      undoable: true,
+      atomic: true,
+      compatibilityAliases: [],
+    },
+    {
       id: 'xlsx.sheet.set_print_area',
       format: 'xlsx',
       family: 'sheet',

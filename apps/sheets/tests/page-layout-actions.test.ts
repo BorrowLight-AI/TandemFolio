@@ -290,4 +290,142 @@ describe('page layout actions', () => {
     expect(editJournal.pageSetup.size).toBe(0)
     expect(messages.at(-1)).toContain('21')
   })
+
+  it('inserts a manual row and column break before the active cell', () => {
+    const editJournal = createEditJournal()
+    const worksheet = {
+      getSheetId: () => 'sheet-1',
+      getMaxRows: () => 1_000,
+      getMaxColumns: () => 100,
+    }
+    const workbook = {
+      getId: () => undefined,
+      getActiveSheet: () => worksheet,
+      getActiveRange: () => ({
+        getRow: () => 5,
+        getColumn: () => 2,
+        getHeight: () => 1,
+        getWidth: () => 1,
+      }),
+    }
+    const ctx = {
+      univerRef: { current: { univerAPI: { getActiveWorkbook: () => workbook } } },
+      lazyWorkbookRef: {
+        current: {
+          editJournal,
+          file: { sheets: [{ id: 'sheet-1', name: 'Budget', pageSetup: {} }] },
+        },
+      },
+      setMessage: () => undefined,
+      setPendingEdits: () => undefined,
+    } as unknown as PageLayoutContext
+
+    handlePageLayoutCommand(ctx, 'breaks:insert')
+
+    expect(editJournal.pageSetup.get('sheet-1')).toMatchObject({ rowBreaks: [5], colBreaks: [2] })
+  })
+
+  it('inserts only a row break for a full-row selection', () => {
+    const editJournal = createEditJournal()
+    const worksheet = {
+      getSheetId: () => 'sheet-1',
+      getMaxRows: () => 1_000,
+      getMaxColumns: () => 100,
+    }
+    const workbook = {
+      getId: () => undefined,
+      getActiveSheet: () => worksheet,
+      getActiveRange: () => ({
+        getRow: () => 5,
+        getColumn: () => 0,
+        getHeight: () => 1,
+        getWidth: () => 100,
+      }),
+    }
+    const ctx = {
+      univerRef: { current: { univerAPI: { getActiveWorkbook: () => workbook } } },
+      lazyWorkbookRef: {
+        current: {
+          editJournal,
+          file: { sheets: [{ id: 'sheet-1', name: 'Budget', pageSetup: {} }] },
+        },
+      },
+      setMessage: () => undefined,
+      setPendingEdits: () => undefined,
+    } as unknown as PageLayoutContext
+
+    handlePageLayoutCommand(ctx, 'breaks:insert')
+
+    expect(editJournal.pageSetup.get('sheet-1')).toMatchObject({ rowBreaks: [5], colBreaks: [] })
+  })
+
+  it('inserts only a column break for a full-column selection', () => {
+    const editJournal = createEditJournal()
+    const worksheet = {
+      getSheetId: () => 'sheet-1',
+      getMaxRows: () => 1_000,
+      getMaxColumns: () => 100,
+    }
+    const workbook = {
+      getId: () => undefined,
+      getActiveSheet: () => worksheet,
+      getActiveRange: () => ({
+        getRow: () => 0,
+        getColumn: () => 2,
+        getHeight: () => 1_000,
+        getWidth: () => 1,
+      }),
+    }
+    const ctx = {
+      univerRef: { current: { univerAPI: { getActiveWorkbook: () => workbook } } },
+      lazyWorkbookRef: {
+        current: {
+          editJournal,
+          file: { sheets: [{ id: 'sheet-1', name: 'Budget', pageSetup: {} }] },
+        },
+      },
+      setMessage: () => undefined,
+      setPendingEdits: () => undefined,
+    } as unknown as PageLayoutContext
+
+    handlePageLayoutCommand(ctx, 'breaks:insert')
+
+    expect(editJournal.pageSetup.get('sheet-1')).toMatchObject({ rowBreaks: [], colBreaks: [2] })
+  })
+
+  it('does not create an empty page-break edit at the top-left cell', () => {
+    const editJournal = createEditJournal()
+    const messages: string[] = []
+    const worksheet = {
+      getSheetId: () => 'sheet-1',
+      getMaxRows: () => 1_000,
+      getMaxColumns: () => 100,
+    }
+    const workbook = {
+      getId: () => undefined,
+      getActiveSheet: () => worksheet,
+      getActiveRange: () => ({
+        getRow: () => 0,
+        getColumn: () => 0,
+        getHeight: () => 1,
+        getWidth: () => 1,
+      }),
+    }
+    const ctx = {
+      univerRef: { current: { univerAPI: { getActiveWorkbook: () => workbook } } },
+      lazyWorkbookRef: {
+        current: {
+          editJournal,
+          file: { sheets: [{ id: 'sheet-1', name: 'Budget', pageSetup: {} }] },
+        },
+      },
+      setMessage: (message: string) => messages.push(message),
+      setPendingEdits: () => undefined,
+    } as unknown as PageLayoutContext
+
+    handlePageLayoutCommand(ctx, 'breaks:insert')
+
+    expect(editJournal.pageSetup.size).toBe(0)
+    expect(messages.at(-1)).toContain('第 1 行')
+  })
 })

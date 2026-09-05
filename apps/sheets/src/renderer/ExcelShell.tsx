@@ -215,6 +215,7 @@ export interface PageLayoutEcho {
   readonly printTitles?: string | null | undefined
   readonly header?: HeaderFooterParts | null | undefined
   readonly footer?: HeaderFooterParts | null | undefined
+  readonly pageBreakPreview?: boolean | undefined
 }
 
 export function ExcelShell({
@@ -1612,7 +1613,11 @@ function Ribbon({
               { value: 'page-layout:print-area:clear', label: t('appClearPrintArea') },
             ],
           )}
-          <RibbonReserved large menu label={t('appBreaks')} symbol="┆" />
+          {largeMenu(t('appBreaks'), '┆', t('appBreaks'), [
+            { value: 'page-layout:breaks:insert', label: t('appInsertPageBreak') },
+            { value: 'page-layout:breaks:remove', label: t('appRemovePageBreak') },
+            { value: 'page-layout:breaks:reset', label: t('appResetAllPageBreaks') },
+          ])}
           <RibbonReserved large label={t('appBackground')} symbol="🖼" />
           {largeMenu(
             t('appPrintTitlesLabel'),
@@ -1975,16 +1980,27 @@ function Ribbon({
     return (
       <div className="ribbon">
         <RibbonGroup label={t('appGroupWorkbookViews')}>
-          <div className="ribbon-tool large is-current" data-tip={t('appCurrentViewTitle')}>
-            <span className="tool-icon-row">
-              <ToolSymbol symbol="▦" />
-            </span>
-            <span>
-              <strong>{t('appNormalView')}</strong>
-            </span>
-          </div>
+          <RibbonButton
+            large
+            label={t('appNormalView')}
+            detail={t('appCurrentViewTitle')}
+            symbol="▦"
+            active={pageLayout.pageBreakPreview !== true}
+            onClick={() => {
+              if (pageLayout.pageBreakPreview === true) onCommand('toggle-page-break-preview')
+            }}
+          />
           <RibbonReserved large label={t('appTabPageLayout')} symbol="🗎" />
-          <RibbonReserved large label={t('appPageBreakPreview')} symbol="┆" />
+          <RibbonButton
+            large
+            label={t('appPageBreakPreview')}
+            detail={t('appPageBreakPreview')}
+            symbol="┆"
+            active={pageLayout.pageBreakPreview === true}
+            onClick={() => {
+              if (pageLayout.pageBreakPreview !== true) onCommand('toggle-page-break-preview')
+            }}
+          />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupShow')}>
           <div className="check-column">

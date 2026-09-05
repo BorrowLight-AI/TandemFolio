@@ -798,6 +798,8 @@ export const workbookPageSetupStateSchema = z
     /// Printed header/footer sections, or null to clear that half.
     header: z.union([headerFooterPartsSchema, z.null()]).optional(),
     footer: z.union([headerFooterPartsSchema, z.null()]).optional(),
+    rowBreaks: z.array(z.number().int().min(1).max(1_048_575)).max(1_023).optional(),
+    colBreaks: z.array(z.number().int().min(1).max(16_383)).max(1_023).optional(),
   })
   .strict()
   .refine((state) => Object.keys(state).length > 1, {

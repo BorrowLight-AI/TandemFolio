@@ -195,6 +195,35 @@ describe('applyPageSetupState headerFooter', () => {
   })
 })
 
+describe('applyPageSetupState manual page breaks', () => {
+  it('writes sorted deduplicated row and column break sets in schema order', () => {
+    const xml = applyPageSetupState(
+      '<worksheet><sheetData/><headerFooter><oddHeader>&amp;CTitle</oddHeader></headerFooter>' +
+        '<tableParts count="0"/></worksheet>',
+      { sheetName: 'S', rowBreaks: [20, 10, 20], colBreaks: [3] },
+    )
+    expect(xml).toContain(
+      '<rowBreaks count="2" manualBreakCount="2">' +
+        '<brk id="10" max="16383" man="1"/><brk id="20" max="16383" man="1"/></rowBreaks>' +
+        '<colBreaks count="1" manualBreakCount="1">' +
+        '<brk id="3" max="1048575" man="1"/></colBreaks>',
+    )
+    expect(xml.indexOf('</headerFooter>')).toBeLessThan(xml.indexOf('<rowBreaks'))
+    expect(xml.indexOf('</colBreaks>')).toBeLessThan(xml.indexOf('<tableParts'))
+  })
+
+  it('clears only the requested break axis', () => {
+    const xml =
+      '<worksheet><sheetData/>' +
+      '<rowBreaks count="1" manualBreakCount="1"><brk id="5" max="16383" man="1"/></rowBreaks>' +
+      '<colBreaks count="1" manualBreakCount="1"><brk id="2" max="1048575" man="1"/></colBreaks>' +
+      '</worksheet>'
+    const cleared = applyPageSetupState(xml, { sheetName: 'S', rowBreaks: [] })
+    expect(cleared).not.toContain('<rowBreaks')
+    expect(cleared).toContain('<colBreaks count="1"')
+  })
+})
+
 const WORKBOOK =
   '<workbook><sheets>' +
   '<sheet name="Sheet1" sheetId="1" r:id="rId1"/>' +

@@ -437,6 +437,29 @@ describe('browser XLSX workbook', () => {
     expect(file.date1904).toBe(true)
   })
 
+  it('reads, replaces, and reopens manual page breaks', async () => {
+    const zip = await JSZip.loadAsync(await fixture())
+    const sheetXml = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      sheetXml.replace(
+        '</worksheet>',
+        '<rowBreaks count="1" manualBreakCount="1"><brk id="5" max="16383" man="1"/></rowBreaks>' +
+          '<colBreaks count="1" manualBreakCount="1"><brk id="2" max="1048575" man="1"/></colBreaks></worksheet>',
+      ),
+    )
+    const workbook = await openBrowserWorkbook(
+      await zip.generateAsync({ type: 'uint8array' }),
+      'breaks.xlsx',
+    )
+    expect(workbook.pageSetup('Budget')).toMatchObject({ rowBreaks: [5], colBreaks: [2] })
+
+    workbook.applyPageSetup('Budget', { rowBreaks: [7], colBreaks: [] })
+    expect((await openBrowserWorkbook(await workbook.save(), 'breaks.xlsx')).pageSetup('Budget')).toMatchObject(
+      { rowBreaks: [7], colBreaks: [] },
+    )
+  })
+
   it('sets and reopens native allow-edit ranges on a worksheet', async () => {
     const workbook = await openBrowserWorkbook(await fixture(), 'budget.xlsx')
     expect(workbook.protectedRanges('Budget')).toEqual([])

@@ -249,6 +249,7 @@ import {
   handlePageLayoutCommand as handlePageLayoutCommandImpl,
   type PageLayoutContext,
 } from './page-layout-actions'
+import { effectivePageBreaks, installPageBreakPreview } from './page-break-preview'
 import {
   handleSave as handleSaveImpl,
   type SaveActionResult,
@@ -381,6 +382,11 @@ export function App(): React.JSX.Element {
     disposables: [],
     nextId: 0,
   })
+  const [pageBreakPreviewSheets, setPageBreakPreviewSheets] = useState<ReadonlySet<string>>(
+    new Set(),
+  )
+  const pageBreakLayersRef = useRef<Map<string, { dispose(): void }[]>>(new Map())
+  const pageBreakIdRef = useRef(0)
   const visualInstallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sparklineDisposablesRef = useRef<{ dispose(): void }[]>([])
   const sparklineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -2204,6 +2210,63 @@ export function App(): React.JSX.Element {
     void univerRef.current?.univerAPI.redo()
   }
 
+  function disposePageBreakLayers(sheetId: string): void {
+    for (const disposable of pageBreakLayersRef.current.get(sheetId) ?? []) disposable.dispose()
+    pageBreakLayersRef.current.delete(sheetId)
+  }
+
+  function installPageBreakLayers(sheetId: string): void {
+    const runtime = univerRef.current
+    const state = lazyWorkbookRef.current
+    const worksheet = runtime?.univerAPI.getActiveWorkbook()?.getSheetBySheetId(sheetId)
+    if (!runtime || !state || !worksheet) return
+    const fileSheet = state.file.sheets.find((sheet) => sheet.id === sheetId)
+    const base = (
+      fileSheet as
+        | (typeof fileSheet & { readonly pageSetup?: PageSetupJournalState })
+        | undefined
+    )?.pageSetup
+    const setup = { ...base, ...(state.editJournal.pageSetup.get(sheetId) ?? {}) }
+    disposePageBreakLayers(sheetId)
+    pageBreakIdRef.current += 1
+    pageBreakLayersRef.current.set(
+      sheetId,
+      installPageBreakPreview(
+        runtime,
+        worksheet,
+        setup,
+        effectivePageBreaks(state, sheetId),
+        { rows: fileSheet?.rowCount ?? 1, columns: fileSheet?.columnCount ?? 1 },
+        `page-break-${pageBreakIdRef.current}`,
+      ),
+    )
+  }
+
+  function refreshPageBreakPreview(): void {
+    for (const sheetId of pageBreakPreviewSheets) installPageBreakLayers(sheetId)
+  }
+
+  function togglePageBreakPreview(): void {
+    const sheetId = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getSheetId()
+    if (!lazyWorkbookRef.current || !sheetId) {
+      setMessage(t('appPageSetupNeedsFile'))
+      return
+    }
+    if (pageBreakPreviewSheets.has(sheetId)) {
+      disposePageBreakLayers(sheetId)
+      setPageBreakPreviewSheets((sheets) => {
+        const next = new Set(sheets)
+        next.delete(sheetId)
+        return next
+      })
+      setMessage(t('appPageBreakPreviewOff'))
+      return
+    }
+    installPageBreakLayers(sheetId)
+    setPageBreakPreviewSheets((sheets) => new Set(sheets).add(sheetId))
+    setMessage(t('appPageBreakPreviewOn'))
+  }
+
   /** App-scope refs/state bundle for the extracted ribbon dispatcher (ribbon-actions.ts). */
   function ribbonContext(): RibbonCommandContext {
     return {
@@ -2232,13 +2295,20 @@ export function App(): React.JSX.Element {
       visualContext,
       dataToolsContext,
       pivotContext,
-      handlePageLayoutCommand: (rest) => handlePageLayoutCommandImpl(pageLayoutContext(), rest),
+      handlePageLayoutCommand: (rest) => {
+        handlePageLayoutCommandImpl(pageLayoutContext(), rest)
+        refreshPageBreakPreview()
+      },
       handleExportPdf: () => handleExportPdfImpl(pageLayoutContext()),
     }
   }
 
   function handleRibbonCommand(command: string): void {
     const runtime = univerRef.current
+    if (command === 'toggle-page-break-preview') {
+      togglePageBreakPreview()
+      return
+    }
     if (command === 'calc-mode:auto' || command === 'calc-mode:manual') {
       if (!runtime) return
       const manual = command === 'calc-mode:manual'
@@ -2347,6 +2417,8 @@ export function App(): React.JSX.Element {
     }
     disposeVisuals(demoVisualDisposablesRef.current)
     demoVisualDisposablesRef.current = []
+    for (const sheetId of pageBreakLayersRef.current.keys()) disposePageBreakLayers(sheetId)
+    setPageBreakPreviewSheets(new Set())
     const state: LazyWorkbookState = {
       file: selected,
       generation: Date.now(),
@@ -2703,6 +2775,7 @@ export function App(): React.JSX.Element {
         journalState.showGridlines ??
         baseState.showGridlines ??
         (worksheet ? !worksheet.hasHiddenGridLines() : true),
+      pageBreakPreview: worksheet ? pageBreakPreviewSheets.has(worksheet.getSheetId()) : false,
     }
   })()
 

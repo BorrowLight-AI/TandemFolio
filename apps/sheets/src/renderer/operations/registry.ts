@@ -9,7 +9,14 @@ import {
 } from '@univerjs/core'
 import { LexerTreeBuilder } from '@univerjs/engine-formula'
 
-import { formatAddress, parseAddress, parseRange, rangeCellCount } from '../../domain/cell-address'
+import {
+  columnIndex,
+  columnLabel,
+  formatAddress,
+  parseAddress,
+  parseRange,
+  rangeCellCount,
+} from '../../domain/cell-address'
 import type {
   AddChartOperation,
   AddPivotOperation,
@@ -80,6 +87,7 @@ import {
   applyWorkbookHeaderFooter,
   applyWorkbookPageMargins,
   applyWorkbookPageOrientation,
+  applyWorkbookPageBreaks,
   applyWorkbookPaperSize,
   applyWorkbookPrintArea,
   applyWorkbookPrintGridlines,
@@ -4641,6 +4649,41 @@ const handlers = {
       services.setPendingEdits,
     )
     return { ok: true, output: { sheet, enabled } }
+  },
+  'xlsx.sheet.set_page_breaks': (arguments_, services) => {
+    const sheet = arguments_.sheet as string
+    const rows = [...new Set(arguments_.rows as number[])].sort((a, b) => a - b)
+    const columns = [...new Set((arguments_.columns as string[]).map((label) => label.toUpperCase()))]
+      .map((label) => ({ label, index: columnIndex(label) }))
+      .filter(({ index }) => index <= 16_383)
+      .sort((a, b) => a.index - b.index)
+    if (columns.length !== new Set((arguments_.columns as string[]).map((label) => label.toUpperCase())).size) {
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'xlsx.sheet.set_page_breaks columns must be valid Excel column labels.',
+      }
+    }
+    const runtime = services.runtime()
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    const state = xlsxOperationState(services)
+    const worksheet = xlsxWorksheet(runtime, sheet)
+    applyWorkbookPageBreaks(
+      runtime,
+      state,
+      worksheet.getSheetId(),
+      rows.map((row) => row - 1),
+      columns.map(({ index }) => index),
+      services.setPendingEdits,
+    )
+    return {
+      ok: true,
+      output: {
+        sheet,
+        rows,
+        columns: columns.map(({ index }) => columnLabel(index)),
+      },
+    }
   },
   'xlsx.sheet.set_print_area': (arguments_, services) => {
     const sheet = arguments_.sheet as string

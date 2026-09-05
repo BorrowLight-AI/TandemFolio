@@ -37,6 +37,10 @@ export interface SheetPageSetupState {
   /// Printed header/footer; null clears that half, undefined keeps it.
   readonly header?: HeaderFooterParts | null | undefined
   readonly footer?: HeaderFooterParts | null | undefined
+  /// Manual page breaks (0-based index of the row/column after the break).
+  /// Presence replaces the sheet's break set; [] clears that axis.
+  readonly rowBreaks?: readonly number[] | undefined
+  readonly colBreaks?: readonly number[] | undefined
 }
 
 /// Inches, using the standard margin presets.
@@ -54,6 +58,12 @@ const AFTER_PAGE_SETUP =
 /// CT_Worksheet order: elements that may follow headerFooter.
 const AFTER_HEADER_FOOTER =
   /<rowBreaks\b|<colBreaks\b|<customProperties\b|<cellWatches\b|<ignoredErrors\b|<smartTags\b|<drawing\b|<legacyDrawing\b|<legacyDrawingHF\b|<picture\b|<oleObjects\b|<controls\b|<webPublishItems\b|<tableParts\b|<extLst\b/
+
+const AFTER_ROW_BREAKS =
+  /<colBreaks\b|<customProperties\b|<cellWatches\b|<ignoredErrors\b|<smartTags\b|<drawing\b|<legacyDrawing\b|<legacyDrawingHF\b|<picture\b|<oleObjects\b|<controls\b|<webPublishItems\b|<tableParts\b|<extLst\b/
+
+const AFTER_COL_BREAKS =
+  /<customProperties\b|<cellWatches\b|<ignoredErrors\b|<smartTags\b|<drawing\b|<legacyDrawing\b|<legacyDrawingHF\b|<picture\b|<oleObjects\b|<controls\b|<webPublishItems\b|<tableParts\b|<extLst\b/
 
 function insertWorksheetElement(xml: string, element: string, anchor: RegExp): string {
   const found = anchor.exec(xml)
@@ -290,6 +300,25 @@ function setHeaderFooter(
   return insertWorksheetElement(xml, element, AFTER_HEADER_FOOTER)
 }
 
+function setPageBreaks(
+  xml: string,
+  tag: 'rowBreaks' | 'colBreaks',
+  breaks: readonly number[],
+  anchor: RegExp,
+): string {
+  const existing = new RegExp(`<${tag}\\b[^>]*(?:/>|>[\\s\\S]*?</${tag}>)`).exec(xml)
+  const result = existing
+    ? xml.slice(0, existing.index) + xml.slice(existing.index + existing[0].length)
+    : xml
+  const ids = [...new Set(breaks)].filter((id) => id > 0).sort((a, b) => a - b)
+  if (ids.length === 0) return result
+  const max = tag === 'rowBreaks' ? 16_383 : 1_048_575
+  const body = ids.map((id) => `<brk id="${id}" max="${max}" man="1"/>`).join('')
+  const element =
+    `<${tag} count="${ids.length}" manualBreakCount="${ids.length}">` + body + `</${tag}>`
+  return insertWorksheetElement(result, element, anchor)
+}
+
 export function applyPageSetupState(worksheetXml: string, state: SheetPageSetupState): string {
   let xml = worksheetXml
 
@@ -363,6 +392,12 @@ export function applyPageSetupState(worksheetXml: string, state: SheetPageSetupS
   }
   if (state.header !== undefined || state.footer !== undefined) {
     xml = setHeaderFooter(xml, state.header, state.footer)
+  }
+  if (state.rowBreaks !== undefined) {
+    xml = setPageBreaks(xml, 'rowBreaks', state.rowBreaks, AFTER_ROW_BREAKS)
+  }
+  if (state.colBreaks !== undefined) {
+    xml = setPageBreaks(xml, 'colBreaks', state.colBreaks, AFTER_COL_BREAKS)
   }
   return xml
 }

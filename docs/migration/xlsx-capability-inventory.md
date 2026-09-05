@@ -2,7 +2,7 @@
 
 - Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Renderer-source status: complete for the permitted pinned community source set
-- Capability status: 120 XLSX registry operations (118 Agent-visible, two internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, and allow-edit ranges while retaining the audited baseline command surface
+- Capability status: 121 XLSX registry operations (119 Agent-visible, two internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, and manual page breaks while retaining the audited baseline command surface
 - Product readiness: candidate-native migration is in progress and requires a new source-current
   release capture; capability discovery therefore remains fail-closed
 
@@ -32,6 +32,9 @@ save/reopen handling. Worksheet protection toggles now use that native Undo path
 The browser workbook reads and preserves `workbookPr/@date1904`; static calendar values render and
 feed pivot grouping with the 1462-day epoch shift, while formula results, time-only formats, and
 elapsed-time formats keep their native calculation semantics.
+Page Layout manual row/column breaks and `xlsx.sheet.set_page_breaks` share one file-journal
+projection, renderer-owned Undo, structural-coordinate remapping, worksheet XML save/reopen state,
+and a bounded Univer canvas preview that distinguishes automatic and manual boundaries.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until

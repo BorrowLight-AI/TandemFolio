@@ -17,6 +17,7 @@ import {
   recordSheetRename,
   recordChartEdit,
   recordPivotAdd,
+  recordPageSetup,
   recordStructuralOp,
   recordTableAdd,
   recordVisualAdd,
@@ -848,5 +849,17 @@ describe('recordStructuralOp move-rows', () => {
     const restored = journal.cells.get('sheet-1')
     expect(restored?.get('1:0')?.value).toBe('moved')
     expect(restored?.get('3:0')?.value).toBe('displaced')
+  })
+})
+
+describe('recordStructuralOp page breaks', () => {
+  it('shifts and drops journaled page breaks with structural edits', () => {
+    const journal = createEditJournal()
+    recordPageSetup(journal, 'sheet-1', { rowBreaks: [3, 8], colBreaks: [2] })
+    recordStructuralOp(journal, 'sheet-1', { kind: 'insert-rows', index: 5, count: 2 })
+    expect(journal.pageSetup.get('sheet-1')?.rowBreaks).toEqual([3, 10])
+    recordStructuralOp(journal, 'sheet-1', { kind: 'remove-rows', index: 2, count: 3 })
+    expect(journal.pageSetup.get('sheet-1')?.rowBreaks).toEqual([7])
+    expect(journal.pageSetup.get('sheet-1')?.colBreaks).toEqual([2])
   })
 })

@@ -136,6 +136,11 @@ cover its retained producer baseline. Markdown is included in the passing R6-01 
 
 ## XLSX
 
+- `xlsx.calculation.set_mode { mode }`: set the mounted workbook to explicit `automatic` or `manual` calculation through the same native state and Undo path as the Formulas ribbon.
+- `xlsx.calculation.recalculate { scope }`: recalculate the complete mounted workbook or active worksheet without creating an edit revision.
+- `xlsx.calculation.goal_seek { setCell, toValue, byCell }`: solve one input cell so the formula in `setCell` approaches a finite numeric target, returning the reached value, solution, and bounded iteration count through native Undo.
+- `xlsx.document.set_theme { mode, scheme }`: apply a retained workbook theme, color scheme, or font scheme through mounted style state and persisted `theme1.xml` projection.
+- `xlsx.document.set_protection { lockStructure }`: set final passwordless workbook structure protection; removal of password-protected state fails closed.
 - `xlsx.cell.set_value { sheet, address, value }`: set one scalar cell. Legacy `set_cell_value` is an input-only alias.
 - `xlsx.range.set_values { sheet, range, values }`: set one bounded non-empty scalar matrix. Legacy `set_range_values` is an input-only alias.
 - `xlsx.range.set_text_style { sheet, range, style, fields }`: explicitly set or clear bold, italic, strike, and `none | single | double` underline fields as one native range mutation. `fields` must uniquely and exactly name the supplied style values.
@@ -212,6 +217,8 @@ cover its retained producer baseline. Markdown is included in the passing R6-01 
 - `xlsx.sheet.set_visibility { sheet, visible }`: set an explicit final worksheet visibility while preserving the at-least-one-visible-sheet invariant.
 - `xlsx.sheet.set_tab_color { sheet, color }`: set a `#RRGGBB` tab color or clear it with `null` through native history and OOXML `sheetPr` persistence.
 - `xlsx.sheet.set_header_footer { sheet, header, footer }`: replace bounded nullable left/center/right header and footer sections through the shared page-setup journal.
+- `xlsx.sheet.set_page_breaks { sheet, rows, columns }`: replace the complete manual row and column page-break sets as one renderer-owned Undo unit; rows are 1-based worksheet rows and columns are A1 labels, and save/reopen preserves worksheet break XML.
+- `xlsx.sheet.set_protected_ranges { sheet, ranges }`: replace native allow-edit ranges with explicit names and worksheet references; password or permission metadata fails closed, and structural edits remap retained ranges.
 - `xlsx.table.insert_rows`, `xlsx.table.delete_rows`, `xlsx.table.insert_columns`, `xlsx.table.delete_columns`, and `xlsx.table.convert_to_range`: edit one stable named table with bounded table-relative row/column coordinates through retained table history and save/reopen.
 - `xlsx.pivot.add { sourceSheet, sourceRange, targetSheet, targetCell, name, rowFields, columnFields, pageFields, values }`: create a native PivotTable from explicit fields and bounded ranges.
 - `xlsx.pivot.refresh { sheet }`: recompute retained pivots on a named sheet and flag their native caches for refresh on open.
@@ -231,9 +238,10 @@ operation and its `open_local_file` transport alias are hidden from capability d
 be called through `office_execute`; success returns `{ opened: true, fileName }` after the mounted
 renderer accepts the hydrated workbook bytes.
 
-Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 118 public
+Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 119 public
 XLSX operations include the audited retained command surface and candidate-native calculation mode,
-recalculation, Goal Seek, native workbook themes, workbook structure protection, and allow-edit ranges; two internal operations carry staged workbook/image bytes. The current
+recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges,
+and manual page breaks; two internal operations carry staged workbook/image bytes. The current
 candidate-native migration keeps source-current release readiness fail-closed until recapture.
 
 ## PPTX
