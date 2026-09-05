@@ -102,6 +102,7 @@ import { installCenterContinuousRender } from './center-continuous'
 import { installMergeBorderFix } from './merge-border-fix'
 import { installThickBorderFix } from './thick-border-fix'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
+import { solveGoalSeek } from './goal-seek'
 import {
   CLEAR_SELECTION_CONTENT_COMMAND,
   shouldInterceptClearSelection,
@@ -2773,6 +2774,11 @@ export function App(): React.JSX.Element {
         onApplyFormula={(formula) => handleApplyFormulaImpl(dataToolsContext(), formula)}
         onCreateSubtotal={(config) => handleCreateSubtotalImpl(dataToolsContext(), config)}
         onCreateConsolidate={(config) => handleCreateConsolidateImpl(dataToolsContext(), config)}
+        onGoalSeek={(setCell, toValue, byCell) => {
+          const runtime = univerRef.current
+          if (!runtime) return Promise.reject(new Error(t('appWorkbookNotReady')))
+          return solveGoalSeek(runtime, { setCell, toValue, byCell })
+        }}
         onGetConsolidateDefault={() => consolidateDefaultReferenceImpl(dataToolsContext())}
         onApplyHeaderFooter={(result) => handleApplyHeaderFooterImpl(pageLayoutContext(), result)}
       />

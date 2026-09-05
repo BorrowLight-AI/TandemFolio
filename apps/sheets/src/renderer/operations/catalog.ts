@@ -64,6 +64,41 @@ export const xlsxOperationCatalog = {
   format: 'xlsx',
   operations: [
     {
+      id: 'xlsx.calculation.goal_seek',
+      format: 'xlsx',
+      family: 'calculation',
+      summary: 'Solve one input cell so a formula cell reaches a numeric target.',
+      visibility: 'agent',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          setCell: { type: 'string', pattern: '^[A-Za-z]{1,3}[1-9][0-9]{0,6}$' },
+          toValue: { type: 'number' },
+          byCell: { type: 'string', pattern: '^[A-Za-z]{1,3}[1-9][0-9]{0,6}$' },
+        },
+        required: ['setCell', 'toValue', 'byCell'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          found: { type: 'boolean' },
+          reached: { type: 'number' },
+          solution: { type: 'number' },
+          iterations: { type: 'integer', minimum: 1, maximum: 100 },
+        },
+        required: ['found', 'reached', 'solution', 'iterations'],
+        additionalProperties: false,
+      },
+      risk: 'medium',
+      context: ['document'],
+      effects: ['document'],
+      mutates: true,
+      undoable: true,
+      atomic: false,
+      compatibilityAliases: [],
+    },
+    {
       id: 'xlsx.cell.set_value',
       format: 'xlsx',
       family: 'cell',

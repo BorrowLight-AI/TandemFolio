@@ -231,10 +231,10 @@ operation and its `open_local_file` transport alias are hidden from capability d
 be called through `office_execute`; success returns `{ opened: true, fileName }` after the mounted
 renderer accepts the hydrated workbook bytes.
 
-Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 112 public
-XLSX operations cover every retained state-changing command audited through R2-131; two internal
-operations carry staged workbook/image bytes. XLSX passes the repository-wide packaged-host
-visual, performance/resource, MCP smoke, and all-format R6-01 release gates.
+Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 115 public
+XLSX operations include the audited retained command surface and candidate-native calculation mode,
+recalculation, and Goal Seek; two internal operations carry staged workbook/image bytes. The current
+candidate-native migration keeps source-current release readiness fail-closed until recapture.
 
 ## PPTX
 

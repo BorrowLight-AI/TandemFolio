@@ -19288,6 +19288,72 @@
       "visibility": "agent"
     },
     {
+      "atomic": false,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "calculation",
+      "format": "xlsx",
+      "id": "xlsx.calculation.goal_seek",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "byCell": {
+            "pattern": "^[A-Za-z]{1,3}[1-9][0-9]{0,6}$",
+            "type": "string"
+          },
+          "setCell": {
+            "pattern": "^[A-Za-z]{1,3}[1-9][0-9]{0,6}$",
+            "type": "string"
+          },
+          "toValue": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "setCell",
+          "toValue",
+          "byCell"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "iterations": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reached": {
+            "type": "number"
+          },
+          "solution": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "found",
+          "reached",
+          "solution",
+          "iterations"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Solve one input cell so a formula cell reaches a numeric target.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
       "atomic": true,
       "compatibilityAliases": [],
       "context": [

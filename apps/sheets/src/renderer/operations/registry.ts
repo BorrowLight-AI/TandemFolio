@@ -69,6 +69,7 @@ import {
 import { journalSize, recordNoteChange, type HeaderFooterParts } from '../edit-journal'
 import { applyWorkbookFormulaView } from '../formula-view'
 import { quadraticFormulaError } from '../formula-cost'
+import { solveGoalSeek } from '../goal-seek'
 import {
   applyCalculationMode,
   calculateNow,
@@ -1174,6 +1175,16 @@ function normalizeXlsxComparisonOperand(
 }
 
 const handlers = {
+  'xlsx.calculation.goal_seek': async (arguments_, services) => {
+    const runtime = services.runtime()
+    if (!runtime) throw new Error('Open an XLSX workbook first.')
+    const result = await solveGoalSeek(runtime, {
+      setCell: arguments_.setCell as string,
+      toValue: arguments_.toValue as number,
+      byCell: arguments_.byCell as string,
+    })
+    return { ok: true, output: { ...result } }
+  },
   'xlsx.calculation.set_mode': (arguments_, services) => {
     const runtime = services.runtime()
     if (!runtime) throw new Error('Open an XLSX workbook first.')

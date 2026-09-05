@@ -36,6 +36,8 @@ import { ConsolidateDialog } from './ConsolidateDialog'
 import type { ConsolidateConfig } from './consolidate'
 import { HeaderFooterDialog, type HeaderFooterResult } from './HeaderFooterDialog'
 import type { HeaderFooterParts } from './header-footer-types'
+import { GoalSeekDialog } from './GoalSeekDialog'
+import type { GoalSeekResult } from './goal-seek'
 
 // No File tab: file commands live in the macOS
 // application menu (File → Open/Save/Save As) and the toolbar icons.
@@ -179,6 +181,11 @@ interface ExcelShellProps {
   readonly onApplyFormula: (formula: string) => string | null
   readonly onCreateSubtotal: (config: SubtotalConfig) => string | null
   readonly onCreateConsolidate: (config: ConsolidateConfig) => string | null
+  readonly onGoalSeek: (
+    setCell: string,
+    toValue: number,
+    byCell: string,
+  ) => Promise<GoalSeekResult>
   /// Prefill for the Consolidate reference input (current multi-cell selection).
   readonly onGetConsolidateDefault: () => string
   /// Header & Footer dialog OK; returns an error message, or null on success.
@@ -229,6 +236,7 @@ export function ExcelShell({
   onApplyFormula,
   onCreateSubtotal,
   onCreateConsolidate,
+  onGoalSeek,
   onGetConsolidateDefault,
   onApplyHeaderFooter,
   onUndo,
@@ -260,6 +268,7 @@ export function ExcelShell({
   const [insertFunctionCat, setInsertFunctionCat] = useState<string | null>(null)
   const [showSubtotalDialog, setShowSubtotalDialog] = useState(false)
   const [showConsolidateDialog, setShowConsolidateDialog] = useState(false)
+  const [showGoalSeekDialog, setShowGoalSeekDialog] = useState(false)
   const [showGoTo, setShowGoTo] = useState(false)
   const [showHeaderFooter, setShowHeaderFooter] = useState(false)
   /// Non-null while the Chart Design → Add Chart Element text prompt is open.
@@ -400,6 +409,7 @@ export function ExcelShell({
               setInsertFunctionCat(command.slice('insert-function-open:'.length))
             else if (command === 'subtotal-open') setShowSubtotalDialog(true)
             else if (command === 'consolidate-open') setShowConsolidateDialog(true)
+            else if (command === 'goal-seek-open') setShowGoalSeekDialog(true)
             else if (command === 'goto-open') setShowGoTo(true)
             else if (command === 'header-footer-open') setShowHeaderFooter(true)
             else if (command === 'chart-element-title') setChartTextTarget('title')
@@ -560,6 +570,13 @@ export function ExcelShell({
           targetLabel={onGetActiveCell()}
           onCreate={onCreateConsolidate}
           onClose={() => setShowConsolidateDialog(false)}
+        />
+      )}
+      {showGoalSeekDialog && (
+        <GoalSeekDialog
+          initialSetCell={onGetActiveCell()}
+          onSolve={onGoalSeek}
+          onClose={() => setShowGoalSeekDialog(false)}
         />
       )}
       {showGoTo && (
@@ -1874,7 +1891,13 @@ function Ribbon({
           />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupForecast')}>
-          <RibbonReserved large menu label={t('appWhatIfAnalysis')} symbol="❔" />
+          <RibbonButton
+            large
+            label={t('appWhatIfAnalysis')}
+            detail="Goal Seek"
+            symbol="❔"
+            onClick={() => onCommand('goal-seek-open')}
+          />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupOutline')}>
           {largeMenu(t('appOutlineGroup'), '⊟', t('appOutlineGroupTitle'), [
