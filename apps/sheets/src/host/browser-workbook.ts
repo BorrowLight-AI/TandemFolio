@@ -459,6 +459,7 @@ function parseSheet(
     const outlineLevel = Number(xmlAttribute(attributes, 'outlineLevel'))
     const hidden = xmlAttribute(attributes, 'hidden')
     const collapsed = xmlAttribute(attributes, 'collapsed')
+    const styleIndex = Number(xmlAttribute(attributes, 's'))
     rows.push({
       row: rowNumber - 1,
       hidden: hidden === '1' || hidden === 'true',
@@ -467,6 +468,7 @@ function parseSheet(
         ? { outlineLevel }
         : {}),
       ...(collapsed === '1' || collapsed === 'true' ? { collapsed: true } : {}),
+      ...(Number.isInteger(styleIndex) && styleIndex >= 0 ? { styleIndex } : {}),
     })
   }
   const columnWidths: WorkbookFile['sheets'][number]['columnWidths'] = []
@@ -487,6 +489,7 @@ function parseSheet(
     const outlineLevel = Number(xmlAttribute(attributes, 'outlineLevel'))
     const hidden = xmlAttribute(attributes, 'hidden')
     const collapsed = xmlAttribute(attributes, 'collapsed')
+    const styleIndex = Number(xmlAttribute(attributes, 'style'))
     columnWidths.push({
       startColumn: minimum - 1,
       endColumn: maximum - 1,
@@ -496,6 +499,7 @@ function parseSheet(
         ? { outlineLevel }
         : {}),
       ...(collapsed === '1' || collapsed === 'true' ? { collapsed: true } : {}),
+      ...(Number.isInteger(styleIndex) && styleIndex >= 0 ? { styleIndex } : {}),
     })
   }
   const dataValidations: WorkbookRangeResult['dataValidations'] = []

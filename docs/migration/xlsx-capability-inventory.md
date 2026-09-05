@@ -55,6 +55,9 @@ formats into the live workbook. Scale threshold formulas fold absolute cell/rang
 aggregates, workbook names, and safe arithmetic against file values before install; unresolved
 workbook-dependent expressions fall back to Excel's slot default. Native data bars resolve min/max,
 zero-anchored automatic bounds, legacy 10/90% extents, and two-signed midpoint axes.
+Worksheet row and column default style indices are now retained. Column styles enter Univer's
+native column model with their widths, and streamed row styles enter the native row model when each
+row block loads, preserving file-owned font/fill/alignment defaults.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -125,8 +128,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 124 passing files and one environment-conditional LibreOffice pivot
-suite; 1,575 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 125 passing files and one environment-conditional LibreOffice pivot
+suite; 1,577 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

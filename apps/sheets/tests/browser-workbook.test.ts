@@ -159,6 +159,27 @@ describe('browser XLSX workbook', () => {
     })
   })
 
+  it('reads row and column default style indices from worksheet XML', async () => {
+    vi.stubGlobal('window', {})
+    const zip = await JSZip.loadAsync(await fixture())
+    const sheet = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      sheet
+        .replace('<sheetData>', '<cols><col min="1" max="2" width="12" style="2"/></cols><sheetData>')
+        .replace('<row r="1">', '<row r="1" s="1" customFormat="1">'),
+    )
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await zip.generateAsync({ type: 'arraybuffer' }), 'styles.xlsx')
+    expect(file.sheets[0]!.columnWidths[0]).toMatchObject({ styleIndex: 2 })
+    const range = await api.readWorkbookRange({
+      sessionId: file.sessionId,
+      sheetId: file.sheets[0]!.id,
+      range: { startRow: 0, endRow: 2, startColumn: 0, endColumn: 2 },
+    })
+    expect(range.rows[0]).toMatchObject({ row: 0, styleIndex: 1 })
+  })
+
   it('hydrates native conditional-format rules and differential styles', async () => {
     vi.stubGlobal('window', {})
     const zip = await JSZip.loadAsync(await fixture())

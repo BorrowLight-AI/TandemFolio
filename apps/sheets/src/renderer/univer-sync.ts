@@ -345,7 +345,7 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
                     startColumn: sheet.freeze.frozenColumns,
                   },
                 }),
-            columnData: createColumnData(sheet),
+            columnData: createColumnData(sheet, file.styles),
             cellData: {},
           },
         ]
@@ -1004,21 +1004,26 @@ function applyWorkbookNotesInner(
   }
 }
 
-function createColumnData(
+export function createColumnData(
   sheet: WorkbookFile['sheets'][number],
-): Record<number, { w?: number; hd?: BooleanNumber }> {
-  const data: Record<number, { w?: number; hd?: BooleanNumber }> = {}
+  styles: WorkbookFile['styles'],
+): Record<number, { w?: number; hd?: BooleanNumber; s?: IStyleData }> {
+  const data: Record<number, { w?: number; hd?: BooleanNumber; s?: IStyleData }> = {}
   for (const columnWidth of sheet.columnWidths) {
     const endColumn = Math.min(columnWidth.endColumn, sheet.columnCount - 1)
     // Outline-only <col> entries carry no width; leave the default width.
     const width = columnWidth.width
     const pixelWidth = width === undefined ? undefined : characterWidthToPixels(width)
+    const style =
+      columnWidth.styleIndex === undefined ? undefined : styles[columnWidth.styleIndex]
     for (let column = columnWidth.startColumn; column <= endColumn; column += 1) {
       data[column] = {
+        ...data[column],
         ...(pixelWidth !== undefined && ((width ?? 0) > 0 || !columnWidth.hidden)
           ? { w: pixelWidth }
           : {}),
         ...(columnWidth.hidden ? { hd: BooleanNumber.TRUE } : {}),
+        ...(style ? { s: toUniverStyle(style) } : {}),
       }
     }
   }
@@ -1998,9 +2003,13 @@ function applyRowProperties(
           hidden: row.hidden,
         })
       }
-      const key = `${row.row}:${row.height ?? ''}:${row.hidden}`
+      const key = `${row.row}:${row.height ?? ''}:${row.hidden}:${row.styleIndex ?? ''}`
       if (applied.has(key)) continue
       applied.add(key)
+      if (row.styleIndex !== undefined) {
+        const style = state.file.styles[row.styleIndex]
+        if (style) worksheet.getSheet().setRowStyle(row.row, toUniverStyle(style))
+      }
       if (row.height !== undefined) {
         // The engine reports ht for every row that carries one, not just
         // customHeight="1" rows: Excel stores its laid-out height (auto-fit
