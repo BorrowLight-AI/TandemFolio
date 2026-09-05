@@ -3,7 +3,6 @@ import { platformShortcuts } from '@genoffice/i18n'
 import {
   EditorFileIcon,
   EditorFullscreenIcon,
-  EditorSaveIcon,
   SHAPE_GALLERY_GROUPS,
   ShapePreview,
 } from '@genoffice/ui'
@@ -12,6 +11,8 @@ import {
   CaretIcon,
   RIBBON_GLYPH_ICONS,
   RedoIcon,
+  SaveAsIcon,
+  SaveIcon,
   UndoIcon,
 } from './ribbon-icons'
 
@@ -140,6 +141,9 @@ interface ExcelShellProps {
   /// True when the edit journal has unsaved changes (enables the QAT Save).
   readonly canSave: boolean
   readonly onSave: () => void
+  /** Save As remains available for a clean file-backed workbook. */
+  readonly canSaveAs: boolean
+  readonly onSaveAs: () => void
   /// QAT redo (workbook history, same path as the app menu's ⇧⌘Z); undo
   /// shares the AI panel's onUndo above.
   readonly onRedo: () => void
@@ -255,6 +259,8 @@ export function ExcelShell({
   zoomPercent,
   canSave,
   onSave,
+  canSaveAs,
+  onSaveAs,
   onRedo,
   canUndo,
   canRedo,
@@ -312,6 +318,7 @@ export function ExcelShell({
   const visibleTabs: readonly RibbonTab[] = selectedChart
     ? [...ribbonTabs, 'Chart Design']
     : ribbonTabs
+  const saveAsTitle = `${t('appSaveAs')} (${platformShortcuts('⇧⌘S')})`
 
   return (
     <main className="app-shell">
@@ -328,7 +335,17 @@ export function ExcelShell({
             disabled={!canSave}
             onClick={onSave}
           >
-            <EditorSaveIcon />
+            <SaveIcon />
+          </button>
+          <button
+            type="button"
+            className="qa-btn"
+            data-tip={saveAsTitle}
+            aria-label={saveAsTitle}
+            disabled={!canSaveAs}
+            onClick={onSaveAs}
+          >
+            <SaveAsIcon />
           </button>
           <button
             type="button"

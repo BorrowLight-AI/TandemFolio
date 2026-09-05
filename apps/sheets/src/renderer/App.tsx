@@ -2911,6 +2911,8 @@ export function App(): React.JSX.Element {
     }
   })()
 
+  const workbookFile = lazyWorkbookRef.current?.file ?? null
+
   return (
     <>
       <ToastHost />
@@ -2949,6 +2951,8 @@ export function App(): React.JSX.Element {
         zoomPercent={zoomPercent}
         canSave={pendingEdits > 0}
         onSave={() => void handleSave('save')}
+        canSaveAs={workbookFile !== null}
+        onSaveAs={() => void handleSave('save-as')}
         onRedo={handleRedo}
         autoSave={autoSave}
         onAutoSaveChange={setAutoSave}
