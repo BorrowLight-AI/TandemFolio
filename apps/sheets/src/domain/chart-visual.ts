@@ -41,6 +41,8 @@ export interface ChartSeriesVisualState {
   /// numCache formatCode of the category (or scatter X) data.
   categoryFormat?: string | undefined
   color?: string | undefined
+  /// Explicit series outline from `c:spPr/a:ln`; `none` represents noFill.
+  lineColor?: string | undefined
   trendline?: string | undefined
   valuesRef?: string | undefined
   categoriesRef?: string | undefined

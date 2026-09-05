@@ -68,6 +68,9 @@ chart part and reopen reproduces the same mode.
 Column, line, and area chart category axes now wrap space-delimited labels into two lines and
 calculate an overlap-aware tick stride. Wide slots retain every label; dense native category sets
 display every nth label instead of painting unreadable text over adjacent ticks.
+Line, radar, and combo previews now separate the series fill from its explicit `a:ln` stroke.
+`noFill` suppresses the line while retaining a visible legend key, explicit stroke colors reach the
+drawn series and line-family legend, and non-line chart legends continue to use fill colors.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -139,7 +142,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,606 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,611 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

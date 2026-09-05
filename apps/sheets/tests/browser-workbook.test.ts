@@ -1019,11 +1019,24 @@ describe('browser XLSX workbook', () => {
               name: 'Revenue',
               categories: ['Q1', 'Q2'],
               values: [10, 20],
+              lineColor: '#4472C4',
             }),
           ],
         }),
       }),
     ])
+
+    const noLineZip = await JSZip.loadAsync(saved)
+    const noLineChart = (await noLineZip.file('xl/charts/chart2.xml')!.async('text')).replace(
+      /<a:ln\b[^>]*>[\s\S]*?<\/a:ln>/,
+      '<a:ln><a:noFill/></a:ln>',
+    )
+    noLineZip.file('xl/charts/chart2.xml', noLineChart)
+    const noLine = await openBrowserWorkbook(
+      await noLineZip.generateAsync({ type: 'uint8array' }),
+      'no-line.xlsx',
+    )
+    expect(noLine.visuals[0]?.chart?.series[0]?.lineColor).toBe('none')
   })
 
   it('reopens sparse chart caches with their blank-point display mode', async () => {

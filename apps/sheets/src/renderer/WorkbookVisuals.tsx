@@ -1348,6 +1348,7 @@ function ChartVisual({
             valueAxis={chart.valueAxis}
             gapWidthPct={chart.gapWidthPct}
             categoryFormat={categoryFormat}
+            dispBlanksAs={chart.dispBlanksAs}
             onElement={selectElement}
             selectedEl={selectedEl}
           />
@@ -1357,6 +1358,8 @@ function ChartVisual({
           (chart.legend !== undefined || populated.length > 1) && (
             <SeriesLegend
               seriesList={populated}
+              lineSwatches={legendUsesLineSwatches(types)}
+              lineSwatchFrom={isCombo && populated.length > 1 ? populated.length - 1 : undefined}
               selected={selectedEl?.kind === 'legend'}
               onSelect={
                 selectElement
@@ -1714,16 +1717,28 @@ function SeriesLegend({
   seriesList,
   selected,
   onSelect,
+  lineSwatches = false,
+  lineSwatchFrom,
 }: {
   readonly seriesList: readonly ChartSeries[]
   readonly selected?: boolean | undefined
   readonly onSelect?: ((event: React.MouseEvent) => void) | undefined
+  readonly lineSwatches?: boolean | undefined
+  readonly lineSwatchFrom?: number | undefined
 }): React.JSX.Element {
   return (
     <div className={`chart-legend${selected ? ' chart-el-selected' : ''}`} onClick={onSelect}>
       {seriesList.slice(0, 8).map((series, index) => (
         <span key={`${series.name}-${index}`}>
-          <i style={{ background: seriesColor(series, index) }} />
+          <i
+            style={{
+              background: legendSwatchColor(
+                series,
+                index,
+                lineSwatches || (lineSwatchFrom !== undefined && index >= lineSwatchFrom),
+              ),
+            }}
+          />
           {truncateLabel(series.name, 18)}
         </span>
       ))}
@@ -1745,6 +1760,7 @@ function BarChart({
   valueAxis,
   gapWidthPct,
   categoryFormat,
+  dispBlanksAs,
   onElement,
   selectedEl,
 }: {
@@ -1760,6 +1776,7 @@ function BarChart({
   readonly valueAxis?: ChartValueAxis
   readonly gapWidthPct?: number | undefined
   readonly categoryFormat?: string | undefined
+  readonly dispBlanksAs?: ChartMetadata['dispBlanksAs']
 } & ChartElementProps): React.JSX.Element {
   const primary = seriesList[0]
   if (!primary) return <div className="xlsx-visual-error">{t('appChartCacheEmpty')}</div>
@@ -1908,12 +1925,14 @@ function BarChart({
   const groupLeft = (index: number): number =>
     62 + columnWidth * index + (columnWidth - groupWidth) / 2
   const lineMaximum = lineSeries ? niceAxisMaximum(Math.max(...lineSeries.values, 0)) : 1
-  const points = lineSeries?.values
-    .slice(0, visibleCount)
-    .map(
-      (value, index) => `${groupLeft(index) + groupWidth / 2},${280 - (value / lineMaximum) * 230}`,
-    )
-    .join(' ')
+  const comboStroke = lineSeries ? lineStroke(lineSeries, seriesList.length) : null
+  const comboSegments = lineSeries
+    ? lineSegments(
+        Math.min(lineSeries.values.length, visibleCount),
+        lineSeries.blanks,
+        dispBlanksAs,
+      )
+    : []
   const showValueLabels =
     !isStacked &&
     (dataLabels === 'value' ||
@@ -2001,14 +2020,22 @@ function BarChart({
             />
           ) : null,
         )}
-      {points && (
-        <polyline
-          points={points}
-          fill="none"
-          stroke={seriesColor(lineSeries, seriesList.length)}
-          strokeWidth="3"
-        />
-      )}
+      {lineSeries &&
+        comboStroke !== null &&
+        comboSegments.map((indices, segmentIndex) => (
+          <polyline
+            key={`combo-line-${segmentIndex}`}
+            points={indices
+              .map(
+                (index) =>
+                  `${groupLeft(index) + groupWidth / 2},${280 - ((lineSeries.values[index] ?? 0) / lineMaximum) * 230}`,
+              )
+              .join(' ')}
+            fill="none"
+            stroke={comboStroke}
+            strokeWidth="3"
+          />
+        ))}
       {lineSeries &&
         [0, 0.5, 1].map((fraction) => (
           <text
@@ -2017,7 +2044,7 @@ function BarChart({
             y={284 - fraction * 230}
             textAnchor="end"
             className="axis-label"
-            fill={seriesColor(lineSeries, seriesList.length)}
+            fill={comboStroke ?? seriesColor(lineSeries, seriesList.length)}
           >
             {formatAxisValue(fraction * lineMaximum, lineSeries.numberFormat)}
           </text>
@@ -2108,6 +2135,32 @@ export function lineSegments(
   }
   if (current.length > 0) segments.push(current)
   return segments
+}
+
+export function lineStroke(
+  series: SeriesLike & { readonly lineColor?: string | undefined },
+  index: number,
+): string | null {
+  if (series.lineColor === 'none') return null
+  return series.lineColor ?? seriesColor(series, index)
+}
+
+export function legendUsesLineSwatches(types: readonly string[]): boolean {
+  if (types.includes('pieChart') || types.includes('doughnutChart')) return false
+  const noBar = !types.includes('barChart')
+  if (types.includes('radarChart') && noBar) return true
+  if (types.includes('scatterChart')) return false
+  if (types.includes('areaChart') && noBar) return false
+  return types.includes('lineChart') && noBar
+}
+
+export function legendSwatchColor(
+  series: SeriesLike & { readonly lineColor?: string | undefined },
+  index: number,
+  lineSwatches: boolean,
+): string {
+  if (!lineSwatches) return seriesColor(series, index)
+  return lineStroke(series, index) ?? seriesColor(series, index)
 }
 
 /// 5-tick nice ceiling so the top gridline sits at or above the data maximum.
@@ -2359,6 +2412,8 @@ function LineChart({
         }
       />
       {seriesList.flatMap((series, seriesIndex) => {
+        const stroke = lineStroke(series, seriesIndex)
+        if (stroke === null) return []
         const values = displayValues(seriesIndex)
         return lineSegments(values.length, isStacked ? undefined : series.blanks, dispBlanksAs).map(
           (indices, segmentIndex) => (
@@ -2371,7 +2426,7 @@ function LineChart({
                 )
                 .join(' ')}
               fill="none"
-              stroke={seriesColor(series, seriesIndex)}
+              stroke={stroke}
               strokeWidth={
                 selectedEl?.kind === 'series' && selectedEl.seriesIndex === seriesIndex ? '5' : '3'
               }
@@ -2387,7 +2442,7 @@ function LineChart({
             values={displayValues(seriesIndex)}
             minimum={bounds.min}
             maximum={bounds.max}
-            color={seriesColor(series, seriesIndex)}
+            color={lineStroke(series, seriesIndex) ?? seriesColor(series, seriesIndex)}
             xFor={(index) => 60 + (index / Math.max(1, series.values.length - 1)) * 500}
           />
         ) : null,
@@ -2654,13 +2709,14 @@ function RadarChart({
       })}
       {seriesList.map((series, seriesIndex) => {
         const isSel = selectedEl?.kind === 'series' && selectedEl.seriesIndex === seriesIndex
+        const stroke = lineStroke(series, seriesIndex)
         return (
           <polygon
             key={seriesIndex}
             points={seriesPoints(series)}
             fill={seriesColor(series, seriesIndex)}
             fillOpacity="0.18"
-            stroke={isSel ? '#107C41' : seriesColor(series, seriesIndex)}
+            stroke={isSel ? '#107C41' : (stroke ?? 'none')}
             strokeWidth={isSel ? '4' : '2.5'}
             onClick={
               onElement

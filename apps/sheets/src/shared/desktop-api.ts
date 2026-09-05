@@ -290,6 +290,7 @@ const visualObjectSchema = z
               /// numCache formatCode of the category (or scatter X) data.
               categoryFormat: z.string().optional(),
               color: z.string().optional(),
+              lineColor: z.string().optional(),
               trendline: z.string().optional(),
               /// `c:f` range references (groundwork for E5 data-range editing).
               valuesRef: z.string().optional(),

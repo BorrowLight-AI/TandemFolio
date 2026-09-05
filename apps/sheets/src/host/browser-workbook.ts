@@ -804,7 +804,22 @@ function chartSeries(chartXml: string): NonNullable<WorkbookVisualObject['chart'
     const categories = chartPointValues(categoriesBody)
     const valuesRef = textContent(valuesBody, 'c:f')
     const categoriesRef = textContent(categoriesBody, 'c:f')
-    const rawColor = elementAttribute(body, 'a:srgbClr', 'val')
+    const seriesShape = xmlElementBody(body, 'c:spPr') ?? ''
+    const lineShape = xmlElementBody(seriesShape, 'a:ln')
+    const fillShape =
+      lineShape === undefined
+        ? seriesShape
+        : seriesShape.replace(/<a:ln\b[^>]*>[\s\S]*?<\/a:ln>/, '')
+    const rawColor = elementAttribute(fillShape, 'a:srgbClr', 'val')
+    const rawLineColor = lineShape && elementAttribute(lineShape, 'a:srgbClr', 'val')
+    const lineColor =
+      lineShape === undefined
+        ? undefined
+        : /<a:noFill\b/.test(lineShape)
+          ? 'none'
+          : rawLineColor && /^[0-9A-Fa-f]{6}$/.test(rawLineColor)
+            ? `#${rawLineColor}`
+            : undefined
     const explosionPct = integerAttribute(body, 'c:explosion', 'val')
     return {
       name,
@@ -814,6 +829,7 @@ function chartSeries(chartXml: string): NonNullable<WorkbookVisualObject['chart'
       ...(valuesRef === undefined ? {} : { valuesRef }),
       ...(categoriesRef === undefined ? {} : { categoriesRef }),
       ...(rawColor && /^[0-9A-Fa-f]{6}$/.test(rawColor) ? { color: `#${rawColor}` } : {}),
+      ...(lineColor === undefined ? {} : { lineColor }),
       ...(explosionPct === undefined ? {} : { explosionPct }),
     }
   })
