@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 162 passing files and one environment-conditional LibreOffice pivot
-suite; 1,895 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 163 passing files and one environment-conditional LibreOffice pivot
+suite; 1,903 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -223,6 +223,12 @@ expressions. The installed rule still owns its original ranges and save represen
 rehydration additionally retains error/non-error operators, case-insensitive text predicates,
 `stopIfTrue`, dxf borders and number formats, nonnumeric comparison operands, solid/negative data
 bar settings, and formula/automatic thresholds.
+
+View's Row & Column Highlight installs one bounded Univer canvas extension per worksheet and follows
+the active selection without changing workbook data or revision. The preference persists locally,
+dark/light theme changes repaint the existing extension, streamed worksheets attach lazily, and
+disposal removes every registered extension. The feature remains a renderer-owned reading aid and
+does not introduce AI search, a second document state, or a state-changing MCP command.
 
 ## Executable browser evidence
 

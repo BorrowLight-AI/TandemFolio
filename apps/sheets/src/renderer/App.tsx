@@ -230,6 +230,12 @@ import { installMultiRowAutofit } from './autofit-multi-row'
 import { registerExcelShortcuts } from './excel-shortcuts'
 import { registerExcelJumpNav } from './excel-jump-nav'
 import { installCopyMaterialize } from './copy-materialize'
+import {
+  installCrossHighlight,
+  loadCrossHighlightPreference,
+  storeCrossHighlightPreference,
+  type CrossHighlightHandle,
+} from './cross-highlight'
 import { installCfFormulaFold } from './cf-formula-fold'
 import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
@@ -397,6 +403,8 @@ export function App(): React.JSX.Element {
   )
   const pageBreakLayersRef = useRef<Map<string, { dispose(): void }[]>>(new Map())
   const pageBreakIdRef = useRef(0)
+  const [crossHighlightVisible, setCrossHighlightVisible] = useState(loadCrossHighlightPreference)
+  const crossHighlightRef = useRef<CrossHighlightHandle | null>(null)
   const visualInstallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sparklineDisposablesRef = useRef<{ dispose(): void }[]>([])
   const sparklineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1106,7 +1114,10 @@ export function App(): React.JSX.Element {
     // registered at bootstrap), so reading the attribute here is safe; the
     // matchMedia listener covers OS appearance flips while in system mode
     const themeService = runtime.univer.__getInjector().get(ThemeService)
-    const applyUniverDark = () => themeService.setDarkMode(isDarkTheme())
+    const applyUniverDark = () => {
+      themeService.setDarkMode(isDarkTheme())
+      crossHighlightRef.current?.refresh()
+    }
     const offThemeChanged = window.desktopApi?.onThemeChanged?.(applyUniverDark)
     prefersDark.addEventListener('change', applyUniverDark)
     // Undo/redo stack occupancy: the QAT buttons grey out when there is nothing to apply
@@ -1213,6 +1224,9 @@ export function App(): React.JSX.Element {
     // Large expression-CF ranges register only equivalent folded axes and
     // the streamed row window, avoiding millions of engine formula trees.
     const cfFormulaFoldDisposable = installCfFormulaFold(runtime)
+    crossHighlightRef.current = installCrossHighlight(runtime, {
+      theme: () => (isDarkTheme() ? 'dark' : 'light'),
+    })
     // Empty-value formula results (IFERROR/IF/CHOOSE over blank refs)
     // display as 0 like Excel.
     const nullResultDisposable = installFormulaNullResultFix(runtime)
@@ -2131,6 +2145,8 @@ export function App(): React.JSX.Element {
       selectionWrapGuardDisposable.dispose()
       multiRowAutofitDisposable.dispose()
       cfFormulaFoldDisposable.dispose()
+      crossHighlightRef.current?.dispose()
+      crossHighlightRef.current = null
       nullResultDisposable.dispose()
       ifsEmptySetDisposable.dispose()
       criteriaCompareCacheDisposable.dispose()
@@ -2163,6 +2179,10 @@ export function App(): React.JSX.Element {
       univerRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    crossHighlightRef.current?.setVisible(crossHighlightVisible)
+  }, [crossHighlightVisible])
 
   /// Demo-mode counterpart of queueVisualInstall: charts live in the adapter
   /// snapshot, so every grid rebuild (Apply/undo) and sheet switch re-installs
@@ -2343,6 +2363,12 @@ export function App(): React.JSX.Element {
     const runtime = univerRef.current
     if (command === 'toggle-page-break-preview') {
       togglePageBreakPreview()
+      return
+    }
+    if (command === 'toggle-cross-highlight') {
+      const next = !crossHighlightVisible
+      setCrossHighlightVisible(next)
+      storeCrossHighlightPreference(next)
       return
     }
     if (command === 'calc-mode:auto' || command === 'calc-mode:manual') {
@@ -2908,6 +2934,7 @@ export function App(): React.JSX.Element {
         onToggleFullscreen={() => void toggleLiveEditorFullscreen()}
         pageLayout={activePageLayout}
         calcManual={calcManual}
+        crossHighlightVisible={crossHighlightVisible}
         selectionFormat={selectionFormat}
         statusMessage={message}
         onUndo={handleUndo}

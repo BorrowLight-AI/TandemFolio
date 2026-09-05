@@ -199,6 +199,7 @@ interface ExcelShellProps {
   /// Layout tab's controls (untouched fields show the app default).
   readonly pageLayout: PageLayoutEcho
   readonly calcManual: boolean
+  readonly crossHighlightVisible: boolean
 }
 
 export interface PageLayoutEcho {
@@ -262,6 +263,7 @@ export function ExcelShell({
   selectedChart,
   pageLayout,
   calcManual,
+  crossHighlightVisible,
 }: ExcelShellProps): React.JSX.Element {
   const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<RibbonTab>('Home')
@@ -402,6 +404,7 @@ export function ExcelShell({
           workbookProtected={onGetWorkbookProtection()}
           pageLayout={pageLayout}
           calcManual={calcManual}
+          crossHighlightVisible={crossHighlightVisible}
           selectedChart={selectedChart}
           onRefreshPivot={onRefreshPivot}
           onIsSelectionInPivot={onIsSelectionInPivot}
@@ -990,6 +993,7 @@ function Ribbon({
   workbookProtected,
   pageLayout,
   calcManual,
+  crossHighlightVisible,
   selectedChart,
   onCommand,
   onRefreshPivot,
@@ -1001,6 +1005,7 @@ function Ribbon({
   readonly workbookProtected: boolean | null
   readonly pageLayout: PageLayoutEcho
   readonly calcManual: boolean
+  readonly crossHighlightVisible: boolean
   readonly selectedChart: SelectedChartRibbon | null
   readonly onCommand: (command: string) => void
   readonly onRefreshPivot: () => string | null
@@ -2011,6 +2016,14 @@ function Ribbon({
             >
               <i className="check-box">{pageLayout.showGridlines ? '✓' : ''}</i>
               {t('appGridlines')}
+            </button>
+            <button
+              className="check-item"
+              data-tip="Highlight active row and column"
+              onClick={() => onCommand('toggle-cross-highlight')}
+            >
+              <i className="check-box">{crossHighlightVisible ? '✓' : ''}</i>
+              Highlight row &amp; column
             </button>
             <span className="check-item reserved-check">
               <i className="check-box">✓</i>
