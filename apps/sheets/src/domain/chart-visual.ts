@@ -490,6 +490,22 @@ export function chartDataFromValues(
     })
     if (series.length >= MAX_CHART_SERIES) break
   }
+  if (series.length === 0 && hasCategoryColumn && body.some((row) => isNumeric(row[0]))) {
+    const header = hasHeaderRow ? firstRow[0] : null
+    return {
+      byRow,
+      hasHeaderRow,
+      hasCategoryColumn: false,
+      categories: body.map((_, index) => String(index + 1)),
+      series: [
+        {
+          name: isBlank(header) ? 'Series 1' : String(header),
+          values: body.map((row) => toNumber(row[0])),
+          column: 0,
+        },
+      ],
+    }
+  }
   return series.length > 0 ? { byRow, hasHeaderRow, hasCategoryColumn, categories, series } : null
 }
 
