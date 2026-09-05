@@ -83,7 +83,17 @@ import { t } from './i18n/locale'
 import { mapProtectedRanges } from './protected-ranges'
 import { INDENT_STEP_PX } from './selection-format'
 import { CENTER_ACROSS_END_KEY } from './center-continuous'
-import { clampColorScaleStops } from './cf-thresholds'
+import {
+  THRESHOLD_RANGE_CELL_CAP,
+  clampColorScaleStops,
+  dataBarNeedsLayout,
+  dataBarNeedsValues,
+  defaultThreshold,
+  evaluateThresholdFormula,
+  isSelfContainedFormula,
+  layoutDataBar,
+  type ThresholdReader,
+} from './cf-thresholds'
 import {
   fileRangeToScreenRange,
   indexedThroughScreenRow,
@@ -1854,7 +1864,7 @@ async function loadRange(
     // skip it (rare: the sheet was being edited before it first rendered).
     const hasStructuralOps = (state.editJournal.structuralOps.get(sheetId)?.length ?? 0) > 0
     if (!hasStructuralOps) {
-      applyConditionalRules(worksheet, state, sheetId, result.conditionalRules)
+      await applyConditionalRules(worksheet, state, sheetId, result.conditionalRules)
       if (result.indexingComplete) {
         applySheetFilter(worksheet, state, sheetId, result.autoFilter)
         applyDataValidations(runtime, state, sheetId, result.dataValidations)
@@ -2615,7 +2625,7 @@ export async function preloadEntireWorkbook(
       applyRowProperties(worksheet, state, sheetId, screen.rows)
       applyMerges(worksheet, state, sheetId, screen.merges)
       if (result.indexingComplete && ops.length === 0) {
-        applyConditionalRules(worksheet, state, sheetId, result.conditionalRules)
+        await applyConditionalRules(worksheet, state, sheetId, result.conditionalRules)
         applySheetFilter(worksheet, state, sheetId, result.autoFilter)
         applyDataValidations(runtime, state, sheetId, result.dataValidations)
       }
@@ -3146,12 +3156,12 @@ export function toUniverDvRule(
   }
 }
 
-export function applyConditionalRules(
+export async function applyConditionalRules(
   worksheet: UniverWorksheet,
   state: LazyWorkbookState,
   sheetId: string,
   rules: WorkbookRangeResult['conditionalRules'],
-): void {
+): Promise<void> {
   if (state.appliedCfSheets.has(sheetId)) return
   state.appliedCfSheets.add(sheetId)
   if (rules.length === 0) return
@@ -3159,9 +3169,19 @@ export function applyConditionalRules(
   // insertion order, so add the most important rules first. Installing the
   // file's own rules must not mark the sheet's CF as edited.
   const ordered = [...dropShadowedPaintOnceRules(rules)].sort((a, b) => b.priority - a.priority)
+  const prepared = []
+  for (const rule of ordered) {
+    try {
+      prepared.push(
+        await resolveDataBarLayout(state, sheetId, await resolveRuleCfvos(state, sheetId, rule)),
+      )
+    } catch {
+      prepared.push(rule)
+    }
+  }
   journalSuppression.active = true
   try {
-    for (const rule of ordered) {
+    for (const rule of prepared) {
       try {
         const built = buildConditionalRule(worksheet, state.file.dxfStyles, rule)
         if (built) worksheet.addConditionalFormattingRule(built)
@@ -3171,6 +3191,103 @@ export function applyConditionalRules(
     }
   } finally {
     journalSuppression.active = false
+  }
+}
+
+async function resolveRuleCfvos(
+  state: LazyWorkbookState,
+  sheetId: string,
+  rule: WorkbookRangeResult['conditionalRules'][number],
+): Promise<WorkbookRangeResult['conditionalRules'][number]> {
+  if (!['dataBar', 'colorScale', 'iconSet'].includes(rule.ruleType) || rule.cfvos.length === 0) {
+    return rule
+  }
+  const reader = thresholdReader(state, sheetId)
+  const cfvos = []
+  for (const [index, cfvo] of rule.cfvos.entries()) {
+    const needsFold =
+      cfvo.kind === 'formula' ||
+      (cfvo.value !== undefined &&
+        !Number.isFinite(Number(cfvo.value)) &&
+        ['num', 'percent', 'percentile'].includes(cfvo.kind))
+    if (!needsFold) {
+      cfvos.push(cfvo)
+      continue
+    }
+    const resolved =
+      cfvo.value === undefined ? null : await evaluateThresholdFormula(cfvo.value, reader)
+    if (resolved !== null) cfvos.push({ ...cfvo, kind: 'num', value: String(resolved) })
+    else if (cfvo.value !== undefined && isSelfContainedFormula(cfvo.value)) cfvos.push(cfvo)
+    else cfvos.push({ ...defaultThreshold(rule.ruleType, index, rule.cfvos.length), gte: cfvo.gte })
+  }
+  return { ...rule, cfvos: rule.ruleType === 'colorScale' ? clampColorScaleStops(cfvos) : cfvos }
+}
+
+async function resolveDataBarLayout(
+  state: LazyWorkbookState,
+  sheetId: string,
+  rule: WorkbookRangeResult['conditionalRules'][number],
+): Promise<WorkbookRangeResult['conditionalRules'][number]> {
+  if (rule.ruleType !== 'dataBar' || !dataBarNeedsLayout(rule)) return rule
+  const values = dataBarNeedsValues(rule)
+    ? await readConditionalValues(state, sheetId, rule.ranges, THRESHOLD_RANGE_CELL_CAP)
+    : null
+  const cfvos = layoutDataBar(rule, values)
+  return cfvos === null ? rule : { ...rule, cfvos }
+}
+
+function thresholdReader(state: LazyWorkbookState, ownSheetId: string): ThresholdReader {
+  return {
+    readValues: async (sheetName, range) => {
+      const sheetId =
+        sheetName === null
+          ? ownSheetId
+          : state.file.sheets.find(
+              (sheet) => sheet.name.toLocaleLowerCase() === sheetName.toLocaleLowerCase(),
+            )?.id
+      return sheetId
+        ? readConditionalValues(state, sheetId, [range], THRESHOLD_RANGE_CELL_CAP)
+        : null
+    },
+    definedName: (name) =>
+      state.file.definedNames.find(
+        (entry) =>
+          entry.name.toLocaleLowerCase() === name.toLocaleLowerCase() &&
+          (entry.sheetIndex === undefined || state.file.sheets[entry.sheetIndex]?.id === ownSheetId),
+      )?.formula ?? null,
+    tableColumn: () => null,
+  }
+}
+
+async function readConditionalValues(
+  state: LazyWorkbookState,
+  sheetId: string,
+  ranges: readonly { startRow: number; endRow: number; startColumn: number; endColumn: number }[],
+  cap: number,
+): Promise<number[] | null> {
+  const cells = ranges.reduce(
+    (sum, range) =>
+      sum +
+      (range.endRow - range.startRow + 1) * (range.endColumn - range.startColumn + 1),
+    0,
+  )
+  if (cells > cap) return null
+  const values: number[] = []
+  try {
+    for (const range of ranges) {
+      const result = await window.desktopApi.readWorkbookRange({
+        sessionId: state.file.sessionId,
+        sheetId,
+        range,
+      })
+      for (const cell of result.cells) {
+        const value = typeof cell.value === 'number' ? cell.value : Number(cell.value)
+        values.push(Number.isFinite(value) ? value : Number.NaN)
+      }
+    }
+    return values
+  } catch {
+    return null
   }
 }
 

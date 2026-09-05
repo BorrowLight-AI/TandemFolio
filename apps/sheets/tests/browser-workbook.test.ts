@@ -159,6 +159,57 @@ describe('browser XLSX workbook', () => {
     })
   })
 
+  it('hydrates native conditional-format rules and differential styles', async () => {
+    vi.stubGlobal('window', {})
+    const zip = await JSZip.loadAsync(await fixture())
+    const sheet = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      sheet.replace(
+        '</worksheet>',
+        '<conditionalFormatting sqref="B2:B10"><cfRule type="colorScale" priority="1">' +
+          '<colorScale><cfvo type="num" val="10"/><cfvo type="num" val="0"/>' +
+          '<color rgb="FFF8696B"/><color rgb="FF63BE7B"/></colorScale></cfRule></conditionalFormatting>' +
+          '<conditionalFormatting sqref="A1:A3"><cfRule type="cellIs" dxfId="0" priority="2" operator="lessThan">' +
+          '<formula>5</formula></cfRule></conditionalFormatting></worksheet>',
+      ),
+    )
+    const styles = await zip.file('xl/styles.xml')!.async('text')
+    zip.file(
+      'xl/styles.xml',
+      styles.replace(
+        '</styleSheet>',
+        '<dxfs count="1"><dxf><font><b/><color rgb="FFFF0000"/></font></dxf></dxfs></styleSheet>',
+      ),
+    )
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await zip.generateAsync({ type: 'arraybuffer' }), 'cf.xlsx')
+
+    expect(file.dxfStyles[0]).toMatchObject({ bold: true, fontColor: '#FF0000' })
+    const range = await api.readWorkbookRange({
+      sessionId: file.sessionId,
+      sheetId: file.sheets[0]!.id,
+      range: { startRow: 0, endRow: 9, startColumn: 0, endColumn: 1 },
+    })
+    expect(range.conditionalRules).toEqual([
+      expect.objectContaining({
+        ruleType: 'colorScale',
+        priority: 1,
+        cfvos: [
+          { kind: 'num', value: '10' },
+          { kind: 'num', value: '0' },
+        ],
+        colors: ['#F8696B', '#63BE7B'],
+      }),
+      expect.objectContaining({
+        ruleType: 'cellIs',
+        operator: 'lessThan',
+        dxfIndex: 0,
+        formulas: ['5'],
+      }),
+    ])
+  })
+
   it('reads, rewrites, saves, and reopens the native workbook theme', async () => {
     const workbook = await openBrowserWorkbook(await themeFixture(), 'theme.xlsx')
     expect(workbook.theme()).toMatchObject({

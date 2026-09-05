@@ -131,6 +131,32 @@ export class StylesheetEditor {
     })
   }
 
+  /** Differential formats used by native conditional-format rules. */
+  dxfCatalog(): WorkbookCellStyle[] {
+    return this.dxfs.map((dxf) => {
+      const font = /<font\b[^>]*(?:\/>|>[\s\S]*?<\/font>)/.exec(dxf)?.[0] ?? '<font/>'
+      const fill = /<fill\b[^>]*(?:\/>|>[\s\S]*?<\/fill>)/.exec(dxf)?.[0] ?? '<fill/>'
+      const border = /<border\b[^>]*(?:\/>|>[\s\S]*?<\/border>)/.exec(dxf)?.[0] ?? '<border/>'
+      const fontColor = readColorElement(font, 'color')
+      const fillColor = readColorElement(fill, 'fgColor')
+      const fontSize = positiveNumber(readChildAttribute(font, 'sz', 'val'))
+      return {
+        ...(readChildAttribute(font, 'name', 'val')
+          ? { fontFamily: decodeXmlAttribute(readChildAttribute(font, 'name', 'val')!) }
+          : {}),
+        ...(fontSize === undefined ? {} : { fontSize }),
+        bold: hasEnabledElement(font, 'b'),
+        italic: hasEnabledElement(font, 'i'),
+        underline: hasEnabledElement(font, 'u'),
+        strikethrough: hasEnabledElement(font, 'strike'),
+        wrapText: false,
+        ...(fontColor.rgb ? { fontColor: fontColor.rgb } : {}),
+        ...(fillColor.rgb ? { fillColor: fillColor.rgb } : {}),
+        ...readBorderCatalog(border),
+      }
+    })
+  }
+
   /// Conditional-formatting highlight styles; deduped like every other list.
   internDxf(dxfXml: string): number {
     return internElement(this.dxfs, dxfXml)

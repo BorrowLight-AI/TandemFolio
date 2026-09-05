@@ -219,7 +219,7 @@ export class BrowserWorkbookDesktopApi {
       entryCount: 0,
       sheets,
       styles: styleCatalog(workbook),
-      dxfStyles: [],
+      dxfStyles: workbook.dxfCatalog(),
       visuals: workbook.visuals.flatMap(({ sheetName, ...visual }) => {
         const sheetId = sheetIds.get(sheetName)
         return sheetId === undefined ? [] : [{ ...visual, sheetId }]
@@ -300,7 +300,7 @@ export class BrowserWorkbookDesktopApi {
       ),
       merges,
       hyperlinks,
-      conditionalRules: [],
+      conditionalRules: sheet.conditionalRules,
       autoFilter: sheet.autoFilterRef ? parseRange(sheet.autoFilterRef) : null,
       dataValidations: sheet.dataValidations,
       sheetProtection: sheet.sheetProtection,

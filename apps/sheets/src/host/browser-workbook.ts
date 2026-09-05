@@ -99,6 +99,7 @@ export interface BrowserSheet {
   rows: WorkbookRangeResult['rows']
   columnWidths: WorkbookFile['sheets'][number]['columnWidths']
   dataValidations: WorkbookRangeResult['dataValidations']
+  conditionalRules: WorkbookRangeResult['conditionalRules']
   merges: string[]
   autoFilterRef: string | null
   hyperlinks: Map<string, string>
@@ -333,6 +334,103 @@ function parseCell(xml: string, sharedStrings: string[]): BrowserCell | null {
   }
 }
 
+function parseConditionalRules(xml: string): WorkbookRangeResult['conditionalRules'] {
+  const rules: WorkbookRangeResult['conditionalRules'] = []
+  for (const section of xml.matchAll(
+    /<conditionalFormatting\b([^>]*)>([\s\S]*?)<\/conditionalFormatting>/g,
+  )) {
+    const refs = decodeXml(xmlAttribute(section[1] ?? '', 'sqref') ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+    const ranges = refs.flatMap((ref) => {
+      try {
+        return [tableArea(ref.replace(/\$/g, ''))]
+      } catch {
+        return []
+      }
+    })
+    if (ranges.length === 0) continue
+    for (const match of (section[2] ?? '').matchAll(
+      /<cfRule\b([^>]*?)(?:\/>|>([\s\S]*?)<\/cfRule>)/g,
+    )) {
+      const attributes = match[1] ?? ''
+      const body = match[2] ?? ''
+      const ruleType = xmlAttribute(attributes, 'type') ?? ''
+      const priority = Number(xmlAttribute(attributes, 'priority'))
+      if (!ruleType || !Number.isInteger(priority)) continue
+      const formulas = [...body.matchAll(/<formula\b[^>]*>([\s\S]*?)<\/formula>/g)].map(
+        (formula) => decodeXml(formula[1] ?? ''),
+      )
+      const scaleBody =
+        /<(?:colorScale|dataBar|iconSet)\b[^>]*>([\s\S]*?)<\/(?:colorScale|dataBar|iconSet)>/.exec(
+          body,
+        )?.[1] ?? ''
+      const cfvos = [...scaleBody.matchAll(/<cfvo\b([^>]*)\/>/g)].map((cfvo) => {
+        const attrs = cfvo[1] ?? ''
+        const kind = xmlAttribute(attrs, 'type') ?? 'num'
+        const value = xmlAttribute(attrs, 'val')
+        const gte = xmlAttribute(attrs, 'gte')
+        return {
+          kind,
+          ...(value === undefined ? {} : { value: decodeXml(value) }),
+          ...(gte === undefined ? {} : { gte: gte === '1' || gte === 'true' }),
+        }
+      })
+      const colors = [...scaleBody.matchAll(/<color\b([^>]*)\/>/g)].flatMap((color) => {
+        const argb = xmlAttribute(color[1] ?? '', 'rgb')
+        return argb && /^[0-9a-f]{6,8}$/i.test(argb)
+          ? [`#${argb.slice(-6).toUpperCase()}`]
+          : []
+      })
+      const operator = xmlAttribute(attributes, 'operator')
+      const dxfId = Number(xmlAttribute(attributes, 'dxfId'))
+      const rank = Number(xmlAttribute(attributes, 'rank'))
+      const scaleAttributes =
+        new RegExp(`<${ruleType}\b([^>]*)>`).exec(body)?.[1] ??
+        /<(?:colorScale|dataBar|iconSet)\b([^>]*)>/.exec(body)?.[1] ??
+        ''
+      const minLength = Number(xmlAttribute(scaleAttributes, 'minLength'))
+      const maxLength = Number(xmlAttribute(scaleAttributes, 'maxLength'))
+      const effectiveMinLength =
+        ruleType === 'dataBar' && !Number.isInteger(minLength) ? 10 : minLength
+      const effectiveMaxLength =
+        ruleType === 'dataBar' && !Number.isInteger(maxLength) ? 90 : maxLength
+      rules.push({
+        ranges,
+        ruleType,
+        formulas,
+        priority,
+        percent: booleanXmlAttribute(attributes, 'percent'),
+        bottom: booleanXmlAttribute(attributes, 'bottom'),
+        cfvos,
+        colors,
+        iconReverse: booleanXmlAttribute(scaleAttributes, 'reverse'),
+        showValue: xmlAttribute(scaleAttributes, 'showValue') !== '0',
+        ...(operator ? { operator } : {}),
+        ...(Number.isInteger(dxfId) && dxfId >= 0 ? { dxfIndex: dxfId } : {}),
+        ...(Number.isInteger(rank) && rank >= 0 ? { rank } : {}),
+        ...(xmlAttribute(attributes, 'text') ? { text: decodeXml(xmlAttribute(attributes, 'text')!) } : {}),
+        ...(xmlAttribute(scaleAttributes, 'iconSet')
+          ? { iconSetName: xmlAttribute(scaleAttributes, 'iconSet') }
+          : {}),
+        ...(booleanXmlAttribute(attributes, 'stopIfTrue') ? { stopIfTrue: true } : {}),
+        ...(Number.isInteger(effectiveMinLength) && effectiveMinLength >= 0 && effectiveMinLength <= 100
+          ? { minLength: effectiveMinLength }
+          : {}),
+        ...(Number.isInteger(effectiveMaxLength) && effectiveMaxLength >= 0 && effectiveMaxLength <= 100
+          ? { maxLength: effectiveMaxLength }
+          : {}),
+      })
+    }
+  }
+  return rules
+}
+
+function booleanXmlAttribute(attributes: string, name: string): boolean {
+  const value = xmlAttribute(attributes, name)
+  return value === '1' || value === 'true'
+}
+
 function parseSheet(
   xml: string,
   name: string,
@@ -446,6 +544,7 @@ function parseSheet(
       ...optionalText('prompt'),
     })
   }
+  const conditionalRules = parseConditionalRules(xml)
   const merges = [...xml.matchAll(/<mergeCell\b[^>]*\bref="([^"]+)"[^>]*\/>/g)].flatMap((match) =>
     match[1] ? [match[1]] : [],
   )
@@ -537,6 +636,7 @@ function parseSheet(
     rows,
     columnWidths,
     dataValidations,
+    conditionalRules,
     merges,
     autoFilterRef,
     hyperlinks,
@@ -1053,6 +1153,10 @@ export class BrowserWorkbook {
 
   styleCatalog(): WorkbookCellStyle[] {
     return this.#stylesheet?.styleCatalog() ?? []
+  }
+
+  dxfCatalog(): WorkbookCellStyle[] {
+    return this.#stylesheet?.dxfCatalog() ?? []
   }
 
   async readBinary(path: string): Promise<Uint8Array> {

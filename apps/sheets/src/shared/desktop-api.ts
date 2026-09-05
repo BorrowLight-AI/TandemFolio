@@ -183,6 +183,7 @@ const conditionalRuleSchema = z
     text: z.string().optional(),
     dxfIndex: z.number().int().nonnegative().optional(),
     priority: z.number().int(),
+    stopIfTrue: z.boolean().optional(),
     rank: z.number().int().nonnegative().optional(),
     percent: z.boolean(),
     bottom: z.boolean(),
@@ -199,6 +200,13 @@ const conditionalRuleSchema = z
     iconSetName: z.string().optional(),
     iconReverse: z.boolean(),
     showValue: z.boolean(),
+    negativeColor: z.string().optional(),
+    negativeSameAsPositive: z.boolean().optional(),
+    gradient: z.boolean().optional(),
+    axisPosition: z.enum(['automatic', 'middle', 'none']).optional(),
+    axisColor: z.string().optional(),
+    minLength: z.number().int().min(0).max(100).optional(),
+    maxLength: z.number().int().min(0).max(100).optional(),
   })
   .strict()
 const borderEdgeSchema = z
