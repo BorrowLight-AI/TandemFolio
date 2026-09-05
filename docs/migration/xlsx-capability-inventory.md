@@ -262,6 +262,13 @@ cannot be resolved safely in the destination. Sheet creation and content changes
 commands and journal, the current workbook remains the save target, and temporary source sessions
 close after success or failure.
 
+Embedded OLE objects now remain native package-owned content throughout browser editing. The reader
+resolves objectPr and legacy VML anchors, frame colors, ProgID captions, and cached PNG/JPEG/GIF or
+EMF/WMF previews; unsupported or damaged previews degrade to a read-only icon-and-caption box.
+Objects never enter the picture/shape mutation pipeline. Ordinary edits preserve the embedding,
+VML, relationships, and preview bytes, while structural row/column operations shift worksheet OLE,
+VML fallback, drawing, table, and chart coordinates together before save.
+
 The quick-access toolbar now exposes Save As independently from dirty-state Save. Any open
 file-backed workbook can choose a new browser file target even when clean, while the in-memory demo
 keeps the command disabled. The command reuses the existing `handleSave('save-as')` package route

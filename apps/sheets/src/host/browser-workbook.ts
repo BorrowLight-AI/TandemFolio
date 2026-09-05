@@ -40,8 +40,12 @@ import { StylesheetEditor } from '../gateway/xlsx-styles'
 import { applyTableAdditions, type TableAddition } from '../gateway/xlsx-table-add'
 import {
   applyStructuralOps,
+  shiftChartReferences,
   shiftCrossSheetFormulas,
   shiftDefinedNames,
+  shiftDrawingAnchors,
+  shiftTablePart,
+  shiftVmlObjectAnchors,
   type StructuralOp,
 } from '../gateway/xlsx-structure'
 import {
@@ -953,7 +957,7 @@ function chartMetadata(chartXml: string): NonNullable<WorkbookVisualObject['char
 
 function drawingAnchor(anchorXml: string): WorkbookVisualObject['anchor'] {
   const marker = (tag: 'xdr:from' | 'xdr:to') => {
-    const body = xmlElementBody(anchorXml, tag) ?? ''
+    const body = xmlElementBody(anchorXml, tag) ?? xmlElementBody(anchorXml, tag.slice(4)) ?? ''
     const number = (child: string): number => Number(textContent(body, child) ?? 0)
     return {
       row: number('xdr:row'),
@@ -963,7 +967,8 @@ function drawingAnchor(anchorXml: string): WorkbookVisualObject['anchor'] {
     }
   }
   const from = marker('xdr:from')
-  const explicitTo = xmlElementBody(anchorXml, 'xdr:to') !== undefined
+  const explicitTo =
+    xmlElementBody(anchorXml, 'xdr:to') !== undefined || xmlElementBody(anchorXml, 'to') !== undefined
   const to = explicitTo
     ? marker('xdr:to')
     : { row: from.row + 15, column: from.column + 7, rowOffset: 0, columnOffset: 0 }
@@ -990,7 +995,134 @@ function imageMediaType(path: string): string | undefined {
         ? 'image/gif'
         : extension === 'svg'
           ? 'image/svg+xml'
-          : undefined
+          : extension === 'bmp'
+            ? 'image/bmp'
+            : extension === 'webp'
+              ? 'image/webp'
+              : extension === 'emf'
+                ? 'image/x-emf'
+                : extension === 'wmf'
+                  ? 'image/x-wmf'
+                  : extension === 'emz'
+                    ? 'image/x-emz'
+                    : extension === 'wmz'
+                      ? 'image/x-wmz'
+                      : undefined
+}
+
+interface OleObjectRecord {
+  readonly shapeId: number
+  readonly progId: string
+  mediaPath?: string | undefined
+  anchor?: WorkbookVisualObject['anchor'] | undefined
+  lineColor?: string | undefined
+  fillColor?: string | undefined
+}
+
+function vmlBoolean(value: string | undefined): boolean | undefined {
+  if (value === 't' || value === 'true' || value === '1') return true
+  if (value === 'f' || value === 'false' || value === '0') return false
+  return undefined
+}
+
+function vmlColor(value: string | undefined, fallback: string): string {
+  const head = value?.trim().split(/\s+/, 1)[0] ?? ''
+  return /^#[0-9a-f]{6}$/i.test(head) ? head.toUpperCase() : fallback
+}
+
+function vmlAnchor(value: string | undefined): WorkbookVisualObject['anchor'] | undefined {
+  const numbers = value?.split(',').map((part) => Number(part.trim())) ?? []
+  if (numbers.length !== 8 || numbers.some((entry) => !Number.isFinite(entry) || entry < 0)) {
+    return undefined
+  }
+  const [fromColumn, fromColumnPx, fromRow, fromRowPx, toColumn, toColumnPx, toRow, toRowPx] =
+    numbers as [number, number, number, number, number, number, number, number]
+  return {
+    fromRow,
+    fromColumn,
+    fromRowOffset: fromRowPx * 9525,
+    fromColumnOffset: fromColumnPx * 9525,
+    toRow,
+    toColumn,
+    toRowOffset: toRowPx * 9525,
+    toColumnOffset: toColumnPx * 9525,
+    explicitTo: true,
+  }
+}
+
+async function readOleObjects(
+  worksheetXml: string,
+  worksheetPath: string,
+  relationships: readonly PartRelationship[],
+  readPart: (path: string) => Promise<string | null>,
+): Promise<OleObjectRecord[]> {
+  if (!worksheetXml.includes('oleObject')) return []
+  const records = new Map<number, OleObjectRecord>()
+  for (const match of worksheetXml.matchAll(
+    /<oleObject\b([^>]*?)(?:\/>|>([\s\S]*?)<\/oleObject>)/g,
+  )) {
+    const attributes = match[1] ?? ''
+    const shapeId = Number(xmlAttribute(attributes, 'shapeId'))
+    const progId = xmlAttribute(attributes, 'progId')
+    if (!Number.isInteger(shapeId) || shapeId < 0 || !progId) continue
+    const body = match[2] ?? ''
+    const objectPr = /<objectPr\b([^>]*)>([\s\S]*?)<\/objectPr>/.exec(body)
+    const previewId = objectPr ? xmlAttribute(objectPr[1] ?? '', 'r:id') : undefined
+    const previewRelationship = relationships.find((entry) => entry.id === previewId)
+    const anchorXml = objectPr ? xmlElementBody(objectPr[0], 'anchor') : undefined
+    const next = records.get(shapeId) ?? { shapeId, progId: decodeXml(progId) }
+    if (!next.mediaPath && previewRelationship) {
+      next.mediaPath = resolvePartTarget(worksheetPath, previewRelationship.target)
+    }
+    if (!next.anchor && anchorXml) next.anchor = drawingAnchor(anchorXml)
+    records.set(shapeId, next)
+  }
+
+  const legacyId = elementAttribute(worksheetXml, 'legacyDrawing', 'r:id')
+  const legacyRelationship = relationships.find((entry) => entry.id === legacyId)
+  if (!legacyRelationship) return [...records.values()]
+  const vmlPath = resolvePartTarget(worksheetPath, legacyRelationship.target)
+  const vmlXml = await readPart(vmlPath)
+  if (!vmlXml) return [...records.values()]
+  const vmlRelsXml = await readPart(worksheetRelationshipsPath(vmlPath))
+  const vmlRelationships = vmlRelsXml ? readRelationships(vmlRelsXml) : []
+  const inherited = new Map<string, { filled?: boolean; stroked?: boolean }>()
+  for (const match of vmlXml.matchAll(/<v:shapetype\b([^>]*)[\s\S]*?<\/v:shapetype>|<v:shapetype\b([^>]*)\/>/g)) {
+    const attributes = match[1] ?? match[2] ?? ''
+    const id = xmlAttribute(attributes, 'id')
+    if (!id) continue
+    const filled = vmlBoolean(xmlAttribute(attributes, 'filled'))
+    const stroked = vmlBoolean(xmlAttribute(attributes, 'stroked'))
+    inherited.set(`#${id}`, {
+      ...(filled === undefined ? {} : { filled }),
+      ...(stroked === undefined ? {} : { stroked }),
+    })
+  }
+  for (const match of vmlXml.matchAll(/<v:shape\b([^>]*)>([\s\S]*?)<\/v:shape>/g)) {
+    const attributes = match[1] ?? ''
+    const body = match[2] ?? ''
+    const shapeId = Number(/_s([0-9]+)$/.exec(xmlAttribute(attributes, 'id') ?? '')?.[1])
+    const record = records.get(shapeId)
+    if (!record) continue
+    const defaults = inherited.get(xmlAttribute(attributes, 'type') ?? '')
+    const filled = vmlBoolean(xmlAttribute(attributes, 'filled')) ?? defaults?.filled ?? true
+    const stroked = vmlBoolean(xmlAttribute(attributes, 'stroked')) ?? defaults?.stroked ?? true
+    record.fillColor = filled
+      ? vmlColor(xmlAttribute(attributes, 'fillcolor'), '#FFFFFF')
+      : undefined
+    record.lineColor = stroked
+      ? vmlColor(xmlAttribute(attributes, 'strokecolor'), '#000000')
+      : undefined
+    if (!record.anchor) record.anchor = vmlAnchor(textContent(body, 'x:Anchor'))
+    if (!record.mediaPath) {
+      const imageId =
+        elementAttribute(body, 'v:imagedata', 'o:relid') ??
+        elementAttribute(body, 'v:imagedata', 'r:id')
+      const imageRelationship = vmlRelationships.find((entry) => entry.id === imageId)
+      if (imageRelationship) record.mediaPath = resolvePartTarget(vmlPath, imageRelationship.target)
+    }
+  }
+  return [...records.values()]
 }
 
 async function readSheetVisuals(
@@ -1001,18 +1133,41 @@ async function readSheetVisuals(
   readPart: (path: string) => Promise<string | null>,
 ): Promise<BrowserVisual[]> {
   if (!relsXml) return []
+  const sheetRelationships = readRelationships(relsXml)
+  const oleObjects = await readOleObjects(
+    worksheetXml,
+    worksheetPath,
+    sheetRelationships,
+    readPart,
+  )
   const drawingRelationshipId = elementAttribute(worksheetXml, 'drawing', 'r:id')
-  const drawingRelationship = readRelationships(relsXml).find(
+  const drawingRelationship = sheetRelationships.find(
     (relationship) =>
       relationship.id === drawingRelationshipId || relationship.type?.endsWith('/drawing'),
   )
-  if (!drawingRelationship) return []
+  if (!drawingRelationship) {
+    return oleObjects.flatMap((ole, index) => {
+      if (!ole.anchor) return []
+      const mediaType = ole.mediaPath ? imageMediaType(ole.mediaPath) : undefined
+      return [{
+        id: `ole-${index + 1}`,
+        sheetName,
+        kind: 'ole' as const,
+        anchor: ole.anchor,
+        progId: ole.progId,
+        ...(ole.mediaPath && mediaType ? { mediaPath: ole.mediaPath, mediaType } : {}),
+        ...(ole.lineColor === undefined ? {} : { lineColor: ole.lineColor }),
+        ...(ole.fillColor === undefined ? {} : { fillColor: ole.fillColor }),
+      }]
+    })
+  }
   const drawingPath = resolvePartTarget(worksheetPath, drawingRelationship.target)
   const drawingXml = await readPart(drawingPath)
   if (!drawingXml) return []
   const drawingRelsXml = await readPart(worksheetRelationshipsPath(drawingPath))
   const drawingRelationships = drawingRelsXml ? readRelationships(drawingRelsXml) : []
   const visuals: BrowserVisual[] = []
+  const fallbackSlots = new Map<number, number>()
   const anchors = [
     ...drawingXml.matchAll(
       /<xdr:(twoCellAnchor|oneCellAnchor|absoluteAnchor)\b[^>]*>[\s\S]*?<\/xdr:\1>/g,
@@ -1025,6 +1180,7 @@ async function readSheetVisuals(
       const shapeType = elementAttribute(shapeXml, 'a:prstGeom', 'prst')
       if (!shapeType) continue
       const name = elementAttribute(shapeXml, 'xdr:cNvPr', 'name')
+      const nativeId = Number(elementAttribute(shapeXml, 'xdr:cNvPr', 'id'))
       const rawColor = elementAttribute(shapeXml, 'a:srgbClr', 'val')
       const text = xmlTexts(shapeXml, 'a:t').join('')
       visuals.push({
@@ -1039,6 +1195,12 @@ async function readSheetVisuals(
         ...(rawColor && /^[0-9A-Fa-f]{6}$/.test(rawColor) ? { fillColor: `#${rawColor}` } : {}),
         ...(text === '' ? {} : { text }),
       })
+      if (
+        Number.isInteger(nativeId) &&
+        oleObjects.some((candidate) => candidate.shapeId === nativeId)
+      ) {
+        fallbackSlots.set(nativeId, visuals.length - 1)
+      }
       continue
     }
     const pictureXml = xmlElementBody(anchorXml, 'xdr:pic')
@@ -1089,7 +1251,26 @@ async function readSheetVisuals(
       ...(name === undefined ? {} : { name: decodeXml(name) }),
     })
   }
-  return visuals
+  for (const [index, ole] of oleObjects.entries()) {
+    const slot = fallbackSlots.get(ole.shapeId)
+    const anchor = ole.anchor ?? (slot === undefined ? undefined : visuals[slot]?.anchor)
+    if (!anchor) continue
+    const mediaType = ole.mediaPath ? imageMediaType(ole.mediaPath) : undefined
+    const visual: BrowserVisual = {
+      id: `ole-${index + 1}`,
+      sheetName,
+      kind: 'ole',
+      anchor,
+      progId: ole.progId,
+      ...(ole.mediaPath && mediaType ? { mediaPath: ole.mediaPath, mediaType } : {}),
+      ...(ole.lineColor === undefined ? {} : { lineColor: ole.lineColor }),
+      ...(ole.fillColor === undefined ? {} : { fillColor: ole.fillColor }),
+    }
+    if (slot === undefined) visuals.push(visual)
+    else visuals[slot] = visual
+  }
+  const fallbackIndexes = new Set(fallbackSlots.values())
+  return visuals.filter((visual, index) => !fallbackIndexes.has(index) || visual.kind === 'ole')
 }
 
 function tableArea(ref: string): WorkbookFile['sheets'][number]['tables'][number]['range'] {
@@ -2211,6 +2392,40 @@ export class BrowserWorkbook {
     const sheet = this.#sheet(sheetName)
     const xml = applyStructuralOps(this.#sheetXml.get(sheet.path)!, [operation], sheetName)
     this.#sheetXml.set(sheet.path, xml)
+    const relsPath = worksheetRelationshipsPath(sheet.path)
+    const relsXml = this.#metadataXml.get(relsPath)
+    if (relsXml) {
+      const relationships = readRelationships(relsXml)
+      const parts: Array<{ id: string; kind: 'drawing' | 'table' | 'vml' }> = []
+      const drawingId = elementAttribute(xml, 'drawing', 'r:id')
+      if (drawingId) parts.push({ id: drawingId, kind: 'drawing' })
+      for (const match of xml.matchAll(/<tablePart\b([^>]*)\/?\s*>/g)) {
+        const id = xmlAttribute(match[1] ?? '', 'r:id')
+        if (id) parts.push({ id, kind: 'table' })
+      }
+      const legacyId = elementAttribute(xml, 'legacyDrawing', 'r:id')
+      if (legacyId && xml.includes('<oleObjects')) parts.push({ id: legacyId, kind: 'vml' })
+      for (const part of parts) {
+        const relationship = relationships.find((entry) => entry.id === part.id)
+        if (!relationship) {
+          throw new Error(`${sheet.path} references missing ${part.kind} relationship ${part.id}.`)
+        }
+        const path = resolvePartTarget(sheet.path, relationship.target)
+        const previous = this.#metadataXml.get(path)
+        if (previous === undefined) {
+          throw new Error(`${path} was not hydrated for structural editing.`)
+        }
+        const shifted =
+          part.kind === 'drawing'
+            ? shiftDrawingAnchors(previous, [operation])
+            : part.kind === 'vml'
+              ? shiftVmlObjectAnchors(previous, [operation])
+              : shiftTablePart(previous, [operation])
+        if (shifted === previous) continue
+        this.#metadataXml.set(path, shifted)
+        this.#dirtyPaths.add(path)
+      }
+    }
     const index = this.sheets.indexOf(sheet)
     this.sheets[index] = parseSheet(
       xml,
@@ -2243,6 +2458,13 @@ export class BrowserWorkbook {
         candidate.hidden,
       )
       this.#dirtyPaths.add(candidate.path)
+    }
+    for (const [path, previous] of this.#metadataXml) {
+      if (!path.startsWith('xl/charts/') || !path.endsWith('.xml')) continue
+      const shifted = shiftChartReferences(previous, sheetName, [operation])
+      if (shifted === previous) continue
+      this.#metadataXml.set(path, shifted)
+      this.#dirtyPaths.add(path)
     }
     const workbookPath = 'xl/workbook.xml'
     const workbookXml = this.#metadataXml.get(workbookPath)!
@@ -2740,26 +2962,28 @@ export async function openBrowserWorkbook(
     const xml = await zipText(zip, path)
     const sheetRelsPath = worksheetRelationshipsPath(path)
     const sheetRelsXml = zip.file(sheetRelsPath) ? await zipText(zip, sheetRelsPath) : null
+    const readMetadataPart = async (partPath: string): Promise<string | null> => {
+      if (!zip.file(partPath)) return null
+      const content = await zipText(zip, partPath)
+      metadataXml.set(partPath, content)
+      return content
+    }
     const tables = await readSheetTables(
       xml,
       path,
       sheetRelsXml,
-      async (tablePath) => (zip.file(tablePath) ? zipText(zip, tablePath) : null),
+      readMetadataPart,
       themeColors,
     )
-    const comments = await readSheetNotes(path, sheetRelsXml, async (commentsPath) =>
-      zip.file(commentsPath) ? zipText(zip, commentsPath) : null,
-    )
+    const comments = await readSheetNotes(path, sheetRelsXml, readMetadataPart)
     const pivots = await readSheetPivots(
       path,
       sheetRelsXml,
-      async (partPath) => (zip.file(partPath) ? zipText(zip, partPath) : null),
+      readMetadataPart,
       themeColors,
     )
     visuals.push(
-      ...(await readSheetVisuals(xml, path, decodeXml(sheetName), sheetRelsXml, async (partPath) =>
-        zip.file(partPath) ? zipText(zip, partPath) : null,
-      )),
+      ...(await readSheetVisuals(xml, path, decodeXml(sheetName), sheetRelsXml, readMetadataPart)),
     )
     sheetXml.set(path, xml)
     if (sheetRelsXml !== null) metadataXml.set(sheetRelsPath, sheetRelsXml)

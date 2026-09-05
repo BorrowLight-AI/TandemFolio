@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { BooleanNumber, numfmt } from '@univerjs/core'
+import { isMetafileMime, metafileToDataUrl } from '@genoffice/docx-engine/metafile'
 import { shapePreviewPath } from '@genoffice/ui'
 
 import type { createUniver } from './create-univer'
@@ -16,6 +17,7 @@ import {
 } from '../domain/chart-visual'
 import { parseAddress } from '../domain/cell-address'
 import { t } from './i18n/locale'
+import { oleCaption, oleFrameStyle, oleRenderKind } from './ole-visual'
 import { VisualDeleteButton } from './VisualDeleteButton'
 import { shouldShowVisualDeleteButton } from './visual-delete-button'
 import type { WorkbookChartEdit, WorkbookFile, WorkbookVisualObject } from '../shared/desktop-api'
@@ -366,6 +368,9 @@ function WorkbookVisual({
   }
   if (visual.kind === 'image') {
     return <ImageVisual file={file} visual={visual} />
+  }
+  if (visual.kind === 'ole') {
+    return <OleVisual file={file} visual={visual} />
   }
   return <ShapeVisual visual={visual} />
 }
@@ -1021,27 +1026,32 @@ function ShapeVisual({ visual }: { readonly visual: WorkbookVisualObject }): Rea
   )
 }
 
-function ImageVisual({
-  file,
-  visual,
-}: {
-  readonly file: VisualHost
-  readonly visual: WorkbookVisualObject
-}): React.JSX.Element {
-  const [source, setSource] = useState<string | null>(visual.mediaDataUrl ?? null)
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return bytes
+}
+
+function useWorkbookMediaUrl(
+  sessionId: string | undefined,
+  visualId: string,
+): { source: string | null; error: string | null } {
+  const [source, setSource] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Session-added images carry their bytes inline; nothing to fetch.
-    if (visual.mediaDataUrl) return
+    if (sessionId === undefined) return
     let isCurrent = true
     void window.desktopApi
-      .readWorkbookMedia({
-        sessionId: file.sessionId,
-        visualId: visual.id,
-      })
-      .then((media) => {
-        if (isCurrent) setSource(`data:${media.mediaType};base64,${media.base64}`)
+      .readWorkbookMedia({ sessionId, visualId })
+      .then(async (media) => {
+        const next = isMetafileMime(media.mediaType)
+          ? await metafileToDataUrl(base64ToBytes(media.base64), media.mediaType)
+          : `data:${media.mediaType};base64,${media.base64}`
+        if (!isCurrent) return
+        if (next) setSource(next)
+        else setError(t('appImageLoadFailed'))
       })
       .catch((reason: unknown) => {
         if (isCurrent) setError(reason instanceof Error ? reason.message : t('appImageLoadFailed'))
@@ -1049,11 +1059,71 @@ function ImageVisual({
     return () => {
       isCurrent = false
     }
-  }, [file.sessionId, visual.id, visual.mediaDataUrl])
+  }, [sessionId, visualId])
 
-  if (error) return <div className="xlsx-visual-error">{error}</div>
+  return { source, error }
+}
+
+function ImageVisual({
+  file,
+  visual,
+}: {
+  readonly file: VisualHost
+  readonly visual: WorkbookVisualObject
+}): React.JSX.Element {
+  const media = useWorkbookMediaUrl(visual.mediaDataUrl ? undefined : file.sessionId, visual.id)
+  const source = visual.mediaDataUrl ?? media.source
+
+  if (media.error) return <div className="xlsx-visual-error">{media.error}</div>
   if (!source) return <div className="xlsx-visual-loading">{t('appImageLoading')}</div>
   return <img className="xlsx-image" src={source} alt={visual.name ?? t('appWorkbookImageAlt')} />
+}
+
+function OleVisual({
+  file,
+  visual,
+}: {
+  readonly file: VisualHost
+  readonly visual: WorkbookVisualObject
+}): React.JSX.Element {
+  const media = useWorkbookMediaUrl(visual.mediaPath ? file.sessionId : undefined, visual.id)
+  const caption = oleCaption(visual.progId)
+  const frame = oleFrameStyle(visual)
+  if (oleRenderKind(visual, media.error !== null) === 'preview') {
+    if (!media.source) return <div className="xlsx-visual-loading">{t('appImageLoading')}</div>
+    return (
+      <div className="xlsx-ole-frame" style={frame}>
+        <img
+          className="xlsx-image xlsx-ole-preview"
+          src={media.source}
+          alt={caption}
+          draggable={false}
+        />
+      </div>
+    )
+  }
+  return (
+    <div
+      className="xlsx-ole-placeholder"
+      style={frame}
+      role="img"
+      aria-label={caption}
+      title={caption}
+    >
+      <svg className="xlsx-ole-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M6 2h8l5 5v15H6z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        <path d="M14 2v5h5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M9 12h7M9 15h7M9 18h5" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+      <span className="xlsx-ole-caption">{caption}</span>
+    </div>
+  )
 }
 
 type ChartMetadata = NonNullable<WorkbookVisualObject['chart']>

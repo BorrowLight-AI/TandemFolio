@@ -93,7 +93,57 @@ export function applyStructuralOps(
     if (axis === 'column') xml = transformColDefinitions(xml, shift)
   }
   if (outlineTouched) xml = syncOutlineSummaryLevels(xml)
-  return xml
+  return shiftOleObjectAnchors(xml, ops)
+}
+
+/// Embedded OLE objects anchor in the worksheet's own `<oleObjects>` block,
+/// outside the normal spreadsheet drawing part.
+export function shiftOleObjectAnchors(worksheetXml: string, ops: readonly StructuralOp[]): string {
+  if (!worksheetXml.includes('<oleObjects')) return worksheetXml
+  return worksheetXml.replace(/<oleObjects\b[\s\S]*?<\/oleObjects>/g, (block) =>
+    shiftDrawingAnchors(block, ops),
+  )
+}
+
+/// Legacy VML picture shapes carry OLE fallback anchors in pixel units.
+/// Note/comment shapes remain untouched.
+export function shiftVmlObjectAnchors(vmlXml: string, ops: readonly StructuralOp[]): string {
+  const shifting = rowColumnOps(ops)
+  if (shifting.length === 0 || !vmlXml.includes('ObjectType="Pict"')) return vmlXml
+  return vmlXml.replace(/<v:shape\b[\s\S]*?<\/v:shape>/g, (shape) => {
+    if (!/<x:ClientData\b[^>]*\bObjectType="Pict"/.test(shape)) return shape
+    return shape.replace(
+      /(<x:Anchor>)([^<]*)(<\/x:Anchor>)/,
+      (_match, open: string, inner: string, close: string) => {
+        const values = inner.split(',').map((part) => Number(part.trim()))
+        if (values.length !== 8 || values.some((value) => !Number.isFinite(value))) return _match
+        return `${open}${shiftVmlAnchorValues(values, shifting).join(', ')}${close}`
+      },
+    )
+  })
+}
+
+function shiftVmlAnchorValues(values: readonly number[], ops: readonly RowColumnOp[]): number[] {
+  const next = [...values]
+  for (const op of ops) {
+    const shift = toShift(op)
+    const from = axisOf(op) === 'row' ? 2 : 0
+    const to = from + 4
+    if (shift.swap) {
+      const moved = moveRange(next[from]!, next[to]!, shift)
+      if (moved) {
+        next[from] = moved.start
+        next[to] = moved.end
+      }
+      continue
+    }
+    for (const at of [from, to]) {
+      const moved = moveAnchorMark(next[at]!, shift)
+      next[at] = moved.position
+      if (moved.clamped) next[at + 1] = 0
+    }
+  }
+  return next
 }
 
 /// Excel sizes the outline gutter from sheetFormatPr's outlineLevelRow/Col;
@@ -478,7 +528,7 @@ export function shiftDrawingAnchors(drawingXml: string, ops: readonly Structural
 function swapDrawingAnchors(xml: string, shift: BlockSwap, tag: string): string {
   const markPattern = (kind: string): RegExp =>
     new RegExp(`(<(?:\\w+:)?${kind}>[\\s\\S]*?<(?:\\w+:)?${tag}>)([0-9]+)(</(?:\\w+:)?${tag}>)`)
-  const result = xml.replace(/<((?:\w+:)?)twoCellAnchor\b[\s\S]*?<\/\1twoCellAnchor>/g, (block) => {
+  const result = xml.replace(/<((?:\w+:)?)(twoCellAnchor|anchor)\b[\s\S]*?<\/\1\2>/g, (block) => {
     const from = markPattern('from').exec(block)
     const to = markPattern('to').exec(block)
     if (!from?.[2] || !to?.[2]) return block

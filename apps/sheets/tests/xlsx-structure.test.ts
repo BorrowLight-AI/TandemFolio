@@ -8,7 +8,9 @@ import {
   shiftDefinedNames,
   shiftDrawingAnchors,
   shiftFormulaText,
+  shiftOleObjectAnchors,
   shiftTablePart,
+  shiftVmlObjectAnchors,
   StructuralShiftError,
 } from '../src/gateway/xlsx-structure'
 import { buildStructureFixture } from './fixture-builder'
@@ -284,6 +286,36 @@ describe('shiftDrawingAnchors', () => {
     const removed = shiftDrawingAnchors(DRAWING_XML, [{ kind: 'remove-cols', index: 2, count: 2 }])
     // to col 3 was inside the deleted span: clamps to 2, colOff zeroed.
     expect(removed).toContain('<xdr:to><xdr:col>2</xdr:col><xdr:colOff>0</xdr:colOff>')
+  })
+})
+
+describe('embedded OLE anchors', () => {
+  it('moves objectPr anchors in worksheet XML', () => {
+    const xml =
+      '<worksheet><sheetData/><oleObjects><oleObject><objectPr><anchor>' +
+      '<from><xdr:col>1</xdr:col><xdr:colOff>9</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>8</xdr:rowOff></from>' +
+      '<to><xdr:col>4</xdr:col><xdr:colOff>7</xdr:colOff><xdr:row>3</xdr:row><xdr:rowOff>6</xdr:rowOff></to>' +
+      '</anchor></objectPr></oleObject></oleObjects></worksheet>'
+    const shifted = shiftOleObjectAnchors(xml, [
+      { kind: 'insert-rows', index: 0, count: 2 },
+      { kind: 'insert-cols', index: 2, count: 1 },
+    ])
+    expect(shifted).toContain('<xdr:col>1</xdr:col>')
+    expect(shifted).toContain('<xdr:col>5</xdr:col>')
+    expect(shifted).toContain('<xdr:row>3</xdr:row>')
+    expect(shifted).toContain('<xdr:row>5</xdr:row>')
+  })
+
+  it('moves only VML picture-object anchors', () => {
+    const vml =
+      '<xml><v:shape id="ole"><x:ClientData ObjectType="Pict"><x:Anchor>1, 0, 1, 0, 4, 40, 3, 16</x:Anchor></x:ClientData></v:shape>' +
+      '<v:shape id="note"><x:ClientData ObjectType="Note"><x:Anchor>2, 0, 2, 0, 3, 0, 4, 0</x:Anchor></x:ClientData></v:shape></xml>'
+    const shifted = shiftVmlObjectAnchors(vml, [
+      { kind: 'insert-rows', index: 0, count: 2 },
+      { kind: 'insert-cols', index: 2, count: 1 },
+    ])
+    expect(shifted).toContain('<x:Anchor>1, 0, 3, 0, 5, 40, 5, 16</x:Anchor>')
+    expect(shifted).toContain('<x:Anchor>2, 0, 2, 0, 3, 0, 4, 0</x:Anchor>')
   })
 })
 

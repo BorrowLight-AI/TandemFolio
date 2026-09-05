@@ -339,7 +339,9 @@ const visualObjectSchema = z
   .object({
     id: z.string().min(1),
     sheetId: z.string().min(1),
-    kind: z.enum(['chart', 'image', 'shape']),
+    /// `ole` is a read-only worksheet embedded object rendered from its
+    /// cached preview or an icon-and-caption placeholder.
+    kind: z.enum(['chart', 'image', 'shape', 'ole']),
     anchor: drawingAnchorSchema,
     chart: z
       .object({
@@ -434,6 +436,8 @@ const visualObjectSchema = z
     name: z.string().optional(),
     shapeType: z.string().optional(),
     fillColor: z.string().optional(),
+    lineColor: z.string().optional(),
+    progId: z.string().optional(),
     text: z.string().optional(),
     rotation: z.number().finite().optional(),
     /// Save-side edit locator: the drawing part this visual lives in and its

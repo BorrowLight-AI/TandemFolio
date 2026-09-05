@@ -557,7 +557,12 @@ export class BrowserWorkbookDesktopApi {
   async readWorkbookMedia(request: WorkbookMediaRequest): Promise<WorkbookMediaResult> {
     const session = this.#session(request.sessionId)
     const visual = session.file.visuals.find((candidate) => candidate.id === request.visualId)
-    if (visual?.kind !== 'image' || !visual.mediaPath || !visual.mediaType) {
+    if (
+      !visual ||
+      (visual.kind !== 'image' && visual.kind !== 'ole') ||
+      !visual.mediaPath ||
+      !visual.mediaType
+    ) {
       throw new Error(`Unknown workbook image: ${request.visualId}`)
     }
     return {
