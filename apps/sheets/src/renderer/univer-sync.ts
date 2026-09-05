@@ -42,7 +42,11 @@ import { splitSheetRef, type CellBounds } from '../domain/chart-visual'
 import { applyFlashFillTemplate, inferFlashFillTemplate } from '../domain/flash-fill'
 import { InMemoryWorkbookAdapter } from '../domain/in-memory-workbook'
 import { WORST_FIRST_ICON_SETS } from '../gateway/xlsx-cf'
-import { pixelsToCharacterWidth } from './app-constants'
+import {
+  getWorkbookMdw,
+  pixelsToCharacterWidth,
+  setWorkbookMdw,
+} from './app-constants'
 import type { CellFormatState, CellState, WorkbookSnapshot } from '../domain/workbook.types'
 import type {
   WorkbookCellStyle,
@@ -306,6 +310,7 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
   if (!runtime) return
   const activeWorkbook = runtime.univerAPI.getActiveWorkbook()
   if (activeWorkbook) runtime.univerAPI.disposeUnit(activeWorkbook.getId())
+  setWorkbookMdw(measureNormalFontMdw(file))
   runtime.univerAPI.createWorkbook({
     id: `file-${file.sha256}`,
     name: file.name,
@@ -334,9 +339,9 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
             ...(sheet.defaultRowHeight === null
               ? {}
               : { defaultRowHeight: (sheet.defaultRowHeight * 96) / 72 }),
-            ...(sheet.defaultColumnWidth === null
-              ? {}
-              : { defaultColumnWidth: characterWidthToPixels(sheet.defaultColumnWidth) }),
+            defaultColumnWidth: characterWidthToPixels(
+              sheet.defaultColumnWidth ?? paddedBaseColumnWidth(sheet.baseColumnWidth),
+            ),
             ...(sheet.freeze === null
               ? {}
               : {
@@ -357,7 +362,48 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
 }
 
 export function characterWidthToPixels(width: number): number {
-  return width === 0 ? 0 : Math.floor(((256 * width + Math.floor(128 / 7)) / 256) * 7) + 5
+  const mdw = getWorkbookMdw()
+  return width === 0 ? 0 : Math.floor(((256 * width + Math.floor(128 / mdw)) / 256) * mdw) + 5
+}
+
+export function paddedBaseColumnWidth(base: number | null | undefined): number {
+  const chars = base ?? 8
+  const mdw = getWorkbookMdw()
+  return Math.trunc(((chars * mdw + 5) / mdw) * 256) / 256
+}
+
+const KNOWN_DIGIT_WIDTH_PER_POINT: Readonly<Record<string, number>> = {
+  Calibri: 8 / 11,
+  Verdana: 8 / 10,
+  'Aptos Narrow': 8 / 11,
+  'Malgun Gothic': 7 / 11,
+  '맑은 고딕': 7 / 11,
+  'ＭＳ Ｐゴシック': 8 / 11,
+  'MS PGothic': 8 / 11,
+  'ＭＳ ゴシック': 8 / 11,
+  'MS Gothic': 8 / 11,
+  宋体: 8 / 11,
+  SimSun: 8 / 11,
+  新細明體: 8 / 11,
+  PMingLiU: 8 / 11,
+}
+
+export function measureNormalFontMdw(file: WorkbookFile): number {
+  const normal = file.styles?.[0]
+  const size = normal?.fontSize ?? 11
+  const family = normal?.fontFamily ?? 'Calibri'
+  const known = KNOWN_DIGIT_WIDTH_PER_POINT[family]
+  if (known !== undefined) return Math.max(4, Math.min(30, Math.round(known * size)))
+  if (typeof document === 'undefined') return 7
+  try {
+    const context = document.createElement('canvas').getContext('2d')
+    if (!context) return 7
+    context.font = `${(size * 96) / 72}px "${family.replace(/["\\]/g, '')}"`
+    const width = context.measureText('0').width
+    return width > 0 ? Math.max(4, Math.min(30, Math.floor(width + 0.6))) : 7
+  } catch {
+    return 7
+  }
 }
 
 /// Normalizes dialog input into the wire target format: '#Sheet!A1' for

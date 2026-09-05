@@ -81,6 +81,7 @@ const worksheetMetadataSchema = z
     // reject the whole workbook — the preload maps it back to null.
     defaultRowHeight: z.number().nonnegative().nullable(),
     defaultColumnWidth: z.number().nonnegative().nullable(),
+    baseColumnWidth: z.number().int().nonnegative().optional(),
     freeze: z
       .object({
         frozenColumns: z.number().int().nonnegative(),

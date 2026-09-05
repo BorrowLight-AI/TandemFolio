@@ -92,8 +92,18 @@ export const AXIS_ATTR_MUTATIONS: Record<
 
 /// Univer column pixels → OOXML character width (inverse of
 /// characterWidthToPixels), snapped to the format's 1/256 granularity.
+let workbookMdw = 7
+
+export function setWorkbookMdw(mdw: number): void {
+  workbookMdw = Number.isFinite(mdw) && mdw >= 4 && mdw <= 30 ? Math.round(mdw) : 7
+}
+
+export function getWorkbookMdw(): number {
+  return workbookMdw
+}
+
 export function pixelsToCharacterWidth(pixels: number): number {
-  return Math.max(Math.round(((pixels - 5) / 7) * 256) / 256, 1 / 256)
+  return Math.max(Math.round(((pixels - 5) / workbookMdw) * 256) / 256, 1 / 256)
 }
 // Sorting reorders the model in place; the journal snapshots the sorted
 // range afterwards, so the save writes exactly what the screen shows.

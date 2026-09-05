@@ -100,6 +100,9 @@ export interface BrowserSheet {
   cells: Map<string, BrowserCell>
   rows: WorkbookRangeResult['rows']
   columnWidths: WorkbookFile['sheets'][number]['columnWidths']
+  defaultRowHeight: number | null
+  defaultColumnWidth: number | null
+  baseColumnWidth?: number
   dataValidations: WorkbookRangeResult['dataValidations']
   conditionalRules: WorkbookRangeResult['conditionalRules']
   merges: string[]
@@ -552,6 +555,9 @@ function parseSheet(
       ...(Number.isInteger(styleIndex) && styleIndex >= 0 ? { styleIndex } : {}),
     })
   }
+  const defaultRowHeight = numberAttribute(xml, 'sheetFormatPr', 'defaultRowHeight') ?? null
+  const defaultColumnWidth = numberAttribute(xml, 'sheetFormatPr', 'defaultColWidth') ?? null
+  const baseColumnWidth = integerAttribute(xml, 'sheetFormatPr', 'baseColWidth')
   const dataValidations: WorkbookRangeResult['dataValidations'] = []
   for (const match of xml.matchAll(
     /<dataValidation\b([^>]*?)(?:\/>|>([\s\S]*?)<\/dataValidation>)/g,
@@ -689,6 +695,9 @@ function parseSheet(
     cells,
     rows,
     columnWidths,
+    defaultRowHeight,
+    defaultColumnWidth,
+    ...(baseColumnWidth === undefined ? {} : { baseColumnWidth }),
     dataValidations,
     conditionalRules,
     merges,

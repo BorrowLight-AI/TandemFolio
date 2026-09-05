@@ -18,14 +18,10 @@ import { CellValueType, InterceptorEffectEnum, isDefaultFormat, numfmt } from '@
 import { INTERCEPTOR_POINT, SheetInterceptorService } from '@univerjs/sheets'
 
 import type { UniverRuntime } from './univer-state'
-
-/// Same max-digit-width constant as characterWidthToPixels (univer-sync.ts),
-/// so a column imported as N chars yields a budget of floor(N) regardless of
-/// the render font.
-const MDW = 7
+import { getWorkbookMdw } from './app-constants'
 
 export function generalCharBudget(columnWidthPx: number): number {
-  return Math.max(1, Math.floor((columnWidthPx - 5) / MDW))
+  return Math.max(1, Math.floor((columnWidthPx - 5) / getWorkbookMdw()))
 }
 
 function toScientific(value: number, decimals: number): string {

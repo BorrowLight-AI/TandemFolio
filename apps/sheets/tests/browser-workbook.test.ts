@@ -208,6 +208,24 @@ describe('browser XLSX workbook', () => {
     expect(range.rows[0]).toMatchObject({ row: 0, styleIndex: 1 })
   })
 
+  it('preserves sheetFormatPr default and base column widths', async () => {
+    vi.stubGlobal('window', {})
+    const zip = await JSZip.loadAsync(await fixture())
+    const sheet = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      sheet.replace('<sheetData>', '<sheetFormatPr defaultRowHeight="18" baseColWidth="10" defaultColWidth="12.5"/><sheetData>'),
+    )
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await zip.generateAsync({ type: 'arraybuffer' }), 'widths.xlsx')
+
+    expect(file.sheets[0]).toMatchObject({
+      defaultRowHeight: 18,
+      defaultColumnWidth: 12.5,
+      baseColumnWidth: 10,
+    })
+  })
+
   it('hydrates native conditional-format rules and differential styles', async () => {
     vi.stubGlobal('window', {})
     const zip = await JSZip.loadAsync(await fixture())
