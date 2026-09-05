@@ -123,6 +123,13 @@ cell fills and non-default font colors. Filtered tables rank stripes by visible 
 stream has proven row visibility through the table; manual hides and incomplete streams keep
 physical parity. Cached formula strings remain explicitly typed, and anchored A1 addresses remain
 valid throughout Pivot and range parsing.
+Saved `sheetView/@zoomScale` now crosses the browser package boundary and seeds Univer's initial
+zoom ratio. Shape gestures derive two-cell anchors from the scrolled render viewport, divide screen
+distance by zoom, and mirror the logical horizontal walk on RTL sheets. Streamed rows and columns
+also record their default-style keys before cell installation; an explicit cell xf blocks inherited
+font, fill, alignment, rotation, and number-format values while unstyled cells continue to inherit
+the row or column default. Existing load-time row-height suppression and style-only-cell formula
+coercion are now covered by the candidate regression suites.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -193,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 152 passing files and one environment-conditional LibreOffice pivot
-suite; 1,799 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 157 passing files and one environment-conditional LibreOffice pivot
+suite; 1,825 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

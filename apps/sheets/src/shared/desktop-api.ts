@@ -98,6 +98,8 @@ const worksheetMetadataSchema = z
     showHeadings: z.boolean().optional(),
     /// sheetView/@rightToLeft — places column A at the visual right edge.
     rightToLeft: z.boolean().optional(),
+    /// Saved normal-view zoom percent.
+    zoomScale: z.number().int().min(10).max(400).optional(),
     /// Exact file-declared print geometry and page-specific header/footer variants.
     printSettings: filePagePrintSettingsSchema.nullable().optional(),
     tables: z.array(

@@ -200,6 +200,7 @@ export class BrowserWorkbookDesktopApi {
         defaultRowHeight: sheet.defaultRowHeight,
         defaultColumnWidth: sheet.defaultColumnWidth,
         ...(sheet.baseColumnWidth === undefined ? {} : { baseColumnWidth: sheet.baseColumnWidth }),
+        ...(sheet.zoomScale === undefined ? {} : { zoomScale: sheet.zoomScale }),
         freeze: null,
         hidden: sheet.hidden,
         tabColor: tabColor ?? null,

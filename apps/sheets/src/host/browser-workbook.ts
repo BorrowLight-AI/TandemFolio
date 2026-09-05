@@ -114,6 +114,7 @@ export interface BrowserSheet {
   comments: WorkbookFile['sheets'][number]['comments']
   pivotRanges: WorkbookFile['sheets'][number]['pivotRanges']
   pivotTables: WorkbookFile['sheets'][number]['pivotTables']
+  zoomScale?: number
   sheetProtection: { readonly protected: boolean; readonly hasPassword: boolean } | null
   protectedRanges: Array<ProtectedRangeState & { readonly hasPassword: boolean }>
 }
@@ -565,6 +566,11 @@ function parseSheet(
   const defaultRowHeight = numberAttribute(xml, 'sheetFormatPr', 'defaultRowHeight') ?? null
   const defaultColumnWidth = numberAttribute(xml, 'sheetFormatPr', 'defaultColWidth') ?? null
   const baseColumnWidth = integerAttribute(xml, 'sheetFormatPr', 'baseColWidth')
+  const rawZoomScale = integerAttribute(xml, 'sheetView', 'zoomScale')
+  const zoomScale =
+    rawZoomScale !== undefined && rawZoomScale >= 10 && rawZoomScale <= 400
+      ? rawZoomScale
+      : undefined
   const dataValidations: WorkbookRangeResult['dataValidations'] = []
   for (const match of xml.matchAll(
     /<dataValidation\b([^>]*?)(?:\/>|>([\s\S]*?)<\/dataValidation>)/g,
@@ -705,6 +711,7 @@ function parseSheet(
     defaultRowHeight,
     defaultColumnWidth,
     ...(baseColumnWidth === undefined ? {} : { baseColumnWidth }),
+    ...(zoomScale === undefined ? {} : { zoomScale }),
     dataValidations,
     conditionalRules,
     merges,

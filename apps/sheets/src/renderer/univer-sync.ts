@@ -360,6 +360,7 @@ export function loadWorkbookSkeleton(runtime: UniverRuntime | null, file: Workbo
                     startColumn: sheet.freeze.frozenColumns,
                   },
                 }),
+            ...(sheet.zoomScale === undefined ? {} : { zoomRatio: sheet.zoomScale / 100 }),
             columnData: createColumnData(sheet, file.styles),
             cellData: {},
           },
@@ -1885,6 +1886,7 @@ async function loadFrozenColumnStrip(
     }
     const stripPatchRange = { ...stripRange, endRow: availableEndRow }
     recordHiddenFileRows(state, sheetId, mapped.screen.rows, stripPatchRange)
+    recordRowStyleKeys(state, sheetId, mapped.screen.rows)
     patchWorksheetRange(
       worksheet,
       undefined,
@@ -1901,6 +1903,7 @@ async function loadFrozenColumnStrip(
       state.recalc.overlay.get(sheetId),
       undefined,
       hiddenRowsInfo(state, sheetId),
+      sheetRowColStyleKeys(state, sheetId),
     )
   } catch {
     state.frozenStripKeys.delete(sheetId)
@@ -1948,6 +1951,7 @@ async function loadRange(
     if (availableEndRow !== null && availableEndRow >= range.startRow) {
       const availableRange = { ...range, endRow: availableEndRow }
       recordHiddenFileRows(state, sheetId, mapped.screen.rows, availableRange)
+      recordRowStyleKeys(state, sheetId, mapped.screen.rows)
       const alreadyLoaded = state.loadedRanges.get(sheetId)
       if (!alreadyLoaded || !containsRange(alreadyLoaded, availableRange)) {
         patchWorksheetRange(
@@ -1966,6 +1970,7 @@ async function loadRange(
           state.recalc.overlay.get(sheetId),
           undefined,
           hiddenRowsInfo(state, sheetId),
+          sheetRowColStyleKeys(state, sheetId),
         )
         state.loadedRanges.set(sheetId, availableRange)
       }
@@ -2090,6 +2095,81 @@ export async function ensureLazyRangeLoaded(
   return state === initialState && loaded !== undefined && containsRange(loaded, range)
 }
 
+/// Union of row/column default style keys for one sheet. Explicit OOXML cell
+/// xfs are complete records and must block these composed Univer defaults.
+export function sheetRowColStyleKeys(state: LazyWorkbookState, sheetId: string): Set<string> {
+  let keys = state.rowColStyleKeys.get(sheetId)
+  if (!keys) {
+    keys = new Set()
+    const sheet = state.file.sheets.find((candidate) => candidate.id === sheetId)
+    for (const column of sheet?.columnWidths ?? []) {
+      if (column.styleIndex === undefined) continue
+      const style = state.file.styles[column.styleIndex]
+      if (style) for (const key of Object.keys(toUniverStyle(style))) keys.add(key)
+    }
+    state.rowColStyleKeys.set(sheetId, keys)
+  }
+  return keys
+}
+
+export function recordRowStyleKeys(
+  state: LazyWorkbookState,
+  sheetId: string,
+  rows: WorkbookRangeResult['rows'],
+): void {
+  for (const row of rows) {
+    if (row.styleIndex === undefined) continue
+    const style = state.file.styles[row.styleIndex]
+    if (!style) continue
+    const keys = sheetRowColStyleKeys(state, sheetId)
+    for (const key of Object.keys(toUniverStyle(style))) keys.add(key)
+  }
+}
+
+function bleedOverrideValue(key: string, normal: WorkbookCellStyle | undefined): unknown {
+  switch (key) {
+    case 'cl':
+      return { rgb: '#000000' }
+    case 'bg':
+      return { rgb: '#FFFFFF' }
+    case 'ul':
+    case 'st':
+      return { s: BooleanNumber.FALSE }
+    case 'ht':
+      return HorizontalAlign.UNSPECIFIED
+    case 'vt':
+      return VerticalAlign.UNSPECIFIED
+    case 'tr':
+      return { a: 0 }
+    case 'n':
+      return { pattern: 'General' }
+    case 'ff': {
+      const family = normal?.fontFamily ?? 'Calibri'
+      return /^[0-9]/.test(family) ? `\\3${family[0]} ${family.slice(1)}` : family
+    }
+    case 'fs':
+      return normal?.fontSize ?? 11
+    default:
+      return undefined
+  }
+}
+
+export function withRowColOverrides(
+  style: IStyleData,
+  bleedKeys: ReadonlySet<string> | undefined,
+  normal: WorkbookCellStyle | undefined,
+): IStyleData {
+  if (bleedKeys?.size) {
+    const record = style as Record<string, unknown>
+    for (const key of bleedKeys) {
+      if (record[key] !== undefined) continue
+      const override = bleedOverrideValue(key, normal)
+      if (override !== undefined) record[key] = override
+    }
+  }
+  return style
+}
+
 export function hiddenRowsInfo(
   state: LazyWorkbookState,
   sheetId: string,
@@ -2129,6 +2209,7 @@ export function applyRowProperties(
   rows: WorkbookRangeResult['rows'],
 ): void {
   if (rows.length === 0) return
+  recordRowStyleKeys(state, sheetId, rows)
   let applied = state.appliedRowKeys.get(sheetId)
   if (!applied) {
     applied = new Set()
@@ -2315,6 +2396,7 @@ function patchWorksheetRange(
   recalcOverlay?: ReadonlyMap<string, PinnedClosureCell>,
   arrayFollowers?: ReadonlySet<string>,
   hiddenRows?: HiddenRowsInfo,
+  rowColStyleKeys?: ReadonlySet<string>,
 ): void {
   journalSuppression.active = true
   try {
@@ -2331,6 +2413,7 @@ function patchWorksheetRange(
       useFormulas,
       arrayFollowers,
       hiddenRows,
+      rowColStyleKeys,
     )
     // Closure cells were just evicted or clobbered with static cached
     // values; re-pin them first — the journal overlay runs after so user
@@ -2438,6 +2521,7 @@ export function patchWorksheetRangeInner(
   useFormulas: boolean,
   arrayFollowers?: ReadonlySet<string>,
   hiddenRows?: HiddenRowsInfo,
+  rowColStyleKeys?: ReadonlySet<string>,
 ): void {
   if (previousRange) {
     // Frozen rows/columns stay visible while scrolling, so never evict them —
@@ -2462,6 +2546,7 @@ export function patchWorksheetRangeInner(
     Array.from({ length: columns }, () => ({})),
   )
   const centerAcross = new Map<number, Map<number, boolean>>()
+  const overrideCells: Array<readonly [number, number]> = []
   for (const cell of cells) {
     if (
       cell.row < range.startRow ||
@@ -2492,6 +2577,9 @@ export function patchWorksheetRangeInner(
     if (useFormulas && arrayFollowers?.has(`${cell.row}:${cell.column}`)) {
       if (row) {
         row[cell.column - range.startColumn] = style ? { s: toUniverStyle(style) } : {}
+        if (style && rowColStyleKeys?.size) {
+          overrideCells.push([cell.row - range.startRow, cell.column - range.startColumn])
+        }
       }
       continue
     }
@@ -2554,6 +2642,9 @@ export function patchWorksheetRangeInner(
             }
           : {}),
       }
+      if (effectiveStyle && rowColStyleKeys?.size) {
+        overrideCells.push([cell.row - range.startRow, cell.column - range.startColumn])
+      }
     }
   }
   for (const [rowIndex, run] of centerAcross) {
@@ -2568,6 +2659,12 @@ export function patchWorksheetRangeInner(
   }
   applyTableBanding(matrix, range, tables, hiddenRows)
   applyPivotStyling(matrix, range, pivotTables)
+  for (const [rowIndex, columnIndex] of overrideCells) {
+    const style = matrix[rowIndex]?.[columnIndex]?.s
+    if (style && typeof style === 'object') {
+      withRowColOverrides(style as IStyleData, rowColStyleKeys, styles[0])
+    }
+  }
   worksheet.getRange(range.startRow, range.startColumn, rows, columns).setValues(matrix)
 }
 
@@ -3187,6 +3284,7 @@ export async function preloadEntireWorkbook(
       storeFormulaText(state, sheetId, screen.cells)
       collectArrayFollowers(arrayFollowers, screen.cells, ops)
       recordHiddenFileRows(state, sheetId, screen.rows, screenRange)
+      recordRowStyleKeys(state, sheetId, screen.rows)
       patchWorksheetRange(
         worksheet,
         undefined,
@@ -3203,6 +3301,7 @@ export async function preloadEntireWorkbook(
         undefined,
         arrayFollowers,
         hiddenRowsInfo(state, sheetId),
+        sheetRowColStyleKeys(state, sheetId),
       )
       recordHyperlinks(state, sheetId, screen.hyperlinks)
       applyRowProperties(worksheet, state, sheetId, screen.rows)
@@ -4516,6 +4615,7 @@ export function clearLazyState(state: LazyWorkbookState | null): void {
   state.retryTimers.clear()
   state.loadingKeys.clear()
   state.loadedRanges.clear()
+  state.rowColStyleKeys.clear()
   state.hiddenFileRows.clear()
   state.hiddenRowsCoveredThrough.clear()
 }
