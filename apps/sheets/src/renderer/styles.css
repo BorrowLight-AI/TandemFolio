@@ -1988,6 +1988,66 @@ textarea:focus {
   pointer-events: none;
 }
 
+.data-validation-dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  cursor: default;
+  appearance: none;
+}
+
+.univer-z-10:has(.data-validation-dropdown-button),
+.univer-z-10:has(.data-validation-input-message),
+.univer-z-10:has(.data-validation-input-message) > .univer-overflow-hidden {
+  overflow: visible !important;
+}
+
+.data-validation-dropdown-button:hover {
+  border-color: var(--border-hover);
+  background: var(--hover);
+  color: var(--text);
+}
+
+.data-validation-dropdown-button svg {
+  display: block;
+  width: 8px;
+  height: 8px;
+  fill: currentcolor;
+  pointer-events: none;
+}
+
+.data-validation-input-message {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid #a5a5a5;
+  background: #fff2cc;
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 25%);
+  color: #222;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(4px);
+}
+
+.data-validation-input-message-title {
+  font-weight: 600;
+}
+
 .pie-layout {
   display: flex;
   min-height: 0;

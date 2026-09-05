@@ -224,7 +224,7 @@ import { installMultiRowAutofit } from './autofit-multi-row'
 import { installCopyMaterialize } from './copy-materialize'
 import { applyUniverLocale } from './univer-locales'
 import { installRuleDetail } from './univer-rule-detail'
-import { installPopulatedDataValidationArrow } from './data-validation-arrow'
+import { installActiveCellDataValidationChrome } from './data-validation-dropdown'
 import { installFormulaNullResultFix } from './formula-null-result'
 import { installCachedValueFallbackInterceptor } from './formula-cached-fallback'
 import { installIfsEmptySetFix } from './ifs-empty-set'
@@ -1200,8 +1200,8 @@ export function App(): React.JSX.Element {
     // Copy/cut load their selection into the lazy window first so streamed
     // workbooks don't serialize blanks for never-viewed rows.
     const copyMaterializeDisposable = installCopyMaterialize(runtime, lazyWorkbookRef, setMessage)
-    // List-validation arrows stay discoverable on values without cluttering empty template rows.
-    const dataValidationArrowDisposable = installPopulatedDataValidationArrow(runtime)
+    // Active list cells expose Excel-like dropdown and input-message chrome.
+    const dataValidationChromeDisposable = installActiveCellDataValidationChrome(runtime)
     // Univer's own UI (rule-management panels, dialogs) follows the app
     // language instead of hard-coded English.
     void applyUniverLocale(runtime, getLang())
@@ -2112,7 +2112,7 @@ export function App(): React.JSX.Element {
       supportedFunctionProbeDisposable.dispose()
       formulaBarAutosizeDisposable.dispose()
       copyMaterializeDisposable.dispose()
-      dataValidationArrowDisposable.dispose()
+      dataValidationChromeDisposable.dispose()
       ruleDetailDisposable()
       scrollDisposable.dispose()
       zoomDisposable.dispose()
