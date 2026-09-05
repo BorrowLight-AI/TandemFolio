@@ -1207,6 +1207,11 @@ visible Formulas menu and Registry share the same Univer Defined Name/history ac
 reopened workbooks retain the generated names. The generated Manifest now contains 346 operations,
 including 122 XLSX operations (120 Agent-visible and two internal).
 
+The source-current XLSX Error Checking action is read-only: it scans loaded cell matrices or pages
+streamed file rows with journal and structural mappings, then loads and selects the next error. It
+does not change workbook state, document revision, history, or saved bytes, so it remains a native
+Ribbon navigation action outside the mutation Registry.
+
 ## Module map
 
 ```text

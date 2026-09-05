@@ -200,8 +200,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 167 passing files and one environment-conditional LibreOffice pivot
-suite; 1,948 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 168 passing files and one environment-conditional LibreOffice pivot
+suite; 1,961 assertions pass and one is skipped when `soffice` is not available.
 
 The formula-reliability slice rechecks structural edits after every asynchronous closure range
 read, discards already-pinned closure cells when coordinates become stale, and leaves the streamed
@@ -237,6 +237,14 @@ worksheet, and writes replacement values/formulas through Univer so native histo
 them. The scan is capped by actual extent at 400,000 cells in 18,000-cell browser-read batches and
 reports a localized incomplete-result message on budget, indexing, or read truncation. The existing
 typed `xlsx.range.replace_text` route remains the bounded Agent counterpart for replacement.
+
+Formulas › Error Checking now scans both fully loaded worksheets and file-backed rows that have not
+entered Univer's live cell matrix. The bounded scan respects structural coordinate mappings,
+session value shadows, added/deleted worksheets, and computed results from journal formulas. It
+loads and activates the next error after the current selection, wraps across worksheets, and stops
+safely when the workbook changes or the 400,000-cell budget is reached. This is renderer-owned
+read-only inspection and navigation, so it does not advance the document revision or add a mutation
+operation.
 
 The quick-access toolbar now exposes Save As independently from dirty-state Save. Any open
 file-backed workbook can choose a new browser file target even when clean, while the in-memory demo

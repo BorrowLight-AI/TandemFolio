@@ -32,9 +32,9 @@ import type { LazyWorkbookState, UniverRuntime } from './univer-state'
 import { ensureLazyRangeLoaded, readSheetRangeMapped } from './univer-sync'
 
 /** Total cells (by scanned extent) one native Find session may cover. */
-const MAX_SCAN_CELLS = 400_000
+export const MAX_SCAN_CELLS = 400_000
 /** Row batches sized to stay under the browser package reader's cell budget. */
-const FILE_READ_BATCH_CELLS = 18_000
+export const FILE_READ_BATCH_CELLS = 18_000
 
 /** Same match shape the built-in sheets provider produces (ISheetCellMatch). */
 export interface LazyCellMatch extends IFindMatch {

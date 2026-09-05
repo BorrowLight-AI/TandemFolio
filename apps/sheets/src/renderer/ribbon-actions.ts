@@ -13,7 +13,7 @@ import {
 } from '@univerjs/core'
 import { IRenderManagerService, SHEET_VIEWPORT_KEY } from '@univerjs/engine-render'
 import { SheetSkeletonManagerService } from '@univerjs/preset-sheets-core'
-import { columnLabel } from '../domain/cell-address'
+import { columnLabel, formatAddress } from '../domain/cell-address'
 import { transposeChartSeries, type ChartSeriesVisualState } from '../domain/chart-visual'
 import type { WorkbookChartEdit, WorkbookVisualObject } from '../shared/desktop-api'
 import {
@@ -34,6 +34,7 @@ import {
 } from './data-tools-actions'
 import { applyWorkbookCheckbox } from './data-validation-actions'
 import { dedupeRows } from './dedupe'
+import { runStreamedErrorCheck } from './error-checking'
 import { isSheetRemoved, journalSize, recordPageSetup } from './edit-journal'
 import {
   applyWorkbookFilter,
@@ -135,6 +136,9 @@ const EXTRA_SEGMENT_COMMANDS = new Set(['cellprot', 'sort-custom', 'border'])
 
 const DEFAULT_ROW_HEADER_WIDTH = 46
 const DEFAULT_COLUMN_HEADER_HEIGHT = 20
+
+const ERROR_VALUE_PATTERN = /^#(DIV\/0!|N\/A|NAME\?|NULL!|NUM!|REF!|VALUE!|SPILL!|CALC!)/
+const ERROR_CHECK_COLUMN_LIMIT = 20_000
 
 /// ST_BorderStyle names accepted by the Format Cells line-style picker.
 const BORDER_LINE_STYLE_TYPES: Record<string, BorderStyleTypes> = {
@@ -464,6 +468,63 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         }
       }
       return
+    case 'error-checking': {
+      const workbook = runtime.univerAPI.getActiveWorkbook()
+      if (!workbook || !worksheet) return
+      const lazyState = ctx.lazyWorkbookRef.current
+      if (lazyState && !lazyState.flags.preloadComplete) {
+        void runStreamedErrorCheck({
+          runtime,
+          lazyWorkbookRef: ctx.lazyWorkbookRef,
+          setMessage: ctx.setMessage,
+          refreshSelectionEcho: () => ctx.refreshSelectionFormatRef.current(),
+        })
+        return
+      }
+      const errors: { row: number; column: number; value: string }[] = []
+      worksheet
+        .getSheet()
+        .getCellMatrix()
+        .forValue((row, column, cell) => {
+          const value = cell?.v
+          if (typeof value === 'string' && ERROR_VALUE_PATTERN.test(value)) {
+            errors.push({ row, column, value })
+          }
+          return undefined
+        })
+      if (errors.length === 0) {
+        ctx.setMessage(t('appNoErrorsFound'))
+        return
+      }
+      const active = workbook.getActiveRange()
+      const afterActive = active
+        ? active.getRow() * ERROR_CHECK_COLUMN_LIMIT + active.getColumn()
+        : -1
+      const next =
+        errors.find(
+          (error) =>
+            error.row * ERROR_CHECK_COLUMN_LIMIT + error.column > afterActive,
+        ) ?? errors[0]
+      if (!next) return
+      worksheet.getRange(next.row, next.column, 1, 1).activate()
+      ctx.refreshSelectionFormatRef.current()
+      void runtime.univerAPI.executeCommand('sheet.command.scroll-to-cell', {
+        range: {
+          startRow: next.row,
+          endRow: next.row,
+          startColumn: next.column,
+          endColumn: next.column,
+        },
+      })
+      ctx.setMessage(
+        t('appErrorsFound', {
+          count: errors.length,
+          cell: formatAddress(next.row, next.column),
+          value: next.value,
+        }),
+      )
+      return
+    }
     case 'filter-clear':
       {
         const filterRange = worksheet?.getFilter()?.getRange().getRange()
