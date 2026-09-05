@@ -26,6 +26,7 @@ import { INTERCEPTOR_POINT, SheetInterceptorService } from '@univerjs/sheets'
 
 import type { UniverRuntime } from './univer-state'
 import { getWorkbookMdw } from './app-constants'
+import { isSubstitutedCellFamily } from './cell-font-fallback'
 
 export const CELL_INSET_PX = 5
 
@@ -241,7 +242,7 @@ export function overflowHashes(
   return hashFill(columnWidthPx, measure)
 }
 
-const EXCEL_DIGIT_PER_PT: Record<string, number> = {
+export const EXCEL_DIGIT_PER_PT: Record<string, number> = {
   Calibri: 7 / 11,
   Verdana: 8 / 10,
   'Malgun Gothic': 7 / 11,
@@ -249,10 +250,46 @@ const EXCEL_DIGIT_PER_PT: Record<string, number> = {
   'Aptos Narrow': 8 / 11,
   'ＭＳ Ｐゴシック': 8 / 11,
   'MS PGothic': 8 / 11,
+  'ＭＳ ゴシック': 8 / 11,
+  'MS Gothic': 8 / 11,
+  'ＭＳ Ｐ明朝': 8 / 11,
+  'MS PMincho': 8 / 11,
+  'ＭＳ 明朝': 8 / 11,
+  'MS Mincho': 8 / 11,
   宋体: 8 / 11,
   SimSun: 8 / 11,
+  NSimSun: 8 / 11,
   新細明體: 8 / 11,
   PMingLiU: 8 / 11,
+  細明體: 8 / 11,
+  MingLiU: 8 / 11,
+}
+
+const ALIAS_SUBSTITUTED = new Set(['Malgun Gothic', '맑은 고딕', 'Aptos Narrow'])
+
+const SUBSTITUTED_DIGIT_PER_PT: Record<string, number> = {
+  'ＭＳ Ｐゴシック': 0.5 * (4 / 3),
+  'MS PGothic': 0.5 * (4 / 3),
+  'ＭＳ ゴシック': 0.5 * (4 / 3),
+  'MS Gothic': 0.5 * (4 / 3),
+  'MS UI Gothic': 0.5 * (4 / 3),
+  游ゴシック: 0.556 * (4 / 3),
+  游ゴシック体: 0.556 * (4 / 3),
+  'Yu Gothic': 0.556 * (4 / 3),
+  'Yu Gothic UI': 0.539 * (4 / 3),
+  メイリオ: 0.621 * (4 / 3),
+  Meiryo: 0.621 * (4 / 3),
+  'Meiryo UI': 0.621 * (4 / 3),
+  'Cordia New': (4 / 11) * (4 / 3),
+  CordiaUPC: (4 / 11) * (4 / 3),
+  'Angsana New': 0.33 * (4 / 3),
+  AngsanaUPC: 0.33 * (4 / 3),
+  'TH SarabunPSK': 0.362 * (4 / 3),
+  'TH Sarabun New': 0.362 * (4 / 3),
+}
+
+export function hasGdiDigitCalibration(family: string | undefined): boolean {
+  return family !== undefined && SUBSTITUTED_DIGIT_PER_PT[family] !== undefined
 }
 
 export function excelWidthScale(
@@ -262,12 +299,16 @@ export function excelWidthScale(
   substituteActive?: boolean,
 ): number {
   if (!family) return 1
-  const perPt = EXCEL_DIGIT_PER_PT[family]
-  if (perPt === undefined || (substituteActive === undefined && fontAvailable(family))) return 1
+  const substitutedPerPt = SUBSTITUTED_DIGIT_PER_PT[family]
+  const perPt = substitutedPerPt ?? EXCEL_DIGIT_PER_PT[family]
+  if (perPt === undefined) return 1
+  if (!ALIAS_SUBSTITUTED.has(family) && substitutedPerPt === undefined && fontAvailable(family)) {
+    return 1
+  }
   const digit = measureDigit()
   if (!(digit > 0)) return 1
   const scale = (perPt * sizePt) / digit
-  return substituteActive === true ? scale : Math.min(1, scale)
+  return (substituteActive ?? isSubstitutedCellFamily(family)) ? scale : Math.min(1, scale)
 }
 
 const fontAvailabilityCache = new Map<string, boolean>()
@@ -400,6 +441,7 @@ export function installNumberFormatFix(
             location.worksheet.getColumnWidth(location.col),
             measure,
             excelWidthScale(style?.ff ?? undefined, style?.fs ?? 11, () => measure('0')),
+            hasGdiDigitCalibration(style?.ff ?? undefined),
           )
           if (hashes !== null) return next({ ...cell, v: hashes, t: CellValueType.NUMBER })
         }
@@ -450,6 +492,7 @@ export function installNumberFormatFix(
               width,
               measure,
               excelWidthScale(style?.ff ?? undefined, style?.fs ?? 11, () => measure('0')),
+              hasGdiDigitCalibration(style?.ff ?? undefined),
             )
         return hashes === null ? outCell : { ...outCell, v: hashes, t: CellValueType.NUMBER }
       }

@@ -103,6 +103,12 @@ restore. Ctrl+End includes the file's used extent when a large workbook has only
 visible window, and Ctrl+Home skips frozen or hidden leading rows and columns. Ctrl/Cmd+Arrow and
 its Shift variant now use Excel's data-block boundary rule: formulas count as occupied even when
 their cached or displayed result is empty, while style-only cells remain gaps.
+Before the first worksheet skeleton is measured, the renderer now installs scoped fallback faces
+for missing Office, Japanese, Chinese, Korean, and Thai workbook fonts. Canvas text keeps the
+source font's serif or sans intent, uses per-script width correction where the substitute differs,
+and appends monochrome symbol plus color-emoji fallbacks. Number-format overflow uses the same
+substitution state and calibrated digit widths, keeping wrap points, alignment, and `#####`
+decisions stable across hosts without changing the OOXML font declarations.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -173,8 +179,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite executes 142 passing files and one environment-conditional LibreOffice pivot
-suite; 1,662 assertions pass and one is skipped when `soffice` is not available.
+The current suite executes 143 passing files and one environment-conditional LibreOffice pivot
+suite; 1,696 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

@@ -187,17 +187,22 @@
 
 /* Cell-content font aliases (document data, theme-independent): without these,
  * Office sans families the OS lacks silently fall back to Chromium's serif
- * default on the grid canvas; local() keeps the real font first if installed. */
+ * default on the grid canvas; local() keeps the real font first if installed
+ * and bundled metric-stable sans faces keep Office layout available offline. */
 @font-face {
   font-family: Aptos;
-  src: local('Aptos'), local('Calibri'), local('Carlito'), local('Helvetica Neue'), local('Arial');
+  src:
+    local('Aptos'), local('Calibri'), local('Carlito'),
+    url('../../../docs/src/renderer/fonts/LiberationSans-Regular.ttf'), local('Helvetica Neue'),
+    local('Arial');
 }
 
 @font-face {
   font-family: Aptos;
   font-weight: bold;
   src:
-    local('Aptos Bold'), local('Calibri Bold'), local('Carlito Bold'), local('Helvetica Neue Bold'),
+    local('Aptos Bold'), local('Calibri Bold'), local('Carlito Bold'),
+    url('../../../docs/src/renderer/fonts/LiberationSans-Bold.ttf'), local('Helvetica Neue Bold'),
     local('Arial Bold');
 }
 
@@ -206,7 +211,8 @@
   font-style: italic;
   src:
     local('Aptos Italic'), local('Calibri Italic'), local('Carlito Italic'),
-    local('Helvetica Neue Italic'), local('Arial Italic');
+    url('../../../docs/src/renderer/fonts/LiberationSans-Italic.ttf'), local('Helvetica Neue Italic'),
+    local('Arial Italic');
 }
 
 @font-face {
@@ -215,19 +221,52 @@
   font-style: italic;
   src:
     local('Aptos Bold Italic'), local('Calibri Bold Italic'), local('Carlito Bold Italic'),
-    local('Helvetica Neue Bold Italic'), local('Arial Bold Italic');
+    url('../../../docs/src/renderer/fonts/LiberationSans-BoldItalic.ttf'),
+    local('Helvetica Neue Bold Italic'),
+    local('Arial Bold Italic');
+}
+
+@font-face {
+  font-family: Carlito;
+  src: local('Carlito'), url('../../../docs/src/renderer/fonts/LiberationSans-Regular.ttf');
+}
+
+@font-face {
+  font-family: Carlito;
+  font-weight: bold;
+  src: local('Carlito Bold'), url('../../../docs/src/renderer/fonts/LiberationSans-Bold.ttf');
+}
+
+@font-face {
+  font-family: Carlito;
+  font-style: italic;
+  src: local('Carlito Italic'), url('../../../docs/src/renderer/fonts/LiberationSans-Italic.ttf');
+}
+
+@font-face {
+  font-family: Carlito;
+  font-weight: bold;
+  font-style: italic;
+  src:
+    local('Carlito Bold Italic'),
+    url('../../../docs/src/renderer/fonts/LiberationSans-BoldItalic.ttf');
 }
 
 @font-face {
   font-family: Calibri;
-  src: local('Calibri'), local('Carlito'), local('Helvetica Neue'), local('Arial');
+  src:
+    local('Calibri'), local('Carlito'),
+    url('../../../docs/src/renderer/fonts/LiberationSans-Regular.ttf'),
+    local('Helvetica Neue'), local('Arial');
 }
 
 @font-face {
   font-family: Calibri;
   font-weight: bold;
   src:
-    local('Calibri Bold'), local('Carlito Bold'), local('Helvetica Neue Bold'), local('Arial Bold');
+    local('Calibri Bold'), local('Carlito Bold'),
+    url('../../../docs/src/renderer/fonts/LiberationSans-Bold.ttf'),
+    local('Helvetica Neue Bold'), local('Arial Bold');
 }
 
 @font-face {
@@ -235,7 +274,7 @@
   font-style: italic;
   src:
     local('Calibri Italic'), local('Carlito Italic'), local('Helvetica Neue Italic'),
-    local('Arial Italic');
+    url('../../../docs/src/renderer/fonts/LiberationSans-Italic.ttf'), local('Arial Italic');
 }
 
 @font-face {
@@ -244,6 +283,7 @@
   font-style: italic;
   src:
     local('Calibri Bold Italic'), local('Carlito Bold Italic'), local('Helvetica Neue Bold Italic'),
+    url('../../../docs/src/renderer/fonts/LiberationSans-BoldItalic.ttf'),
     local('Arial Bold Italic');
 }
 
