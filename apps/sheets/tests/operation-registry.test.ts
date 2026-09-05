@@ -7040,6 +7040,7 @@ describe('XLSX operation registry', () => {
     ['cf-open', 'explicit xlsx.conditional_format operations'],
     ['insert-symbol', 'xlsx.cell.set_value'],
     ['import-csv', 'xlsx.range.set_values'],
+    ['merge-workbooks', 'xlsx.workbook.merge_staged'],
     ['insert-chart:line', 'xlsx.chart.add'],
     ['recommended-charts-open', 'xlsx.chart.add'],
     ['pivot-open', 'xlsx.pivot.add'],

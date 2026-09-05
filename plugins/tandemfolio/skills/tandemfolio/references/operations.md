@@ -7,7 +7,7 @@ Execute the selected canonical id with a fresh caller `requestId` and a one-item
 `operations: [{ id, arguments }]` array. After a caller timeout, replay that exact request id and
 payload; do not create a second mutation while its final acknowledgement is unknown.
 
-This is the current 337-operation catalog projection. All five retained state-changing producer
+This is the current 347-operation catalog projection. All five retained state-changing producer
 baselines have typed mappings and the R6-01 shared release gate passes, so `ready` is true. An
 operation absent from summary discovery is unavailable and must not be inferred from visible UI.
 Supplying the current `sessionId` also returns stable availability without hiding the operation.
@@ -239,11 +239,17 @@ operation and its `open_local_file` transport alias are hidden from capability d
 be called through `office_execute`; success returns `{ opened: true, fileName }` after the mounted
 renderer accepts the hydrated workbook bytes.
 
+`office_merge_local_workbook { sessionId, baseRevision, path }` accepts one absolute `.xlsx` path,
+stages it as internal `xlsx.workbook.merge_staged`, and appends all source worksheets through the
+mounted Univer command/history and browser save journal. Source formulas are imported as cached
+values so cross-file references cannot silently target the wrong workbook. The tool returns the
+final deduplicated worksheet names after renderer acknowledgement.
+
 Use stable identities and exact workbook/sheet/range/cell targets from fresh context. The 120 public
 XLSX operations include the audited retained command surface and candidate-native calculation mode,
 recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges,
-manual page breaks, and selection-derived Defined Names; two internal operations carry staged
-workbook/image bytes. The current
+manual page breaks, and selection-derived Defined Names; three internal operations carry staged
+workbook/image/merge bytes. The current
 candidate-native migration keeps source-current release readiness fail-closed until recapture.
 
 ## PPTX

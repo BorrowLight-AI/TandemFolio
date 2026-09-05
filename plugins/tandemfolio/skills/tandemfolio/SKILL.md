@@ -45,7 +45,7 @@ Use the live visual editor as the authority for document state.
      Use `resume: "latest"` only when the user explicitly asks to recover the newest unsaved local
      checkpoint without identifying its prior Session. It is cross-session disaster recovery, never
      the default create or follow-up path.
-4. To open an explicit local path, call `office_open_local_file` with the exact current revision and an absolute path whose extension matches the session. For user-driven opening, direct the user to the visible Open/File entry.
+4. To open an explicit local path, call `office_open_local_file` with the exact current revision and an absolute path whose extension matches the session. For user-driven opening, direct the user to the visible Open/File entry. In an XLSX session, use `office_merge_local_workbook` with the exact current revision and one absolute `.xlsx` path to append all of that file's worksheets to the mounted workbook.
 5. Select only a canonical id returned by summary discovery, then call
    `office_get_capabilities` with `view: "detail"`, that exact `operation`, and the current
    `sessionId`. Use the returned schema and require `availability.available: true`; never infer an

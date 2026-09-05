@@ -233,6 +233,10 @@ import { registerExcelJumpNav } from './excel-jump-nav'
 import { installCopyMaterialize } from './copy-materialize'
 import { installLazyFindBridge } from './lazy-find'
 import {
+  mergeWorkbookBytesIntoCurrent,
+  mergeWorkbookFilesIntoCurrent,
+} from './merge-workbooks'
+import {
   installCrossHighlight,
   loadCrossHighlightPreference,
   storeCrossHighlightPreference,
@@ -431,6 +435,7 @@ export function App(): React.JSX.Element {
     setPendingEditsState(count)
   }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const mergeFileInputRef = useRef<HTMLInputElement>(null)
   const pendingFilePickerRef = useRef<((file: File | null) => void) | null>(null)
   const browserHostRef = useRef<BrowserWorkbookDesktopApi | null>(null)
   if (!browserHostRef.current) {
@@ -647,6 +652,15 @@ export function App(): React.JSX.Element {
                 throw new Error('The selected range must include labels and data.')
               }
               return result
+            },
+            mergeStaged: ({ name, data }) => {
+              const runtime = univerRef.current
+              const host = browserHostRef.current
+              if (!runtime || !host) throw new Error('Open an XLSX workbook first.')
+              return mergeWorkbookBytesIntoCurrent(
+                { runtime, host, lazyWorkbookRef, setMessage },
+                [{ name, data }],
+              )
             },
             createSubtotals: ({ sheetId, range, groupColumn, valueColumn, aggregation }) => {
               const worksheet = univerRef.current?.univerAPI
@@ -2397,6 +2411,16 @@ export function App(): React.JSX.Element {
 
   function handleRibbonCommand(command: string): void {
     const runtime = univerRef.current
+    if (command === 'merge-workbooks') {
+      const state = lazyWorkbookRef.current
+      if (state && workbookStructureLocked(state)) {
+        setMessage(t('appMergeWorkbooksLocked'))
+        return
+      }
+      setMessage(t('appMergeWorkbooksPicking'))
+      mergeFileInputRef.current?.click()
+      return
+    }
     if (command === 'watch-window') {
       setWatchOpen((open) => !open)
       return
@@ -3086,6 +3110,30 @@ export function App(): React.JSX.Element {
             )
           }
           event.currentTarget.value = ''
+        }}
+      />
+      <input
+        ref={mergeFileInputRef}
+        className="visually-hidden-file"
+        type="file"
+        multiple
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        onChange={(event) => {
+          const files = [...(event.currentTarget.files ?? [])]
+          event.currentTarget.value = ''
+          if (files.length === 0) {
+            setMessage(t('appOpenCanceled'))
+            return
+          }
+          const runtime = univerRef.current
+          const host = browserHostRef.current
+          if (!runtime || !host) return
+          void mergeWorkbookFilesIntoCurrent(
+            { runtime, host, lazyWorkbookRef, setMessage },
+            files,
+          ).catch((error) =>
+            setMessage(error instanceof Error ? error.message : t('appMergeWorkbooksFailed')),
+          )
         }}
       />
       {advancedFilterColumns !== null && (

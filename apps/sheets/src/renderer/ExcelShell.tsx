@@ -1929,6 +1929,14 @@ function Ribbon({
               <ToolSymbol symbol="🗎" />
               {t('appFromTextCsv')}
             </button>
+            <button
+              className="styles-row as-button"
+              data-tip={t('appMergeWorkbooksTip')}
+              onClick={() => onCommand('merge-workbooks')}
+            >
+              <ToolSymbol symbol="⧉" />
+              {t('appMergeWorkbooks')}
+            </button>
             <span className="styles-row reserved" data-tip={t('appNotAvailableYet')}>
               <ToolSymbol symbol="⟳" />
               {t('appRefreshAll')}

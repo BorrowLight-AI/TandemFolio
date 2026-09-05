@@ -197,6 +197,12 @@ export interface XlsxOperationServices {
   }) =>
     | { readonly created: number; readonly skipped: number }
     | Promise<{ readonly created: number; readonly skipped: number }>
+  readonly mergeStaged?: (input: {
+    readonly name: string
+    readonly data: ArrayBuffer
+  }) =>
+    | { readonly importedSheets: number; readonly files: number; readonly sheetNames: string[] }
+    | Promise<{ readonly importedSheets: number; readonly files: number; readonly sheetNames: string[] }>
   readonly createSubtotals?: (input: {
     readonly sheetId: string
     readonly range: string
@@ -4940,6 +4946,35 @@ const handlers = {
     const target = xlsxWorksheet(services.runtime(), sheet)
     workbook.moveSheet(target, position - 1)
     return { ok: true, output: { sheet, position } }
+  },
+  'xlsx.workbook.merge_staged': async (arguments_, services) => {
+    const name = arguments_.name as string
+    const size = arguments_.size as number
+    const data = arguments_.data
+    if (
+      !isArrayBuffer(data) ||
+      !name.toLowerCase().endsWith('.xlsx') ||
+      data.byteLength !== size
+    ) {
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'xlsx.workbook.merge_staged requires valid hydrated XLSX bytes.',
+      }
+    }
+    if (!services.mergeStaged) {
+      throw new Error('xlsx.workbook.merge_staged is unavailable in this renderer.')
+    }
+    const merged = await services.mergeStaged({ name, data })
+    return {
+      ok: true,
+      output: {
+        merged: true,
+        fileName: name,
+        importedSheets: merged.importedSheets,
+        sheetNames: merged.sheetNames,
+      },
+    }
   },
   'xlsx.document.load_staged': async (arguments_, services) => {
     if (!isArrayBuffer(arguments_.data)) {

@@ -1457,6 +1457,51 @@ describe('format-neutral MCP live session', () => {
     teardown()
   })
 
+  it('hydrates an internal staged XLSX workbook merge before renderer execution', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    mcp.stagedBytes = new TextEncoder().encode('PK\u0003\u0004merge')
+    mcp.commands.push({
+      commandId: 'command-xlsx-merge',
+      baseRevision: 0,
+      operation: 'xlsx.workbook.merge_staged',
+      arguments: {
+        blobId: 'xlsx-merge-blob',
+        name: 'source.xlsx',
+        size: mcp.stagedBytes.byteLength,
+      },
+    })
+    let executed: { readonly operation: string; readonly arguments: Record<string, unknown> } | null =
+      null
+    const teardown = attachMcpLiveSession({
+      execute: async (command) => {
+        executed = command
+        return { ok: true, output: { merged: true, importedSheets: 1 } }
+      },
+      snapshot: (revision) => ({
+        revision,
+        fileName: 'current.xlsx',
+        dirty: true,
+        selection: null,
+      }),
+    })
+    bindEditor('session-1')
+
+    await vi.waitFor(() => {
+      expect(executed).toMatchObject({
+        operation: 'xlsx.workbook.merge_staged',
+        arguments: {
+          blobId: 'xlsx-merge-blob',
+          name: 'source.xlsx',
+          size: mcp.stagedBytes!.byteLength,
+          data: expect.any(ArrayBuffer),
+        },
+      })
+    })
+    const data = (executed as { arguments: { data: ArrayBuffer } } | null)!.arguments.data
+    expect(new TextDecoder().decode(data)).toBe('PK\u0003\u0004merge')
+    teardown()
+  })
+
   it('hydrates internal staged PDF page insertion before renderer execution', async () => {
     Object.defineProperty(window, 'parent', { configurable: true, value: {} })
     mcp.stagedBytes = new TextEncoder().encode('%PDF-1.7\ninsert')

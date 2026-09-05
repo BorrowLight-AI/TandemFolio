@@ -333,6 +333,20 @@ Input:
 
 The local server validates the absolute path and session-format extension and stages bytes under a session-scoped opaque id. Markdown, DOCX, XLSX, PPTX, and PDF queue their format-owned internal canonical `*.document.load_staged` operation. The shared host bridge recognizes canonical ids and their legacy transport aliases, reads bounded chunks, and supplies hydrated bytes to the renderer's existing format-owned load pipeline. Internal load operations are not advertised and cannot be called through `office_execute`. The tool waits for the same acknowledgement contract as `office_execute`. After acknowledgement the Broker binds future Save operations from that Session to the exact opened path. The path is visible as `office_get_context.session.filePath`; bytes are never placed in model context.
 
+### `office_merge_local_workbook`
+
+Input:
+
+```json
+{ "sessionId": "<xlsx-session>", "baseRevision": 4, "path": "/absolute/path/source.xlsx" }
+```
+
+The Broker accepts this tool only for an XLSX Session, validates and stages one absolute `.xlsx`
+path, and queues internal `xlsx.workbook.merge_staged`. The shared bridge hydrates bounded chunks;
+the mounted renderer appends every source worksheet through Univer commands and its existing save
+journal. Sheet names are deduplicated case-insensitively, formulas import as cached values, and the
+acknowledgement reports the final created names. The current workbook's Save target remains bound.
+
 ## App-only transport tools
 
 These tools use `_meta.ui.visibility: ["app"]`:
@@ -700,10 +714,11 @@ are in [`../migration/markdown-capability-inventory.md`](../migration/markdown-c
 | `xlsx.defined_name.set`                    | `{ "name", "formula", "scopeSheet"?, "previousName"? }`                               | Upserts or atomically renames one workbook- or named-sheet-scoped Defined Name through native history.                              |
 | `xlsx.defined_name.remove`                 | `{ "name", "scopeSheet"? }`                                                           | Removes one explicitly scoped Defined Name through the same native model and declarative save route.                                |
 | `xlsx.defined_name.create_from_selection`  | `{ "sheet", "range", "labels": "top" / "left" }`                                      | Creates workbook-scoped names from top-row or left-column labels, skipping invalid or duplicate labels as one native-history action. |
+| `xlsx.workbook.merge_staged` internal      | `{ blobId, name, size, data }`                                                          | Appends all worksheets from one host-hydrated `.xlsx` source through native worksheet/history and save-journal paths.                 |
 | `xlsx.document.load_staged` internal       | `{ blobId, name, size, data }`                                                        | Loads host-hydrated `.xlsx` bytes through the retained workbook-open path without a recovery checkpoint.                            |
 | `xlsx.document.save`                       | `{}`                                                                                  | Saves a workbook copy through the source-preserving worksheet patcher.                                                              |
 
-The 120 public fully qualified XLSX operations and two internal staged operations are generated
+The 120 public fully qualified XLSX operations and three internal staged operations are generated
 registry operations. R6-09 retires all twenty-two public-era XLSX aliases; `open_local_file`
 remains only as the internal staged-load transport alias. Save success returns
 `{ "saved": true, "fileName": string }`; cancellation or write failure returns `execution_failed`.
@@ -837,7 +852,7 @@ command gaps.
   not a save. Inside an MCP Apps iframe, all five formats use the lease-checked internal atomic
   persistence protocol, not `ui/download-file`. Save As writes a collision-safe file under the
   configured output root; there is no arbitrary-path picker in the embedded protocol.
-- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 122 format-owned operations cover the audited mutation surface plus explicit calculation mode, recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, and selection-derived Defined Names through shared Univer/file-journal and browser save/reopen routes. Native Error Checking and the 20-cell Watch Window remain renderer-owned read-only inspection/navigation. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. Candidate-native migration invalidates the earlier release capture until the source-current gate is recaptured.
+- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 123 format-owned operations cover the audited mutation surface plus explicit calculation mode, recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, selection-derived Defined Names, and staged workbook merging through shared Univer/file-journal and browser save/reopen routes. Native Error Checking and the 20-cell Watch Window remain renderer-owned read-only inspection/navigation. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. Candidate-native migration invalidates the earlier release capture until the source-current gate is recaptured.
 - PPTX's 74-operation Registry covers every retained state-changing producer through its complete
   browser API, native history, recovery, and package save seam.
 - PDF's 25-operation Registry covers every retained state-changing producer. Browser PDFium handles

@@ -28380,6 +28380,84 @@
       "summary": "Insert blank data rows into a session-created XLSX table.",
       "undoable": true,
       "visibility": "agent"
+    },
+    {
+      "atomic": false,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "workbook",
+      "format": "xlsx",
+      "id": "xlsx.workbook.merge_staged",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "blobId": {
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "description": "Hydrated ArrayBuffer supplied by the live-session host bridge.",
+            "properties": {},
+            "required": [],
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "maximum": 268435456,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "blobId",
+          "name",
+          "size",
+          "data"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "importedSheets": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "merged": {
+            "type": "boolean"
+          },
+          "sheetNames": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 1024,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "merged",
+          "fileName",
+          "importedSheets",
+          "sheetNames"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Append every worksheet from one hydrated staged XLSX file.",
+      "undoable": true,
+      "visibility": "internal"
     }
   ],
   "schemaVersion": 1

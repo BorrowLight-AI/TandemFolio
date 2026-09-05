@@ -22,6 +22,7 @@ account, telemetry, Electron/IPC, and desktop-only encryption/printing remain ex
 | XLSX lazy-find snapshot lineage through `9f971ed` | Extends Univer's native Find/Replace session over unstreamed file rows, merging loaded and file-backed hits while honoring journal shadows, filters, sheet/order navigation, native replacement/Undo, and a 400,000-cell browser scan budget. Scan constants and localized status copy are format-local; no AI search source is retained. |
 | XLSX error-checking snapshot lineage through `9f971ed` | Retains Formulas › Error Checking for loaded and streamed workbooks. The bounded browser scan observes session edits and structural mappings, includes computed journal formula results, loads distant targets before navigation, and never imports the upstream AI-search module. |
 | XLSX Watch Window snapshot lineage through `9f971ed` | Retains the native non-modal formula inspection panel with stable sheet/cell identities, a bounded 20-cell watch set, live value/formula refresh, sheet-rename tolerance, and explicit removal. It is session-local read-only state and does not enter workbook revision or persistence. |
+| XLSX Merge Workbooks snapshot lineage through `9f971ed` | Adapts the Electron multi-file source sessions to browser-owned secondary sessions and a standard multi-file picker. Imported sheets retain cached values, styles, merges, row heights, and column widths through native Univer commands and the existing save journal; `office_merge_local_workbook` supplies the typed staged-byte route. |
 | XLSX Save As toolbar snapshot lineage through `9f971ed` | Retains the dedicated quick-access Save As command for clean or dirty file-backed workbooks, routed through the existing browser package save-as target selection with localized copy and its distinct glyph. |
 | XLSX defined-name snapshot lineage through `9f971ed` | Retains Use in Formula and top-row/left-column Create from Selection, including Unicode label normalization, lazy file-extent bounds, duplicate avoidance, native Univer name history, OOXML save, and typed `xlsx.defined_name.create_from_selection` parity. |
 | XLSX snapshot lineage through `9f971ed` | Selectively admitted the browser-safe native spreadsheet work for OOXML namespace/relationship fidelity, Rich Data, shared and future formulas, themes, protection metadata, complete 1904 date-system parsing/display/pivot semantics, calculation control, cached results, IFS behavior, formula/delete guards, center-continuous, shrink-to-fit, fill-isolation, text-rotation, workbook-MDW/default-column-width layout, native number-format `*x` fill, cached/fixed/spacer row-height semantics, row/column default-style rendering, explicit empty-string/style-only cell streaming, active-cell data-validation chrome, selected-only non-overlapping visual deletion, structured table-reference thresholds, rich-text subscript/superscript open-edit-save fidelity, and sparse chart-cache, category-axis label, line-style, and legend rendering, browser-side `cellXfs`/dxf/Conditional Formatting hydration, blank coercion, priority/shadow semantics, formula-threshold folding, color-scale clamping, and native data-bar bounds, exact file print settings and page-specific header/footer layout, fit-to-page printing, manual page breaks and page-break preview, criteria comparison, selection clearing, and CSV serialization. Electron/preload/IPC, native sidecar, recovery shell, desktop PDF printing, AI, account, telemetry, and enterprise sources remain excluded. |
@@ -31,7 +32,7 @@ account, telemetry, Electron/IPC, and desktop-only encryption/printing remain ex
 Apache-2.0 attribution remains intact. Newly adapted files carry prominent modification
 notices. Mounted Session authority and Save target binding are unchanged. The new
 `docx.image.set_z_order` and the three XLSX calculation routes raise the generated Registry to
-103 DOCX / 122 XLSX / 346 total operations;
+103 DOCX / 123 XLSX / 347 total operations;
 the user gesture and Agent command share one native transaction and Undo path. The previous approved release capture becomes
 historical after these source changes; the source-current gate is not relaxed.
 Generated plugin HTML resources were rebuilt from the workspace; the gate regenerated
@@ -214,10 +215,10 @@ resource/performance budgets.
 
 - Typecheck: host bridge, five renderers, and MCP server pass the root typecheck graph.
 - Operation registry foundation: fixture and real multi-format product manifests pass deterministic
-  `--check`. The generated Manifest contains 346 operations: 103 DOCX, 22 Markdown, 122 XLSX, 74
+  `--check`. The generated Manifest contains 347 operations: 103 DOCX, 22 Markdown, 123 XLSX, 74
   PPTX, and 25 PDF. All five retained-command producer mappings have no missing entry.
-- Tests: the root workspaces execute 372 passing test files plus one environment-conditional skip,
-  for 4,695 passing assertions and one skipped assertion. Workspace assertions are Operation
+- Tests: the root workspaces execute 374 passing test files plus one environment-conditional skip,
+  for 4,703 passing assertions and one skipped assertion. Workspace assertions are Operation
   Contract 24, Host Bridge 44, DOCX 1,680, Markdown 127, XLSX 1,967 plus one environment skip,
   PPTX 184, PDF 284, and MCP server 385. The separate DOCX engine suite adds 996 passing and one
   skipped assertion. These include wakeable-poll/startup-
@@ -230,7 +231,7 @@ resource/performance budgets.
   persistence.
 - Product graph: no Electron, updater, GenOffice AI provider, agent-core, ai-search, or project-store dependency.
 - Source boundary: Markdown, XLSX, all 80 permitted PPTX renderer files, and all 33 permitted PDF renderer files are restored. PPTX classifies all 104 pinned renderer paths as 61 byte-identical, 19 browser-host/product-boundary adapted, and 24 prohibited AI modules/assets. XLSX excludes exactly 20 `renderer/ai` files, 14 AI composer assets, and `i18n/strings-ai.ts`; the bundled optional Univer render-metrics token is locally inert and does not include the upstream telemetry module.
-- Generated plugin: the artifact contains ten Agent-visible tools, fourteen app-only transport tools,
+- Generated plugin: the artifact contains eleven Agent-visible tools, fifteen app-only transport tools,
   five resources, and self-contained DOCX/Markdown/XLSX/PPTX/PDF editor assets; the install-like real
   MCP smoke passes.
 - Browser smoke: all five standalone entries have mount coverage. All five formats are active in the

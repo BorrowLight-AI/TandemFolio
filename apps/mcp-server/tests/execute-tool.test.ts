@@ -6648,6 +6648,81 @@ describe('office_execute', () => {
     })
   })
 
+  it('queues a local XLSX source as xlsx.workbook.merge_staged without inline bytes', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tandemfolio-xlsx-merge-'))
+    temporaryDirectories.push(directory)
+    const path = join(directory, 'source.xlsx')
+    const bytes = Buffer.from('PK\u0003\u0004xlsx-merge-bytes')
+    await writeFile(path, bytes)
+
+    const client = await connectClient()
+    const created = await client.callTool({
+      name: 'office_create_session',
+      arguments: { format: 'xlsx' },
+    })
+    const sessionId = (created.structuredContent as { session: { id: string } }).session.id
+    await client.callTool({ name: 'office_editor_poll', arguments: { sessionId } })
+
+    const merging = client.callTool({
+      name: 'office_merge_local_workbook',
+      arguments: { sessionId, baseRevision: 0, path },
+    })
+    let command:
+      | {
+          commandId: string
+          operation: string
+          arguments: { blobId: string; name: string; size: number }
+        }
+      | undefined
+    for (let attempt = 0; attempt < 20 && !command; attempt += 1) {
+      const polled = await client.callTool({
+        name: 'office_editor_poll',
+        arguments: { sessionId },
+      })
+      command = (
+        polled.structuredContent as {
+          commands: Array<{
+            commandId: string
+            operation: string
+            arguments: { blobId: string; name: string; size: number }
+          }>
+        }
+      ).commands[0]
+      if (!command) await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+
+    expect(command).toMatchObject({
+      operation: 'xlsx.workbook.merge_staged',
+      arguments: { name: 'source.xlsx', size: bytes.length },
+    })
+    expect(command!.arguments).not.toHaveProperty('data')
+
+    await client.callTool({
+      name: 'office_editor_acknowledge',
+      arguments: {
+        sessionId,
+        commandId: command!.commandId,
+        revision: 1,
+        dirty: true,
+        output: {
+          merged: true,
+          fileName: 'source.xlsx',
+          importedSheets: 2,
+          sheetNames: ['Data', 'Summary'],
+        },
+      },
+    })
+    await expect(merging).resolves.toMatchObject({
+      structuredContent: {
+        ok: true,
+        result: {
+          revision: 1,
+          output: { merged: true, importedSheets: 2 },
+        },
+      },
+    })
+  })
+
   it('stages xlsx.image.add paths as an internal image operation without inline bytes', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'tandemfolio-xlsx-image-'))
     temporaryDirectories.push(directory)

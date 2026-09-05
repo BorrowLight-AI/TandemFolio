@@ -174,6 +174,13 @@ function stagedCompareOperation(): string {
   )
 }
 
+function stagedWorkbookMergeOperation(): string {
+  return (
+    resolveRegisteredOperation('xlsx', 'xlsx.workbook.merge_staged', 'internal')?.id ??
+    'xlsx.workbook.merge_staged'
+  )
+}
+
 function stagedPdfPageInsertOperation(): string {
   return (
     resolveRegisteredOperation('pdf', 'pdf.page.insert_staged', 'internal')?.id ??
@@ -807,6 +814,46 @@ server.registerTool(
         await retireRecovery(session)
       })
       session.filePath = path
+      return result({ ok: true, command, result: completion })
+    } catch (error) {
+      return failure(error)
+    } finally {
+      if (blobId) localFiles.release(blobId)
+    }
+  },
+)
+
+server.registerTool(
+  'office_merge_local_workbook',
+  {
+    title: 'Merge local Excel workbook',
+    description:
+      'Append every worksheet from one absolute local XLSX path into the mounted XLSX editor.',
+    inputSchema: {
+      sessionId: z.string().min(1),
+      baseRevision: z.number().int().nonnegative(),
+      path: z.string().min(1),
+    },
+  },
+  async ({ sessionId, baseRevision, path }) => {
+    let blobId: string | undefined
+    try {
+      const session = store.get(sessionId)
+      if (session.format !== 'xlsx') {
+        throw new SessionError(
+          'invalid_arguments',
+          'office_merge_local_workbook requires an XLSX session.',
+        )
+      }
+      const staged = await localFiles.stage(sessionId, 'xlsx', path)
+      blobId = staged.blobId
+      const command = store.enqueue(
+        sessionId,
+        baseRevision,
+        stagedWorkbookMergeOperation(),
+        { ...staged },
+      )
+      const completion = await store.waitForCommand(sessionId, command.commandId)
       return result({ ok: true, command, result: completion })
     } catch (error) {
       return failure(error)

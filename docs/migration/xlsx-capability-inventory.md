@@ -2,7 +2,7 @@
 
 - Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Renderer-source status: complete for the permitted pinned community source set
-- Capability status: 122 XLSX registry operations (120 Agent-visible, two internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, and create-names-from-selection while retaining the audited baseline command surface
+- Capability status: 123 XLSX registry operations (120 Agent-visible, three internal); the candidate-native migration adds calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, create-names-from-selection, and staged workbook merging while retaining the audited baseline command surface
 - Product readiness: candidate-native migration is in progress and requires a new source-current
   release capture; capability discovery therefore remains fail-closed
 
@@ -252,6 +252,15 @@ at 20 entries, and refreshes displayed worksheet name, formatted value, and form
 Worksheet renames remain visible without changing watch identity; deleted sheets are shown as gone.
 The watch list is session-local read-only state and never changes workbook history, revision, or
 saved bytes.
+
+Data › Merge Workbooks now accepts one or more browser-selected XLSX files, while the typed
+`office_merge_local_workbook` host tool stages one absolute local XLSX path for the same mounted
+merge kernel. Every source worksheet is appended with an Excel-style deduplicated name and retains
+cached values, cell styles, merged ranges, custom row heights, and visible column widths. Source
+formulas intentionally arrive as cached values because their external workbook and sheet references
+cannot be resolved safely in the destination. Sheet creation and content changes use Univer's native
+commands and journal, the current workbook remains the save target, and temporary source sessions
+close after success or failure.
 
 The quick-access toolbar now exposes Save As independently from dirty-state Save. Any open
 file-backed workbook can choose a new browser file target even when clean, while the in-memory demo

@@ -1216,6 +1216,14 @@ The source-current XLSX Watch Window is also outside the mutation Registry. Its 
 list reads live values and formulas from stable worksheet/cell identities and supports local
 add/remove/close controls without changing document state, revision, history, or saved bytes.
 
+The source-current XLSX Merge Workbooks action adds internal
+`xlsx.workbook.merge_staged { blobId, name, size, data }`. The visible browser multi-file picker and
+`office_merge_local_workbook` hydrate source workbooks into secondary browser sessions, then append
+their sheets through the mounted Univer command/history and existing additions/cell/style/merge
+save journal. Source formulas intentionally become cached values because their external workbook
+references are not valid in the destination. The generated Manifest contains 347 operations,
+including 123 XLSX operations (120 Agent-visible and three internal).
+
 ## Module map
 
 ```text

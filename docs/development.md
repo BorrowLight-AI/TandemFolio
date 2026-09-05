@@ -76,6 +76,7 @@ See [`migration/upstream-sync.md`](migration/upstream-sync.md) for classificatio
 - A standard `<input type="file">` opens matching DOCX, Markdown, XLSX, PPTX, or PDF files when native file handles are unavailable.
 - The File ribbon tab remains visible on macOS because TandemFolio browser/MCP hosts have no native File menu.
 - `office_open_local_file` accepts an exact matching absolute DOCX/Markdown/XLSX/PPTX/PDF path and streams it to the renderer in bounded chunks.
+- `office_merge_local_workbook` accepts one absolute `.xlsx` path for an active XLSX Session and appends its worksheets through the same staged-byte bridge used by the visible multi-file Merge Workbooks picker.
 - Existing file handles can be overwritten after permission is granted.
 - Without a writable handle, save falls back to downloading a format-matching copy.
 - PDF Save As/export-image/page-extract/print remain host effects. Mixed-PDF page insertion is

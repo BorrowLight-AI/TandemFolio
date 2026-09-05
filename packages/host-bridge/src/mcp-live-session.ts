@@ -245,6 +245,7 @@ function isStagedFileOperation(operation: string): boolean {
   return (
     operation === 'open_local_file' ||
     operation.endsWith('.document.load_staged') ||
+    operation === 'xlsx.workbook.merge_staged' ||
     operation === 'docx.document.compare_staged' ||
     operation === 'pdf.page.insert_staged' ||
     operation === 'xlsx.image.add_staged' ||
