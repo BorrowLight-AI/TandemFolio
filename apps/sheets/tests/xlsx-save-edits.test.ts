@@ -315,13 +315,13 @@ describe('rich-text run save', () => {
       cell: { value: 'Hello World' },
       rich: [
         { text: 'Hello', bold: true, italic: false, underline: false, strikethrough: false, color: '#FF0000' },
-        { text: ' World', bold: false, italic: true, underline: false, strikethrough: false, size: 14, family: 'Arial' },
+        { text: ' World', bold: false, italic: true, underline: false, strikethrough: false, size: 14, family: 'Arial', vertAlign: 'superscript' },
       ],
     }])
     expect(worksheet).toContain(
       '<c r="A1" s="1" t="inlineStr"><is>'
       + '<r><rPr><b/><color rgb="FFFF0000"/></rPr><t xml:space="preserve">Hello</t></r>'
-      + '<r><rPr><i/><sz val="14"/><rFont val="Arial"/></rPr><t xml:space="preserve"> World</t></r>'
+      + '<r><rPr><i/><sz val="14"/><rFont val="Arial"/><vertAlign val="superscript"/></rPr><t xml:space="preserve"> World</t></r>'
       + '</is></c>',
     )
   })

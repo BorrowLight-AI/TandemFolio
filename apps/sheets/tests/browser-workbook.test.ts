@@ -133,6 +133,34 @@ function cellSaveRequest(
 describe('browser XLSX workbook', () => {
   afterEach(() => vi.unstubAllGlobals())
 
+  it('hydrates rich shared strings including subscript and superscript', async () => {
+    vi.stubGlobal('window', {})
+    const zip = await JSZip.loadAsync(await buildEditFixture())
+    zip.file(
+      'xl/sharedStrings.xml',
+      '<sst><si><r><rPr><rFont val="Aptos"/><sz val="12"/><b/></rPr><t>H</t></r>' +
+        '<r><rPr><vertAlign val="subscript"/></rPr><t>2</t></r>' +
+        '<r><rPr><color rgb="FF123456"/><vertAlign val="superscript"/></rPr><t>O</t></r>' +
+        '</si></sst>',
+    )
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+    const file = await api.openBuffer(await zip.generateAsync({ type: 'arraybuffer' }), 'rich.xlsx')
+    const range = await api.readWorkbookRange({
+      sessionId: file.sessionId,
+      sheetId: file.sheets[0]!.id,
+      range: { startRow: 0, endRow: 0, startColumn: 0, endColumn: 0 },
+    })
+
+    expect(range.cells[0]).toMatchObject({
+      value: 'H2O',
+      rich: [
+        expect.objectContaining({ text: 'H', family: 'Aptos', size: 12, bold: true }),
+        expect.objectContaining({ text: '2', vertAlign: 'subscript' }),
+        expect.objectContaining({ text: 'O', color: '#123456', vertAlign: 'superscript' }),
+      ],
+    })
+  })
+
   it('exposes native shrink-to-fit styles from the workbook stylesheet', async () => {
     vi.stubGlobal('window', {})
     const zip = await JSZip.loadAsync(await fixture())

@@ -7,6 +7,7 @@
  * spreadsheet instance. Extracted from App.tsx; they hold no React state.
  */
 import {
+  BaselineOffset,
   BooleanNumber,
   BorderStyleTypes,
   CellValueType,
@@ -2220,9 +2221,29 @@ function applyJournalOverlay(
       if (entry.formula) cellRange.setValues([[{ f: entry.formula }]])
       else if (entry.value === null) cellRange.clearContent()
       else if (entry.rich && typeof entry.value === 'string') {
-        cellRange.setValues([[{ p: toRichTextDocument(entry.value, [...entry.rich]) }]])
+        cellRange.setValues([
+          [
+            {
+              p: toRichTextDocument(
+                entry.value,
+                [...entry.rich],
+                fontTextStyleOf(worksheet.getSheet().getComposedCellStyle(entry.row, entry.column)),
+              ),
+            },
+          ],
+        ])
       } else if (typeof entry.value === 'string' && entry.value.includes('\n')) {
-        cellRange.setValues([[{ p: toRichTextDocument(entry.value) }]])
+        cellRange.setValues([
+          [
+            {
+              p: toRichTextDocument(
+                entry.value,
+                [],
+                fontTextStyleOf(worksheet.getSheet().getComposedCellStyle(entry.row, entry.column)),
+              ),
+            },
+          ],
+        ])
       } else cellRange.setValues([[{ v: entry.value }]])
     }
     // The set-range-values mutation merges style patches, so re-applying the
@@ -2323,7 +2344,14 @@ export function patchWorksheetRangeInner(
         // Explicit string typing: bare `v` lets Univer coerce numeric-looking
         // text ("007", phone numbers) into numbers.
         ...(cell.rich && typeof displayValue === 'string'
-          ? { p: toRichTextDocument(displayValue, cell.rich, shrinkScale) }
+          ? {
+              p: toRichTextDocument(
+                displayValue,
+                cell.rich,
+                cellFontTextStyle(effectiveStyle),
+                shrinkScale,
+              ),
+            }
           : useFormulas && cell.formula && !keepsCache
             ? // No cached value: leave v unset so the engine computes instead
               // of showing the formula text as a literal.
@@ -2335,7 +2363,7 @@ export function patchWorksheetRangeInner(
               : cachedFormulaCellData(cell.formula, cell.value)
             : typeof displayValue === 'string' && multiline
               ? // Bare `v` renders only the first line; the doc model keeps all.
-                { p: toRichTextDocument(displayValue) }
+                { p: toRichTextDocument(displayValue, [], cellFontTextStyle(effectiveStyle)) }
               : typeof displayValue === 'string' && displayValue !== ''
                 ? { v: displayValue, t: CellValueType.STRING }
                 : { v: displayValue }),
@@ -2486,34 +2514,90 @@ function applyTableBanding(
   }
 }
 
+export function cellFontTextStyle(style: WorkbookCellStyle | undefined): IStyleData {
+  if (!style) return {}
+  return {
+    ...(style.fontFamily ? { ff: style.fontFamily } : {}),
+    ...(style.fontSize ? { fs: style.fontSize } : {}),
+    ...(style.bold ? { bl: BooleanNumber.TRUE } : {}),
+    ...(style.italic ? { it: BooleanNumber.TRUE } : {}),
+    ...(style.underline ? { ul: { s: BooleanNumber.TRUE } } : {}),
+    ...(style.strikethrough ? { st: { s: BooleanNumber.TRUE } } : {}),
+    ...(style.fontColor ? { cl: { rgb: style.fontColor } } : {}),
+  }
+}
+
+function fontTextStyleOf(style: IStyleData | null | undefined): IStyleData {
+  if (!style) return {}
+  return {
+    ...(style.ff ? { ff: style.ff } : {}),
+    ...(style.fs ? { fs: style.fs } : {}),
+    ...(style.bl ? { bl: style.bl } : {}),
+    ...(style.it ? { it: style.it } : {}),
+    ...(style.ul?.s ? { ul: { s: BooleanNumber.TRUE } } : {}),
+    ...(style.st?.s ? { st: { s: BooleanNumber.TRUE } } : {}),
+    ...(style.cl?.rgb ? { cl: { rgb: style.cl.rgb } } : {}),
+  }
+}
+
+function richRunHasFormatting(run: WorkbookRichRun): boolean {
+  return (
+    run.bold ||
+    run.italic ||
+    run.underline ||
+    run.strikethrough ||
+    run.color !== undefined ||
+    run.size !== undefined ||
+    run.family !== undefined ||
+    run.vertAlign !== undefined
+  )
+}
+
 export function toRichTextDocument(
   text: string,
   runs: readonly WorkbookRichRun[] = [],
+  base: IStyleData = {},
   fontScale = 1,
 ): ICellData['p'] {
+  const normalize = (value: string): string => value.replace(/\r\n?/g, '\n')
+  const normalized = normalize(text)
   const textRuns = []
   let cursor = 0
   for (const run of runs) {
-    const end = cursor + run.text.length
+    const end = cursor + normalize(run.text).length
     textRuns.push({
       st: cursor,
       ed: end,
-      ts: {
-        ...(run.family ? { ff: run.family } : {}),
-        ...(run.size ? { fs: scaledFontSize(run.size, fontScale) } : {}),
-        ...(run.bold ? { bl: BooleanNumber.TRUE } : {}),
-        ...(run.italic ? { it: BooleanNumber.TRUE } : {}),
-        ...(run.underline ? { ul: { s: BooleanNumber.TRUE } } : {}),
-        ...(run.strikethrough ? { st: { s: BooleanNumber.TRUE } } : {}),
-        ...(run.color ? { cl: { rgb: run.color } } : {}),
-      },
+      ts: richRunHasFormatting(run)
+        ? {
+            ...base,
+            ...(run.family ? { ff: run.family } : {}),
+            ...(run.size ? { fs: scaledFontSize(run.size, fontScale) } : {}),
+            bl: run.bold ? BooleanNumber.TRUE : BooleanNumber.FALSE,
+            it: run.italic ? BooleanNumber.TRUE : BooleanNumber.FALSE,
+            ul: { s: run.underline ? BooleanNumber.TRUE : BooleanNumber.FALSE },
+            st: { s: run.strikethrough ? BooleanNumber.TRUE : BooleanNumber.FALSE },
+            ...(run.color ? { cl: { rgb: run.color } } : {}),
+            ...(run.vertAlign
+              ? {
+                  va:
+                    run.vertAlign === 'subscript'
+                      ? BaselineOffset.SUBSCRIPT
+                      : BaselineOffset.SUPERSCRIPT,
+                }
+              : {}),
+          }
+        : base,
     })
     cursor = end
+  }
+  if (cursor < normalized.length && Object.keys(base).length > 0) {
+    textRuns.push({ st: cursor, ed: normalized.length, ts: base })
   }
   // Univer document streams use \r as paragraph break and \n as section
   // break; a raw \n would split the cell into sections and drop later lines.
   // 1:1 replacement, so textRun offsets stay valid.
-  const dataStream = `${text.replace(/\n/g, '\r')}\r\n`
+  const dataStream = `${normalized.replace(/\n/g, '\r')}\r\n`
   const paragraphs: Array<{ startIndex: number }> = []
   for (let i = 0; i < dataStream.length; i += 1) {
     if (dataStream[i] === '\r') paragraphs.push({ startIndex: i })

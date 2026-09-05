@@ -1479,6 +1479,11 @@ function extractRichRuns(text: string, textRuns: unknown): WorkbookRichRun[] | u
       ...(typeof color === 'string' ? { color } : {}),
       ...(typeof style.fs === 'number' ? { size: style.fs } : {}),
       ...(typeof style.ff === 'string' ? { family: style.ff } : {}),
+      ...(style.va === 2
+        ? { vertAlign: 'subscript' as const }
+        : style.va === 3
+          ? { vertAlign: 'superscript' as const }
+          : {}),
     }
     if (
       run.bold ||
@@ -1487,7 +1492,8 @@ function extractRichRuns(text: string, textRuns: unknown): WorkbookRichRun[] | u
       run.strikethrough ||
       run.color !== undefined ||
       run.size !== undefined ||
-      run.family !== undefined
+      run.family !== undefined ||
+      run.vertAlign !== undefined
     ) {
       anyStyled = true
     }

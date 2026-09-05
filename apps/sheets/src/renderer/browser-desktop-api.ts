@@ -266,6 +266,7 @@ export class BrowserWorkbookDesktopApi {
             ? { formula: cell.formula.startsWith('=') ? cell.formula : `=${cell.formula}` }
             : {}),
           ...(cell.styleIndex === undefined ? {} : { styleIndex: cell.styleIndex }),
+          ...(cell.rich === undefined ? {} : { rich: cell.rich.map((run) => ({ ...run })) }),
         },
       ]
     })

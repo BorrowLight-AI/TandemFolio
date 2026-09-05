@@ -176,6 +176,7 @@ const richRunSchema = z
     color: z.string().optional(),
     size: z.number().positive().optional(),
     family: z.string().optional(),
+    vertAlign: z.enum(['subscript', 'superscript']).optional(),
   })
   .strict()
 const conditionalRuleSchema = z

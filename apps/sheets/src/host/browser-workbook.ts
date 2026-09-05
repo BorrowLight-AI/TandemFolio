@@ -77,6 +77,7 @@ import type {
   WorkbookFile,
   WorkbookPagePrintSettings,
   WorkbookRangeResult,
+  WorkbookRichRun,
   WorkbookStyleEdit,
   WorkbookVisualEdit,
   WorkbookVisualObject,
@@ -89,6 +90,7 @@ export interface BrowserCell {
   value: CellScalar
   formula?: string
   styleIndex?: number
+  rich?: WorkbookRichRun[]
 }
 
 export interface BrowserSheet {
@@ -291,16 +293,60 @@ function readPageSetupState(
   }
 }
 
-function readSharedStrings(xml: string | null): string[] {
-  if (!xml) return []
-  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) =>
-    [...(match[1] ?? '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)]
+interface BrowserRichString {
+  readonly text: string
+  readonly rich?: WorkbookRichRun[]
+}
+
+function runFlag(properties: string, tag: string): boolean {
+  const match = new RegExp(`<${tag}\\b([^>]*)\\/?\\s*>`).exec(properties)
+  if (!match) return false
+  const value = xmlAttribute(match[1] ?? '', 'val')
+  return value !== '0' && value !== 'false'
+}
+
+function parseRichString(xml: string): BrowserRichString {
+  const runs: WorkbookRichRun[] = []
+  for (const match of xml.matchAll(/<r\b[^>]*>([\s\S]*?)<\/r>/g)) {
+    const body = match[1] ?? ''
+    const properties = /<rPr\b[^>]*>([\s\S]*?)<\/rPr>/.exec(body)?.[1] ?? ''
+    const text = [...body.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)]
+      .map((part) => decodeXml(part[1] ?? ''))
+      .join('')
+    const rgb = elementAttribute(properties, 'color', 'rgb')
+    const size = Number(elementAttribute(properties, 'sz', 'val'))
+    const family = elementAttribute(properties, 'rFont', 'val')
+    const vertAlign = elementAttribute(properties, 'vertAlign', 'val')
+    runs.push({
+      text,
+      bold: runFlag(properties, 'b'),
+      italic: runFlag(properties, 'i'),
+      underline: runFlag(properties, 'u'),
+      strikethrough: runFlag(properties, 'strike'),
+      ...(rgb && /^(?:[0-9A-Fa-f]{2})?[0-9A-Fa-f]{6}$/.test(rgb)
+        ? { color: `#${rgb.slice(-6).toUpperCase()}` }
+        : {}),
+      ...(Number.isFinite(size) && size > 0 ? { size } : {}),
+      ...(family ? { family: decodeXml(family) } : {}),
+      ...(vertAlign === 'subscript' || vertAlign === 'superscript' ? { vertAlign } : {}),
+    })
+  }
+  if (runs.length > 0) return { text: runs.map((run) => run.text).join(''), rich: runs }
+  return {
+    text: [...xml.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)]
       .map((part) => decodeXml(part[1] ?? ''))
       .join(''),
+  }
+}
+
+function readSharedStrings(xml: string | null): BrowserRichString[] {
+  if (!xml) return []
+  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) =>
+    parseRichString(match[1] ?? ''),
   )
 }
 
-function parseCell(xml: string, sharedStrings: string[]): BrowserCell | null {
+function parseCell(xml: string, sharedStrings: BrowserRichString[]): BrowserCell | null {
   const open = /^<c\b([^>]*)>/.exec(xml) ?? /^<c\b([^>]*)\/>/.exec(xml)
   const attributes = open?.[1] ?? ''
   const address = xmlAttribute(attributes, 'r')?.toUpperCase()
@@ -310,12 +356,15 @@ function parseCell(xml: string, sharedStrings: string[]): BrowserCell | null {
   const formula = textContent(xml, 'f')
   const raw = textContent(xml, 'v')
   let value: CellScalar = null
+  let rich: WorkbookRichRun[] | undefined
   if (type === 'inlineStr') {
-    value = [...xml.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)]
-      .map((match) => decodeXml(match[1] ?? ''))
-      .join('')
+    const parsed = parseRichString(xml)
+    value = parsed.text
+    rich = parsed.rich
   } else if (type === 's') {
-    value = sharedStrings[Number(raw)] ?? ''
+    const shared = sharedStrings[Number(raw)]
+    value = shared?.text ?? ''
+    rich = shared?.rich
   } else if (type === 'b') {
     value = raw === '1'
   } else if (type === 'str') {
@@ -331,6 +380,7 @@ function parseCell(xml: string, sharedStrings: string[]): BrowserCell | null {
     ...(style !== undefined && Number.isInteger(Number(style))
       ? { styleIndex: Number(style) }
       : {}),
+    ...(rich === undefined ? {} : { rich }),
   }
 }
 
@@ -435,7 +485,7 @@ function parseSheet(
   xml: string,
   name: string,
   path: string,
-  sharedStrings: string[],
+  sharedStrings: BrowserRichString[],
   relsXml: string | null = null,
   tables: WorkbookFile['sheets'][number]['tables'] = [],
   comments: WorkbookFile['sheets'][number]['comments'] = [],
@@ -1139,7 +1189,7 @@ export class BrowserWorkbook {
   readonly #sheetXml = new Map<string, string>()
   readonly #zip: JSZip
   readonly #stylesheet: StylesheetEditor | null
-  readonly #sharedStrings: string[]
+  readonly #sharedStrings: BrowserRichString[]
   readonly #metadataXml: Map<string, string>
   readonly #removedPaths = new Set<string>()
   readonly #structureUndo: StructureSnapshot[] = []
@@ -1152,7 +1202,7 @@ export class BrowserWorkbook {
     zip: JSZip,
     sheetXml: ReadonlyMap<string, string>,
     stylesheet: StylesheetEditor | null,
-    sharedStrings: string[],
+    sharedStrings: BrowserRichString[],
     metadataXml: ReadonlyMap<string, string>,
   ) {
     this.#zip = zip
@@ -2495,7 +2545,17 @@ export class BrowserWorkbook {
       metadataXml: new Map(this.#metadataXml),
       sheets: this.sheets.map((sheet) => ({
         ...sheet,
-        cells: new Map(sheet.cells),
+        cells: new Map(
+          [...sheet.cells].map(([address, cell]) => [
+            address,
+            {
+              ...cell,
+              ...(cell.rich === undefined
+                ? {}
+                : { rich: cell.rich.map((run) => ({ ...run })) }),
+            },
+          ]),
+        ),
         rows: sheet.rows.map((row) => ({ ...row })),
         columnWidths: sheet.columnWidths.map((column) => ({ ...column })),
         dataValidations: sheet.dataValidations.map((rule) => ({

@@ -1968,6 +1968,7 @@ function serializeRunProperties(run: WorkbookRichRun): string {
   if (run.family !== undefined) {
     parts.push(`<rFont val="${escapeXmlAttribute(run.family)}"/>`)
   }
+  if (run.vertAlign !== undefined) parts.push(`<vertAlign val="${run.vertAlign}"/>`)
   return parts.length === 0 ? '' : `<rPr>${parts.join('')}</rPr>`
 }
 
