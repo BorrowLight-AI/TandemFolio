@@ -2436,7 +2436,11 @@ export function patchWorksheetRangeInner(
                 { p: toRichTextDocument(displayValue, [], cellFontTextStyle(effectiveStyle)) }
               : typeof displayValue === 'string' && displayValue !== ''
                 ? { v: displayValue, t: CellValueType.STRING }
-                : { v: displayValue }),
+                : displayValue === ''
+                  ? cell.value === ''
+                    ? { v: '', t: CellValueType.STRING }
+                    : { v: null }
+                  : { v: displayValue }),
         ...(style || isLink || multiline
           ? {
               s: {

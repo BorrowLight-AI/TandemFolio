@@ -83,6 +83,9 @@ the file's major unit and number format.
 Chart insertion recognizes numeric series in mixed tables even when rows contain blanks or text
 notes. When a mixed first column is the only numeric vector, it becomes the value series rather
 than being consumed as a category axis; completely nonnumeric selections still fail closed.
+Lazy worksheet streaming now distinguishes an explicit empty shared/inline string from a style-only
+cell. Empty strings retain string identity for copy and save, while style-only cells remain
+value-less so formula references coerce them to zero as Excel does.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -154,7 +157,7 @@ remain absent for recorded product-boundary reasons:
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
 The current suite executes 126 passing files and one environment-conditional LibreOffice pivot
-suite; 1,622 assertions pass and one is skipped when `soffice` is not available.
+suite; 1,625 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 
