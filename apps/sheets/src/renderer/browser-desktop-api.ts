@@ -87,11 +87,15 @@ function dimensions(sheet: BrowserSheet): { rowCount: number; columnCount: numbe
 }
 
 function styleCatalog(workbook: BrowserWorkbook): WorkbookCellStyle[] {
+  const parsed = workbook.styleCatalog()
   let maximum = 0
   for (const sheet of workbook.sheets) {
     for (const cell of sheet.cells.values()) maximum = Math.max(maximum, cell.styleIndex ?? 0)
   }
-  return Array.from({ length: maximum + 1 }, () => ({ ...DEFAULT_STYLE }))
+  return Array.from({ length: Math.max(maximum + 1, parsed.length) }, (_, index) => ({
+    ...DEFAULT_STYLE,
+    ...parsed[index],
+  }))
 }
 
 function xlsxName(name: string): string {

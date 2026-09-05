@@ -13,7 +13,7 @@ migration completes.
 ## 2026-09-05 candidate-native migration
 
 The reviewed candidate is `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`.
-The first completed XLSX slices retain namespace-tolerant OOXML parsing, Rich Data passthrough,
+The completed XLSX slices retain namespace-tolerant OOXML parsing, Rich Data passthrough,
 shared and future formula handling, theme and protection metadata helpers, 1904 date-system support,
 calculation mode/recalculation, Goal Seek, cached formula values, IFS empty-set behavior, quadratic-formula and
 structural-delete guards, center-continuous rendering, fit-to-page printing, numeric/date criteria
@@ -39,6 +39,11 @@ editing the odd header/footer preserves the file's page variants.
 Page Layout manual row/column breaks and `xlsx.sheet.set_page_breaks` share one file-journal
 projection, renderer-owned Undo, structural-coordinate remapping, worksheet XML save/reopen state,
 and a bounded Univer canvas preview that distinguishes automatic and manual boundaries.
+The browser stylesheet adapter now exposes real `cellXfs` records instead of substituting default
+styles. Native `alignment/@shrinkToFit` therefore reaches the mounted Univer renderer together with
+its source font, color, alignment, number-format, fill, and border context. Overflowing text is
+measured against the live column or merged-cell width and receives an integer fitted font size;
+the original OOXML style stays untouched for save/reopen fidelity.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
 telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
@@ -109,10 +114,8 @@ remain absent for recorded product-boundary reasons:
 | `lazy-plan.test.ts`, `privacy-policy.test.ts`, `workbook-skill-tools.test.ts`                                               | Import prohibited renderer AI planners/policies/tools.                                                                                               |
 | `close-guard.test.ts`, `xlsx-borders.test.ts`, `xlsx-recalc.test.ts`, `xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts` | Require the removed Electron main process or XLSX sidecar. Browser-host behavior is covered by public browser tests instead of a fake desktop layer. |
 
-The current suite contains 86 test files: 81 permitted original tests and five TandemFolio browser/product-
-boundary/registry tests. `npm test -w @genoffice/sheets` executes 85 passing files and one environment-
-conditional LibreOffice pivot suite; 1,345 assertions pass and one is skipped when `soffice` is not
-available.
+The current suite executes 118 passing files and one environment-conditional LibreOffice pivot
+suite; 1,554 assertions pass and one is skipped when `soffice` is not available.
 
 ## Executable browser evidence
 

@@ -133,6 +133,31 @@ function cellSaveRequest(
 describe('browser XLSX workbook', () => {
   afterEach(() => vi.unstubAllGlobals())
 
+  it('exposes native shrink-to-fit styles from the workbook stylesheet', async () => {
+    vi.stubGlobal('window', {})
+    const zip = await JSZip.loadAsync(await fixture())
+    zip.file(
+      'xl/styles.xml',
+      '<styleSheet><fonts count="2"><font/><font><name val="Aptos"/><sz val="12"/><b/><color rgb="FF123456"/></font></fonts>' +
+        '<fills count="1"><fill/></fills><borders count="1"><border/></borders><cellXfs count="4">' +
+        '<xf/><xf/><xf/><xf fontId="1" applyFont="1" applyAlignment="1"><alignment shrinkToFit="1" horizontal="right"/></xf>' +
+        '</cellXfs></styleSheet>',
+    )
+    const source = await zip.generateAsync({ type: 'arraybuffer' })
+    const api = new BrowserWorkbookDesktopApi(async () => null)
+
+    const file = await api.openBuffer(source, 'shrink.xlsx')
+
+    expect(file.styles[3]).toMatchObject({
+      fontFamily: 'Aptos',
+      fontSize: 12,
+      bold: true,
+      fontColor: '#123456',
+      horizontalAlignment: 'right',
+      shrinkToFit: true,
+    })
+  })
+
   it('reads, rewrites, saves, and reopens the native workbook theme', async () => {
     const workbook = await openBrowserWorkbook(await themeFixture(), 'theme.xlsx')
     expect(workbook.theme()).toMatchObject({

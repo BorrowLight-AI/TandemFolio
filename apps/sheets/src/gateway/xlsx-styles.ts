@@ -1,4 +1,4 @@
-import type { WorkbookStyleEdit } from '../shared/desktop-api'
+import type { WorkbookCellStyle, WorkbookStyleEdit } from '../shared/desktop-api'
 
 /// Copy-on-write editor for xl/styles.xml. Existing entries are never
 /// modified — every changed cell gets a new cellXfs entry (deduped) derived
@@ -74,6 +74,59 @@ export class StylesheetEditor {
       this.cellXfs.length !== this.originalCounts.cellXfs ||
       this.dxfs.length !== this.originalCounts.dxfs
     )
+  }
+
+  /** Resolved cell format records in cellXfs order for the live renderer. */
+  styleCatalog(): WorkbookCellStyle[] {
+    const customFormats = new Map(
+      this.numFmts.map((entry) => [
+        Number(readAttribute(entry, 'numFmtId') ?? 0),
+        decodeXmlAttribute(readAttribute(entry, 'formatCode') ?? 'General'),
+      ]),
+    )
+    return this.cellXfs.map((xf) => {
+      const font = this.fonts[Number(readAttribute(xf, 'fontId') ?? 0)] ?? '<font/>'
+      const fill = this.fills[Number(readAttribute(xf, 'fillId') ?? 0)] ?? '<fill/>'
+      const border = this.borders[Number(readAttribute(xf, 'borderId') ?? 0)] ?? '<border/>'
+      const alignment = /<alignment\b[^>]*\/?>/.exec(xf)?.[0] ?? ''
+      const fontColor = readColorElement(font, 'color')
+      const fillColor = readColorElement(
+        /<patternFill\b[^>]*>[\s\S]*?<\/patternFill>/.exec(fill)?.[0] ?? fill,
+        'fgColor',
+      )
+      const numFmtId = Number(readAttribute(xf, 'numFmtId') ?? 0)
+      const fontFamily = readChildAttribute(font, 'name', 'val')
+      const fontSize = positiveNumber(readChildAttribute(font, 'sz', 'val'))
+      const fontScheme = readChildAttribute(font, 'scheme', 'val')
+      const indent = nonnegativeInteger(readAttribute(alignment, 'indent'))
+      return {
+        ...(fontFamily ? { fontFamily: decodeXmlAttribute(fontFamily) } : {}),
+        ...(fontSize === undefined ? {} : { fontSize }),
+        bold: hasEnabledElement(font, 'b'),
+        italic: hasEnabledElement(font, 'i'),
+        underline: hasEnabledElement(font, 'u'),
+        strikethrough: hasEnabledElement(font, 'strike'),
+        wrapText: booleanAttribute(alignment, 'wrapText'),
+        ...(booleanAttribute(alignment, 'shrinkToFit') ? { shrinkToFit: true } : {}),
+        ...(fontColor.rgb ? { fontColor: fontColor.rgb } : {}),
+        ...(fontColor.theme !== undefined ? { fontColorTheme: fontColor.theme } : {}),
+        ...(fontColor.tint !== undefined ? { fontColorTint: fontColor.tint } : {}),
+        ...(fillColor.rgb ? { fillColor: fillColor.rgb } : {}),
+        ...(fillColor.theme !== undefined ? { fillColorTheme: fillColor.theme } : {}),
+        ...(fillColor.tint !== undefined ? { fillColorTint: fillColor.tint } : {}),
+        ...(fontScheme === 'major' || fontScheme === 'minor' ? { fontScheme } : {}),
+        ...(readAttribute(alignment, 'horizontal')
+          ? { horizontalAlignment: readAttribute(alignment, 'horizontal') }
+          : {}),
+        ...(readAttribute(alignment, 'vertical')
+          ? { verticalAlignment: readAttribute(alignment, 'vertical') }
+          : {}),
+        ...(indent === undefined ? {} : { indent }),
+        numberFormat:
+          customFormats.get(numFmtId) ?? BUILTIN_NUMBER_FORMATS_BY_ID.get(numFmtId) ?? 'General',
+        ...readBorderCatalog(border),
+      }
+    })
   }
 
   /// Conditional-formatting highlight styles; deduped like every other list.
@@ -209,6 +262,85 @@ const BUILTIN_NUMBER_FORMATS = new Map<string, number>([
   ['0.00E+00', 11],
   ['@', 49],
 ])
+const BUILTIN_NUMBER_FORMATS_BY_ID = new Map(
+  [...BUILTIN_NUMBER_FORMATS].map(([pattern, id]) => [id, pattern]),
+)
+
+function hasEnabledElement(xml: string, tag: string): boolean {
+  const element = new RegExp(`<${tag}\\b[^>]*\\/?>`).exec(xml)?.[0]
+  if (!element) return false
+  const value = readAttribute(element, 'val')
+  return value !== '0' && value !== 'false'
+}
+
+function booleanAttribute(xml: string, name: string): boolean {
+  const value = readAttribute(xml, name)
+  return value === '1' || value === 'true'
+}
+
+function positiveNumber(value: string | undefined): number | undefined {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+function nonnegativeInteger(value: string | undefined): number | undefined {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined
+}
+
+function readColorElement(
+  xml: string,
+  tag: string,
+): { rgb?: string; theme?: number; tint?: number } {
+  const element = new RegExp(`<${tag}\\b[^>]*\\/?>`).exec(xml)?.[0] ?? ''
+  const argb = readAttribute(element, 'rgb')
+  const theme = nonnegativeInteger(readAttribute(element, 'theme'))
+  const tintValue = Number(readAttribute(element, 'tint'))
+  const tint =
+    Number.isFinite(tintValue) && tintValue >= -1 && tintValue <= 1 ? tintValue : undefined
+  return {
+    ...(argb && /^[0-9a-f]{6,8}$/i.test(argb) ? { rgb: `#${argb.slice(-6).toUpperCase()}` } : {}),
+    ...(theme === undefined ? {} : { theme }),
+    ...(tint === undefined ? {} : { tint }),
+  }
+}
+
+function readBorderCatalog(
+  border: string,
+): Pick<
+  WorkbookCellStyle,
+  | 'borderTop'
+  | 'borderBottom'
+  | 'borderLeft'
+  | 'borderRight'
+  | 'borderDiagonal'
+  | 'diagonalUp'
+  | 'diagonalDown'
+> {
+  const edge = (tag: string): WorkbookCellStyle['borderTop'] => {
+    const element = new RegExp(`<${tag}\\b[^>]*/>|<${tag}\\b[^>]*>[\\s\\S]*?</${tag}>`).exec(
+      border,
+    )?.[0]
+    const style = element ? readAttribute(element, 'style') : undefined
+    if (!element || !style) return undefined
+    const color = readColorElement(element, 'color').rgb
+    return { style, ...(color ? { color } : {}) }
+  }
+  const top = edge('top')
+  const bottom = edge('bottom')
+  const left = edge('left')
+  const right = edge('right')
+  const diagonal = edge('diagonal')
+  return {
+    ...(top ? { borderTop: top } : {}),
+    ...(bottom ? { borderBottom: bottom } : {}),
+    ...(left ? { borderLeft: left } : {}),
+    ...(right ? { borderRight: right } : {}),
+    ...(diagonal ? { borderDiagonal: diagonal } : {}),
+    diagonalUp: booleanAttribute(border, 'diagonalUp'),
+    diagonalDown: booleanAttribute(border, 'diagonalDown'),
+  }
+}
 
 function hasFontDelta(delta: WorkbookStyleEdit): boolean {
   return (
@@ -419,6 +551,11 @@ function readAttribute(element: string, name: string): string | undefined {
   return new RegExp(`\\b${name}="([^"]*)"`).exec(element)?.[1]
 }
 
+function readChildAttribute(xml: string, tag: string, name: string): string | undefined {
+  const child = new RegExp(`<${tag}\\b[^>]*\\/?>`).exec(xml)?.[0]
+  return child ? readAttribute(child, name) : undefined
+}
+
 /** like readAttribute, but never matches a namespace-prefixed name */
 function readCoreAttribute(element: string, name: string): string | undefined {
   return new RegExp(`(?<![\\w:.-])${name}="([^"]*)"`).exec(element)?.[1]
@@ -443,4 +580,13 @@ function escapeXmlAttribute(input: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&apos;')
+}
+
+function decodeXmlAttribute(input: string): string {
+  return input
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&')
 }

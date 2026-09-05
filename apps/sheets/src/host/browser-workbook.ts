@@ -72,6 +72,7 @@ import {
 import { applyVisualEdits as applyVisualEditsToPackage } from '../gateway/xlsx-drawing-edit'
 import type { SheetPivotAddition } from '../gateway/xlsx-gateway'
 import type {
+  WorkbookCellStyle,
   WorkbookChartEdit,
   WorkbookFile,
   WorkbookPagePrintSettings,
@@ -1048,6 +1049,10 @@ export class BrowserWorkbook {
 
   get dirty(): boolean {
     return this.#dirtyPaths.size > 0 || this.#removedPaths.size > 0
+  }
+
+  styleCatalog(): WorkbookCellStyle[] {
+    return this.#stylesheet?.styleCatalog() ?? []
   }
 
   async readBinary(path: string): Promise<Uint8Array> {

@@ -21,7 +21,7 @@ import {
   type IRange,
   type IStyleData,
 } from '@univerjs/core'
-import { IRenderManagerService } from '@univerjs/engine-render'
+import { FontCache, getFontStyleString, IRenderManagerService } from '@univerjs/engine-render'
 import { CFValueType, type IValueConfig } from '@univerjs/preset-sheets-conditional-formatting'
 
 import type {
@@ -2285,12 +2285,24 @@ export function patchWorksheetRangeInner(
     }
     const isLink = linkedCells.has(`${cell.row}:${cell.column}`)
     const multiline = typeof displayValue === 'string' && displayValue.includes('\n')
+    const shrinkScale =
+      style?.shrinkToFit &&
+      !style.wrapText &&
+      typeof displayValue === 'string' &&
+      displayValue !== '' &&
+      !(useFormulas && cell.formula)
+        ? shrinkScaleFor(worksheet, cell.row, cell.column, displayValue, style, cell.rich)
+        : 1
+    const effectiveStyle =
+      shrinkScale >= 1 || !style
+        ? style
+        : { ...style, fontSize: scaledFontSize(style.fontSize ?? 11, shrinkScale) }
     if (row) {
       row[cell.column - range.startColumn] = {
         // Explicit string typing: bare `v` lets Univer coerce numeric-looking
         // text ("007", phone numbers) into numbers.
         ...(cell.rich && typeof displayValue === 'string'
-          ? { p: toRichTextDocument(displayValue, cell.rich) }
+          ? { p: toRichTextDocument(displayValue, cell.rich, shrinkScale) }
           : useFormulas && cell.formula && !keepsCache
             ? // No cached value: leave v unset so the engine computes instead
               // of showing the formula text as a literal.
@@ -2312,7 +2324,7 @@ export function patchWorksheetRangeInner(
                 // Link blue/underline is a fallback only: a colour or
                 // underline the file specifies must win.
                 ...(isLink ? { cl: { rgb: '#0563C1' }, ul: { s: BooleanNumber.TRUE } } : {}),
-                ...(style ? toUniverStyle(style) : {}),
+                ...(effectiveStyle ? toUniverStyle(effectiveStyle) : {}),
                 // Excel shows manual line breaks even without wrapText.
                 ...(multiline ? { tb: WrapStrategy.WRAP } : {}),
               },
@@ -2456,6 +2468,7 @@ function applyTableBanding(
 export function toRichTextDocument(
   text: string,
   runs: readonly WorkbookRichRun[] = [],
+  fontScale = 1,
 ): ICellData['p'] {
   const textRuns = []
   let cursor = 0
@@ -2466,7 +2479,7 @@ export function toRichTextDocument(
       ed: end,
       ts: {
         ...(run.family ? { ff: run.family } : {}),
-        ...(run.size ? { fs: run.size } : {}),
+        ...(run.size ? { fs: scaledFontSize(run.size, fontScale) } : {}),
         ...(run.bold ? { bl: BooleanNumber.TRUE } : {}),
         ...(run.italic ? { it: BooleanNumber.TRUE } : {}),
         ...(run.underline ? { ul: { s: BooleanNumber.TRUE } } : {}),
@@ -3431,6 +3444,56 @@ export function mapBorderStyle(style: string): BorderStyleTypes {
     default:
       return BorderStyleTypes.THIN
   }
+}
+
+/**
+ * Return the integer font size needed to fit the widest logical line inside
+ * a cell, or null when no shrink is necessary (or no width is available).
+ * Univer rounds fractional font sizes up, so the fitted size must be floored.
+ */
+export function shrinkToFitFontSize(
+  text: string,
+  fontSize: number,
+  availablePx: number,
+  measure: (line: string) => number,
+): number | null {
+  if (!(availablePx > 0)) return null
+  let widest = 0
+  for (const line of text.split(/\r\n|[\r\n]/)) widest = Math.max(widest, measure(line))
+  if (!(widest > availablePx)) return null
+  return Math.max(1, Math.floor((fontSize * availablePx) / widest))
+}
+
+function scaledFontSize(size: number, scale: number): number {
+  return Math.max(1, Math.floor(size * scale + 1e-6))
+}
+
+function shrinkScaleFor(
+  worksheet: UniverWorksheet,
+  row: number,
+  column: number,
+  text: string,
+  style: WorkbookCellStyle,
+  runs?: readonly WorkbookRichRun[],
+): number {
+  const sheet = worksheet.getSheet()
+  const merge = sheet.getMergedCell(row, column)
+  if (merge && (row !== merge.startRow || column !== merge.startColumn)) return 1
+  let cellWidth = 0
+  for (
+    let current = merge?.startColumn ?? column;
+    current <= (merge?.endColumn ?? column);
+    current += 1
+  ) {
+    cellWidth += sheet.getColumnWidth(current)
+  }
+  const measureSize = Math.max(style.fontSize ?? 11, ...(runs ?? []).map((run) => run.size ?? 0))
+  const { fontString } = getFontStyleString({ ...toUniverStyle(style), fs: measureSize })
+  const available = cellWidth - 5 - (style.indent ? style.indent * INDENT_STEP_PX : 0)
+  const shrunk = shrinkToFitFontSize(text, measureSize, available, (line) =>
+    line === '' ? 0 : FontCache.getMeasureText(line, fontString).width,
+  )
+  return shrunk === null ? 1 : shrunk / measureSize
 }
 
 function mapHorizontalAlignment(value: string | undefined): HorizontalAlign | undefined {

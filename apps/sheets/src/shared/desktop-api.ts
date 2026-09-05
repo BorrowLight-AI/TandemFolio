@@ -216,6 +216,8 @@ const cellStyleSchema = z
     underline: z.boolean(),
     strikethrough: z.boolean(),
     wrapText: z.boolean(),
+    /// OOXML alignment/@shrinkToFit; omitted when disabled.
+    shrinkToFit: z.boolean().optional(),
     fontColor: z.string().optional(),
     fillColor: z.string().optional(),
     /// Original theme slots/tints let a live theme change re-resolve colors.
