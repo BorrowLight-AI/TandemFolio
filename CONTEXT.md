@@ -17,7 +17,7 @@ The first release is intentionally live-bound. The mounted editor remains author
 ADR 0003 rejects simplified renderer replacements as the first-release target, and all parallel
 replacement renderer directories have been removed. All five pinned non-AI renderer structures are
 mounted through format-owned browser/MCP adapters. Their machine-checked producer baselines have no
-unexplained state-changing gap: 102 DOCX, 22 Markdown, 114 XLSX, 74 PPTX, and 25 PDF operations feed
+unexplained state-changing gap: 103 DOCX, 22 Markdown, 116 XLSX, 74 PPTX, and 25 PDF operations feed
 the generated product Manifest. Native renderer history or explicitly declared format-owned
 journals remain authoritative, and persisted families have save/reopen evidence. The remaining work
 is no longer a renderer-parity or release-evidence migration: R6-01 records approved pinned-source
@@ -51,7 +51,7 @@ module vault: the entry graph is inflated first and optional Univer locale/hyphe
 inflated only when requested, without a sibling resource or network fetch. Release-evidence schema
 v4 requires all three subphases, fixes bootstrap p95 at 500 ms, retains the 1,400 ms total XLSX
 cold-start ceiling, and caps initial executable JavaScript at 11 MB. The first poll, one mounted
-iframe, 114-operation Registry, languages, native history, and save/reopen authority are unchanged.
+iframe, 116-operation Registry, languages, native history, and save/reopen authority are unchanged.
 
 The 2026-09-04 refinement records the vault's static dependencies at build time,
 keeps dependency-free modules as UTF-8 bytes through Blob construction, and embeds

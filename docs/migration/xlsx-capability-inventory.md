@@ -2,17 +2,35 @@
 
 - Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Renderer-source status: complete for the permitted pinned community source set
-- Capability status: 114 XLSX registry operations (112 Agent-visible, two internal) through R2-131; retained state-changing command parity is audited and the open-ended Agent Ribbon route is removed
-- Product readiness: retained-command parity plus R6-05 traced/bounded bootstrap optimization complete;
-  `office_get_capabilities({ format: "xlsx" }).ready === true` for source-current approved evidence
+- Capability status: 116 XLSX registry operations (114 Agent-visible, two internal); the candidate-native migration adds calculation mode and explicit recalculation while retaining the audited baseline command surface
+- Product readiness: candidate-native migration is in progress and requires a new source-current
+  release capture; capability discovery therefore remains fail-closed
 
 This file separates renderer-source restoration from product completion. Both the format-local
-work and the shared ADR 0003/ADR 0005 release evidence now pass.
+work and the shared ADR 0003/ADR 0005 release evidence must be recaptured after the candidate-native
+migration completes.
+
+## 2026-09-05 candidate-native migration
+
+The reviewed candidate is `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`.
+The first completed XLSX slices retain namespace-tolerant OOXML parsing, Rich Data passthrough,
+shared and future formula handling, theme and protection metadata helpers, 1904-date primitives,
+calculation mode/recalculation, cached formula values, IFS empty-set behavior, quadratic-formula and
+structural-delete guards, center-continuous rendering, fit-to-page printing, numeric/date criteria
+comparison, Delete/Backspace selection clearing, and browser CSV serialization. Formula and
+structural mutations continue through the mounted Univer state and native Undo; package changes
+continue through the browser workbook adapter and save/reopen path.
+
+Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
+telemetry, and enterprise areas are excluded. Remaining admitted slices stay unadvertised until
+their native UI, typed MCP route where state changes, Undo, persistence evidence, and focused tests
+are all connected.
 
 ## Pinned renderer source accounting
 
-The pinned `apps/sheets/src/renderer` tree contains 111 files. The current tree contains all 76
-permitted pinned paths plus eleven TandemFolio host/operation files.
+The pinned baseline `apps/sheets/src/renderer` tree contains 111 files. The current tree contains
+all 76 permitted baseline paths plus TandemFolio host/operation files and the selectively admitted
+browser-safe candidate-native modules recorded in `provenance.md`.
 
 | Disposition                                               | Count | Evidence                                                                                          |
 | --------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------- |

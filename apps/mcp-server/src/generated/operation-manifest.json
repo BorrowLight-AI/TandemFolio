@@ -19294,6 +19294,106 @@
         "document"
       ],
       "effects": [
+        "document"
+      ],
+      "family": "calculation",
+      "format": "xlsx",
+      "id": "xlsx.calculation.recalculate",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "enum": [
+              "workbook",
+              "sheet"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "type": "object"
+      },
+      "mutates": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "enum": [
+              "workbook",
+              "sheet"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "type": "object"
+      },
+      "risk": "low",
+      "summary": "Recalculate the mounted XLSX workbook or active worksheet.",
+      "undoable": false,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "calculation",
+      "format": "xlsx",
+      "id": "xlsx.calculation.set_mode",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "automatic",
+              "manual"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "automatic",
+              "manual"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "risk": "low",
+      "summary": "Set automatic or manual calculation for the mounted XLSX workbook.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
         "document",
         "selection"
       ],

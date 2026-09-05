@@ -99,6 +99,10 @@ import { createUniver } from './create-univer'
 import { BrowserWorkbookDesktopApi } from './browser-desktop-api'
 import { structuralDeleteFormulaErrorSync } from './structural-delete-guard'
 import { installCenterContinuousRender } from './center-continuous'
+import {
+  CLEAR_SELECTION_CONTENT_COMMAND,
+  shouldInterceptClearSelection,
+} from './clear-selection-keyboard'
 
 import { columnIndex, columnLabel, parseRange } from '../domain/cell-address'
 import {
@@ -217,6 +221,7 @@ import { installPopulatedDataValidationArrow } from './data-validation-arrow'
 import { installFormulaNullResultFix } from './formula-null-result'
 import { installCachedValueFallbackInterceptor } from './formula-cached-fallback'
 import { installIfsEmptySetFix } from './ifs-empty-set'
+import { installCriteriaCompareCacheFix } from './criteria-compare-cache'
 import { installNumberFormatFix } from './numfmt-fix'
 import { installRateFallback } from './rate-function'
 import {
@@ -1052,6 +1057,13 @@ export function App(): React.JSX.Element {
       ],
     })
     installCenterContinuousRender()
+    const clearSelectionKeydown = (event: KeyboardEvent): void => {
+      if (!shouldInterceptClearSelection(event, editingCellRef.current)) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      void runtime.univerAPI.executeCommand(CLEAR_SELECTION_CONTENT_COMMAND)
+    }
+    window.addEventListener('keydown', clearSelectionKeydown, true)
     const univerCreateMs = performance.now() - univerCreateStartedAt
     const worksheetInstallStartedAt = performance.now()
     loadSnapshotIntoUniver(runtime, initialSnapshot, 'new-workbook', 'Untitled')
@@ -1160,6 +1172,7 @@ export function App(): React.JSX.Element {
     const nullResultDisposable = installFormulaNullResultFix(runtime)
     // MINIFS/MAXIFS with no matching rows return numeric zero, matching Excel.
     const ifsEmptySetDisposable = installIfsEmptySetFix(runtime)
+    const criteriaCompareCacheDisposable = installCriteriaCompareCacheFix()
     // Copy/cut load their selection into the lazy window first so streamed
     // workbooks don't serialize blanks for never-viewed rows.
     const copyMaterializeDisposable = installCopyMaterialize(runtime, lazyWorkbookRef, setMessage)
@@ -2043,6 +2056,7 @@ export function App(): React.JSX.Element {
       unsubscribeMenu()
       unsubscribeCloseSave()
       offThemeChanged?.()
+      window.removeEventListener('keydown', clearSelectionKeydown, true)
       undoRedoSub.unsubscribe()
       undoRedoService.pushUndoRedo = originalPushUndoRedo
       // clear the proxy's cached bound wrapper (see the install site)
@@ -2063,6 +2077,7 @@ export function App(): React.JSX.Element {
       multiRowAutofitDisposable.dispose()
       nullResultDisposable.dispose()
       ifsEmptySetDisposable.dispose()
+      criteriaCompareCacheDisposable.dispose()
       copyMaterializeDisposable.dispose()
       dataValidationArrowDisposable.dispose()
       ruleDetailDisposable()

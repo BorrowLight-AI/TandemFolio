@@ -836,7 +836,7 @@ command gaps.
   not a save. Inside an MCP Apps iframe, all five formats use the lease-checked internal atomic
   persistence protocol, not `ui/download-file`. Save As writes a collision-safe file under the
   configured output root; there is no arbitrary-path picker in the embedded protocol.
-- XLSX mounts the pinned community `App` directly; all permitted renderer files and focused tests are restored, the substitute renderer is removed, and 114 format-owned operations cover the audited retained mutation surface through shared Univer/file-journal and browser save/reopen routes. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. XLSX passes the shared packaged-host visual, performance/resource, MCP smoke, and repository gate.
+- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 116 format-owned operations cover the audited mutation surface plus explicit calculation mode and recalculation through shared Univer/file-journal and browser save/reopen routes. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. Candidate-native migration invalidates the earlier release capture until the source-current gate is recaptured.
 - PPTX's 74-operation Registry covers every retained state-changing producer through its complete
   browser API, native history, recovery, and package save seam.
 - PDF's 25-operation Registry covers every retained state-changing producer. Browser PDFium handles
