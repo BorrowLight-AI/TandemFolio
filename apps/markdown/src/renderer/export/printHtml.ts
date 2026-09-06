@@ -1,3 +1,22 @@
+import katexCss from 'katex/dist/katex.min.css?inline'
+
+const KATEX_FONT_FACES = katexCss.match(/@font-face\{[^}]*\}/g)?.join('') ?? ''
+const KATEX_LAYOUT_CSS = katexCss.replace(/@font-face\{[^}]*\}/g, '')
+
+function loadedKatexFontFaces(): string {
+  const rules: string[] = []
+  for (const sheet of document.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) {
+        if (/font-family:\s*["']?KaTeX_/i.test(rule.cssText)) rules.push(rule.cssText)
+      }
+    } catch {
+      // Cross-origin stylesheets cannot expose rules; use the bundled fallback below.
+    }
+  }
+  return rules.join('\n') || KATEX_FONT_FACES
+}
+
 /** Print-theme CSS: mirrors the editor typography so the PDF matches the canvas */
 const PRINT_CSS = `
 * { box-sizing: border-box; }
@@ -24,6 +43,8 @@ pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.6; }
 hr { border: none; border-top: 2px solid #e4e7eb; margin: 1.6em 0; }
 a { color: #0a69da; }
 img { max-width: 100%; height: auto; }
+.katex { white-space: nowrap; }
+.katex-display { margin: 1em 0; overflow-x: auto; overflow-y: hidden; }
 .tableWrapper { margin: 0.8em 0; }
 table { border-collapse: collapse; width: 100%; margin: 0; break-inside: avoid; }
 th, td { border: 1px solid #d0d5db; padding: 6px 10px; vertical-align: top; text-align: start; }
@@ -50,12 +71,15 @@ export function buildPrintHtml(editorRoot: HTMLElement, title: string): string {
   for (const bar of clone.querySelectorAll('.md-codeblock-bar')) bar.remove()
 
   const escapedTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  const escapedBase = document.baseURI.replace(/"/g, '&quot;')
   return [
     '<!doctype html>',
     '<html>',
     '<head>',
     '<meta charset="utf-8">',
+    `<base href="${escapedBase}">`,
     `<title>${escapedTitle}</title>`,
+    `<style>${loadedKatexFontFaces()}${KATEX_LAYOUT_CSS}</style>`,
     `<style>${PRINT_CSS}</style>`,
     '</head>',
     `<body>${clone.innerHTML}</body>`,

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
+import { Dropdown } from '@genoffice/ui'
 import { t } from '../i18n/locale'
 import {
   markdownCodeBlockLanguages,
@@ -11,19 +12,37 @@ import { getMarkdownTextBlockIndexAtPosition } from './block-type-actions'
 
 export function CodeBlockView({ node, getPos, editor }: NodeViewProps) {
   const [copied, setCopied] = useState(false)
+  const copyTimerRef = useRef<number | null>(null)
+  const mountedRef = useRef(true)
   const language = String(node.attrs.language ?? '') || 'plaintext'
 
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
   const copy = () => {
-    void navigator.clipboard.writeText(node.textContent).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
+    void navigator.clipboard
+      .writeText(node.textContent)
+      .then(() => {
+        if (!mountedRef.current) return
+        if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current)
+        setCopied(true)
+        copyTimerRef.current = window.setTimeout(() => {
+          copyTimerRef.current = null
+          setCopied(false)
+        }, 1500)
+      })
+      .catch(() => {})
   }
 
   return (
     <NodeViewWrapper className="md-codeblock">
       <div className="md-codeblock-bar" contentEditable={false}>
-        <select
+        <Dropdown
           className="md-codeblock-lang"
           value={
             markdownCodeBlockLanguages.includes(language as MarkdownCodeBlockLanguage)
@@ -31,23 +50,18 @@ export function CodeBlockView({ node, getPos, editor }: NodeViewProps) {
               : 'plaintext'
           }
           disabled={!editor.isEditable}
-          onChange={(event) => {
+          options={markdownCodeBlockLanguages.map((lang) => ({ value: lang, label: lang }))}
+          onPick={(language) => {
             const position = getPos()
             if (typeof position !== 'number') return
             const textBlockIndex = getMarkdownTextBlockIndexAtPosition(editor, position)
             if (textBlockIndex === null) return
             setMarkdownCodeBlockLanguage(editor, {
               textBlockIndex,
-              language: event.target.value as MarkdownCodeBlockLanguage,
+              language: language as MarkdownCodeBlockLanguage,
             })
           }}
-        >
-          {markdownCodeBlockLanguages.map((lang) => (
-            <option key={lang} value={lang}>
-              {lang}
-            </option>
-          ))}
-        </select>
+        />
         <button type="button" className="md-codeblock-copy" onClick={copy}>
           {copied ? t('codeCopied') : t('codeCopy')}
         </button>

@@ -5,6 +5,8 @@ import App from './App'
 import { LocaleProvider } from './i18n/locale'
 import '@genoffice/ui/tokens.css'
 import '@genoffice/ui/screentip.css'
+import '@genoffice/ui/dropdown.css'
+import 'katex/dist/katex.min.css'
 import './styles.css'
 
 installScreenTips()

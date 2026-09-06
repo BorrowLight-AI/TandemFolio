@@ -1,5 +1,6 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -160,6 +161,78 @@ describe('DocumentSaveStore', () => {
     expect(nextSavePath).toBe(sourcePath)
     await expect(readFile(copyPath, 'utf8')).resolves.toBe('copy')
     await expect(readFile(sourcePath, 'utf8')).resolves.toBe('updated source')
+  })
+
+  it('commits bounded Markdown companion assets beside the document', async () => {
+    const root = await temporaryDirectory('tandemfolio-document-save-')
+    const store = new DocumentSaveStore(join(root, 'outputs'), join(root, 'bindings'))
+    const markdown = Buffer.from('![chart](assets/chart.png)')
+    const image = Buffer.from([0x89, 0x50, 0x4e, 0x47])
+    const begun = await store.begin(
+      'session-assets',
+      'markdown',
+      'notes.md',
+      markdown.length,
+      'save',
+      [{ relativePath: 'assets/chart.png', size: image.length }],
+    )
+
+    await store.write(
+      'session-assets',
+      begun.uploadId,
+      0,
+      image.toString('base64'),
+      'assets/chart.png',
+    )
+    await store.write('session-assets', begun.uploadId, 0, markdown.toString('base64'))
+    const saved = await store.commit('session-assets', begun.uploadId)
+
+    await expect(readFile(saved.path)).resolves.toEqual(markdown)
+    await expect(readFile(join(saved.path, '..', 'assets/chart.png'))).resolves.toEqual(image)
+  })
+
+  it('rejects companion traversal before creating save files', async () => {
+    const root = await temporaryDirectory('tandemfolio-document-save-')
+    const store = new DocumentSaveStore(join(root, 'outputs'), join(root, 'bindings'))
+
+    await expect(
+      store.begin('session-assets', 'markdown', 'notes.md', 1, 'save', [
+        { relativePath: '../escape.png', size: 1 },
+      ]),
+    ).rejects.toMatchObject({ code: 'invalid_arguments' })
+  })
+
+  it('collects only content-addressed companion files owned by the live session', async () => {
+    const root = await temporaryDirectory('tandemfolio-document-save-')
+    const store = new DocumentSaveStore(join(root, 'outputs'), join(root, 'bindings'))
+    const image = Buffer.from('owned image')
+    const digest = createHash('sha256').update(image).digest('hex').slice(0, 12)
+    const relativePath = `assets/image-${digest}.png`
+    const markdown = Buffer.from(`![x](${relativePath})`)
+    const first = await store.begin('session-gc', 'markdown', 'notes.md', markdown.length, 'save', [
+      { relativePath, size: image.length },
+    ])
+    await store.write('session-gc', first.uploadId, 0, image.toString('base64'), relativePath)
+    await store.write('session-gc', first.uploadId, 0, markdown.toString('base64'))
+    const saved = await store.commit('session-gc', first.uploadId)
+
+    const next = Buffer.from('# image removed')
+    const second = await store.begin(
+      'session-gc',
+      'markdown',
+      'notes.md',
+      next.length,
+      'save',
+      [],
+      [relativePath],
+    )
+    await store.write('session-gc', second.uploadId, 0, next.toString('base64'))
+    await store.commit('session-gc', second.uploadId)
+
+    await expect(readFile(saved.path, 'utf8')).resolves.toBe('# image removed')
+    await expect(readFile(join(saved.path, '..', relativePath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
   })
 
   it('rejects traversal, mismatched formats, cross-session uploads, and out-of-order chunks', async () => {

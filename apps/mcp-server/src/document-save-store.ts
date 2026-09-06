@@ -34,6 +34,21 @@ interface DocumentSaveUpload {
   nextOffset: number
   handle: FileHandle
   closed: boolean
+  companions: Map<string, DocumentSaveCompanionUpload>
+  removeCompanionPaths: string[]
+}
+
+export interface DocumentSaveCompanion {
+  readonly relativePath: string
+  readonly size: number
+}
+
+interface DocumentSaveCompanionUpload extends DocumentSaveCompanion {
+  targetPath: string
+  temporaryPath: string
+  nextOffset: number
+  handle: FileHandle
+  closed: boolean
 }
 
 const formatExtensions: Record<LiveSession['format'], readonly string[]> = {
@@ -80,6 +95,26 @@ function assertTargetPath(format: LiveSession['format'], path: string): void {
   assertFileName(format, basename(path))
 }
 
+function assertCompanion(companion: DocumentSaveCompanion): void {
+  const segments = companion.relativePath.split('/')
+  if (
+    companion.relativePath.length < 1 ||
+    companion.relativePath.length > 512 ||
+    companion.relativePath.includes('\\') ||
+    companion.relativePath.startsWith('/') ||
+    segments.some((segment) => !segment || segment === '.' || segment === '..') ||
+    !/\.(png|jpe?g|gif)$/i.test(companion.relativePath) ||
+    !Number.isInteger(companion.size) ||
+    companion.size < 1 ||
+    companion.size > 20_971_520
+  ) {
+    throw new SessionError(
+      'invalid_arguments',
+      'Markdown companion assets must be bounded relative PNG, JPEG, or GIF paths.',
+    )
+  }
+}
+
 async function pathExists(path: string): Promise<boolean> {
   try {
     await access(path)
@@ -94,6 +129,7 @@ export class DocumentSaveStore {
   readonly #uploads = new Map<string, DocumentSaveUpload>()
   readonly #bindings = new Map<string, DocumentBindingMetadata>()
   readonly #reservedTargets = new Set<string>()
+  readonly #ownedCompanions = new Map<string, Set<string>>()
 
   constructor(
     readonly outputDirectory: string,
@@ -130,6 +166,7 @@ export class DocumentSaveStore {
     }
     await rm(this.#bindingPath(sessionId), { force: true })
     this.#bindings.delete(sessionId)
+    this.#ownedCompanions.delete(sessionId)
   }
 
   async begin(
@@ -138,11 +175,52 @@ export class DocumentSaveStore {
     fileName: string,
     size: number,
     mode: DocumentSaveMode,
+    companionFiles: readonly DocumentSaveCompanion[] = [],
+    removeCompanionPaths: readonly string[] = [],
   ): Promise<{ uploadId: string; path: string }> {
     if (!Number.isInteger(size) || size < 0 || size > this.maxBytes) {
       throw new SessionError(
         'invalid_arguments',
         `Saved documents must be between 0 and ${this.maxBytes} bytes.`,
+      )
+    }
+    if (
+      companionFiles.length > 128 ||
+      removeCompanionPaths.length > 128 ||
+      ((companionFiles.length > 0 || removeCompanionPaths.length > 0) && format !== 'markdown')
+    ) {
+      throw new SessionError(
+        'invalid_arguments',
+        'Only Markdown saves may include up to 128 companion assets.',
+      )
+    }
+    const companionPaths = new Set<string>()
+    let totalSize = size
+    for (const companion of companionFiles) {
+      assertCompanion(companion)
+      if (companionPaths.has(companion.relativePath)) {
+        throw new SessionError(
+          'invalid_arguments',
+          'Markdown companion asset paths must be unique.',
+        )
+      }
+      companionPaths.add(companion.relativePath)
+      totalSize += companion.size
+    }
+    const uniqueRemovals = [...new Set(removeCompanionPaths)]
+    for (const relativePath of uniqueRemovals) {
+      assertCompanion({ relativePath, size: 1 })
+      if (!/^assets\/[a-z0-9_.-]+-[a-f0-9]{12}\.(?:png|jpe?g|gif)$/i.test(relativePath)) {
+        throw new SessionError(
+          'invalid_arguments',
+          'Only content-addressed Markdown companion assets may be collected.',
+        )
+      }
+    }
+    if (totalSize > this.maxBytes) {
+      throw new SessionError(
+        'invalid_arguments',
+        `Saved document bundles must be at most ${this.maxBytes} bytes.`,
       )
     }
     const binding = mode === 'save' ? await this.#binding(sessionId, format) : null
@@ -156,6 +234,7 @@ export class DocumentSaveStore {
     )
     await mkdir(dirname(targetPath), { recursive: true })
     const handle = await open(temporaryPath, 'wx')
+    const companions = new Map<string, DocumentSaveCompanionUpload>()
     try {
       if (await pathExists(targetPath)) {
         const target = await stat(targetPath)
@@ -163,6 +242,20 @@ export class DocumentSaveStore {
           throw new SessionError('invalid_arguments', 'The saved document target is not a file.')
         }
         await handle.chmod(target.mode)
+      }
+      for (const companion of companionFiles) {
+        const companionTargetPath = join(dirname(targetPath), ...companion.relativePath.split('/'))
+        const companionTemporaryPath = `${companionTargetPath}.${randomUUID()}.save.tmp`
+        await mkdir(dirname(companionTargetPath), { recursive: true })
+        const companionHandle = await open(companionTemporaryPath, 'wx')
+        companions.set(companion.relativePath, {
+          ...companion,
+          targetPath: companionTargetPath,
+          temporaryPath: companionTemporaryPath,
+          nextOffset: 0,
+          handle: companionHandle,
+          closed: false,
+        })
       }
       const upload: DocumentSaveUpload = {
         uploadId: randomUUID(),
@@ -176,6 +269,8 @@ export class DocumentSaveStore {
         nextOffset: 0,
         handle,
         closed: false,
+        companions,
+        removeCompanionPaths: uniqueRemovals,
       }
       this.#uploads.set(upload.uploadId, upload)
       this.#reservedTargets.add(targetPath)
@@ -183,6 +278,10 @@ export class DocumentSaveStore {
     } catch (error) {
       await handle.close()
       await rm(temporaryPath, { force: true })
+      for (const companion of companions.values()) {
+        await companion.handle.close().catch(() => undefined)
+        await rm(companion.temporaryPath, { force: true })
+      }
       throw error
     }
   }
@@ -192,12 +291,20 @@ export class DocumentSaveStore {
     uploadId: string,
     offset: number,
     base64: string,
+    relativePath?: string,
   ): Promise<number> {
     const upload = this.#get(sessionId, uploadId)
-    if (offset !== upload.nextOffset) {
+    const target = relativePath ? upload.companions.get(relativePath) : upload
+    if (!target) {
+      throw new SessionError(
+        'invalid_arguments',
+        `Unknown Markdown companion asset: ${relativePath}`,
+      )
+    }
+    if (offset !== target.nextOffset) {
       throw new SessionError(
         'revision_conflict',
-        `Document save upload expected offset ${upload.nextOffset}, received ${offset}.`,
+        `Document save upload expected offset ${target.nextOffset}, received ${offset}.`,
       )
     }
     if (
@@ -207,12 +314,12 @@ export class DocumentSaveStore {
       throw new SessionError('invalid_arguments', 'Document save chunks must be bounded base64.')
     }
     const chunk = Buffer.from(base64, 'base64')
-    if (chunk.length === 0 || offset + chunk.length > upload.size) {
+    if (chunk.length === 0 || offset + chunk.length > target.size) {
       throw new SessionError('invalid_arguments', 'Document save chunk exceeds the declared size.')
     }
     let written = 0
     while (written < chunk.length) {
-      const result = await upload.handle.write(
+      const result = await target.handle.write(
         chunk,
         written,
         chunk.length - written,
@@ -226,8 +333,8 @@ export class DocumentSaveStore {
       }
       written += result.bytesWritten
     }
-    upload.nextOffset += chunk.length
-    return upload.nextOffset
+    target.nextOffset += chunk.length
+    return target.nextOffset
   }
 
   async commit(sessionId: string, uploadId: string): Promise<{ path: string; bound: boolean }> {
@@ -238,16 +345,78 @@ export class DocumentSaveStore {
         `Document save upload is incomplete at ${upload.nextOffset} of ${upload.size} bytes.`,
       )
     }
+    for (const companion of upload.companions.values()) {
+      if (companion.nextOffset !== companion.size) {
+        throw new SessionError(
+          'invalid_arguments',
+          `Markdown companion ${companion.relativePath} is incomplete at ${companion.nextOffset} of ${companion.size} bytes.`,
+        )
+      }
+    }
+    const createdCompanions: string[] = []
     try {
       await upload.handle.sync()
       await upload.handle.close()
       upload.closed = true
+      for (const companion of upload.companions.values()) {
+        await companion.handle.sync()
+        await companion.handle.close()
+        companion.closed = true
+        if (await pathExists(companion.targetPath)) {
+          const existing = await stat(companion.targetPath)
+          if (!existing.isFile()) {
+            throw new SessionError(
+              'invalid_arguments',
+              `Markdown companion target is not a file: ${companion.relativePath}`,
+            )
+          }
+          const [existingBytes, stagedBytes] = await Promise.all([
+            readFile(companion.targetPath),
+            readFile(companion.temporaryPath),
+          ])
+          if (!existingBytes.equals(stagedBytes)) {
+            throw new SessionError(
+              'revision_conflict',
+              `Markdown companion target already contains different bytes: ${companion.relativePath}`,
+            )
+          }
+          await rm(companion.temporaryPath, { force: true })
+        }
+      }
+      for (const companion of upload.companions.values()) {
+        if (!(await pathExists(companion.temporaryPath))) continue
+        await rename(companion.temporaryPath, companion.targetPath)
+        createdCompanions.push(companion.targetPath)
+      }
       await rename(upload.temporaryPath, upload.targetPath)
       const bound = upload.mode !== 'export-copy'
       if (bound) await this.bind(upload.sessionId, upload.format, upload.targetPath)
+      if (bound && upload.format === 'markdown') {
+        const owned =
+          upload.mode === 'save-as'
+            ? new Set<string>()
+            : new Set(this.#ownedCompanions.get(upload.sessionId) ?? [])
+        for (const companion of upload.companions.values()) owned.add(companion.targetPath)
+        for (const relativePath of upload.removeCompanionPaths) {
+          const targetPath = join(dirname(upload.targetPath), ...relativePath.split('/'))
+          if (!owned.has(targetPath)) continue
+          try {
+            const expected = /-([a-f0-9]{12})\.(?:png|jpe?g|gif)$/i.exec(targetPath)?.[1]
+            const actual = createHash('sha256')
+              .update(await readFile(targetPath))
+              .digest('hex')
+            if (expected && actual.startsWith(expected)) await rm(targetPath)
+          } catch {
+            // Missing or user-modified assets are preserved; ownership is relinquished.
+          }
+          owned.delete(targetPath)
+        }
+        this.#ownedCompanions.set(upload.sessionId, owned)
+      }
       this.#release(upload)
       return { path: upload.targetPath, bound }
     } catch (error) {
+      await Promise.all(createdCompanions.map((path) => rm(path, { force: true })))
       await this.#discard(upload)
       throw error
     }
@@ -331,6 +500,10 @@ export class DocumentSaveStore {
       upload.closed = true
     }
     await rm(upload.temporaryPath, { force: true })
+    for (const companion of upload.companions.values()) {
+      if (!companion.closed) await companion.handle.close().catch(() => undefined)
+      await rm(companion.temporaryPath, { force: true })
+    }
     this.#release(upload)
   }
 }

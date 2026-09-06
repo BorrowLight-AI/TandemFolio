@@ -869,12 +869,9 @@ server.registerTool(
       }
       const staged = await localFiles.stage(sessionId, 'xlsx', path)
       blobId = staged.blobId
-      const command = store.enqueue(
-        sessionId,
-        baseRevision,
-        stagedWorkbookMergeOperation(),
-        { ...staged },
-      )
+      const command = store.enqueue(sessionId, baseRevision, stagedWorkbookMergeOperation(), {
+        ...staged,
+      })
       const completion = await store.waitForCommand(sessionId, command.commandId)
       return result({ ok: true, command, result: completion })
     } catch (error) {
@@ -1131,16 +1128,43 @@ server.registerTool(
       fileName: z.string().min(1).max(240),
       size: z.number().int().nonnegative().max(268_435_456),
       mode: z.enum(['save', 'save-as', 'export-copy']).default('save'),
+      companionFiles: z
+        .array(
+          z.object({
+            relativePath: z.string().min(1).max(512),
+            size: z.number().int().positive().max(20_971_520),
+          }),
+        )
+        .max(128)
+        .optional(),
+      removeCompanionPaths: z.array(z.string().min(1).max(512)).max(128).optional(),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, mountId, fileName, size, mode }) => {
+  async ({
+    sessionId,
+    viewId,
+    mountId,
+    fileName,
+    size,
+    mode,
+    companionFiles,
+    removeCompanionPaths,
+  }) => {
     try {
       const session = store.assertView(sessionId, leaseView(viewId, mountId))
       const begun = await persistInOrder(sessionId, () => {
         store.assertView(sessionId, leaseView(viewId, mountId))
         store.assertNotHandingOff(sessionId)
-        return documentSaves.begin(sessionId, session.format, fileName, size, mode)
+        return documentSaves.begin(
+          sessionId,
+          session.format,
+          fileName,
+          size,
+          mode,
+          companionFiles,
+          removeCompanionPaths,
+        )
       })
       return result({ ok: true, ...begun })
     } catch (error) {
@@ -1161,14 +1185,15 @@ server.registerTool(
       uploadId: z.string().min(1),
       offset: z.number().int().nonnegative(),
       data: z.string().max(262_144),
+      relativePath: z.string().min(1).max(512).optional(),
     },
     _meta: { ui: { visibility: ['app'] } },
   },
-  async ({ sessionId, viewId, mountId, uploadId, offset, data }) => {
+  async ({ sessionId, viewId, mountId, uploadId, offset, data, relativePath }) => {
     try {
       store.assertView(sessionId, leaseView(viewId, mountId))
       const nextOffset = await persistInOrder(sessionId, () =>
-        documentSaves.write(sessionId, uploadId, offset, data),
+        documentSaves.write(sessionId, uploadId, offset, data, relativePath),
       )
       return result({ ok: true, nextOffset })
     } catch (error) {

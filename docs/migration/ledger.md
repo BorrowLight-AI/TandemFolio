@@ -40,7 +40,7 @@ excluded:
 Apache-2.0 attribution remains intact. Newly adapted files carry prominent modification
 notices. Mounted Session authority and Save target binding are unchanged. The new
 `docx.image.set_z_order`, the XLSX source-current routes, and seven PPTX native routes raise the
-generated Registry to 103 DOCX / 123 XLSX / 81 PPTX / 32 PDF / 361 total operations;
+generated Registry to 103 DOCX / 123 XLSX / 81 PPTX / 32 PDF / 25 Markdown / 364 total operations;
 the user gesture and Agent command share one native transaction and Undo path. The previous approved release capture becomes
 historical after these source changes; the source-current gate is not relaxed.
 Generated plugin HTML resources were rebuilt from the workspace; the gate regenerated
@@ -222,12 +222,12 @@ resource/performance budgets.
 
 - Typecheck: host bridge, five renderers, and MCP server pass the root typecheck graph.
 - Operation registry foundation: fixture and real multi-format product manifests pass deterministic
-  `--check`. The generated Manifest contains 361 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81
+  `--check`. The generated Manifest contains 364 operations: 103 DOCX, 25 Markdown, 123 XLSX, 81
   PPTX, and 32 PDF. All five retained-command producer mappings have no missing entry.
-- Tests: the root workspaces execute 377 passing test files plus one environment-conditional skip,
-  for 4,714 passing assertions and one skipped assertion. Workspace assertions are Operation
-  Contract 24, Host Bridge 45, DOCX 1,680, Markdown 127, XLSX 1,984 plus one environment skip,
-  PPTX 266, PDF 332, and MCP server 386. The separate PPTX engine and render suites add 836 and 245
+- Tests: the root workspaces execute 408 passing test files plus one environment-conditional skip,
+  for 4,898 passing assertions and one skipped assertion. Workspace assertions are Operation
+  Contract 24, Host Bridge 46, DOCX 1,686, Markdown 165, XLSX 1,988 plus one environment skip,
+  PPTX 266, PDF 332, and MCP server 391. The separate PPTX engine and render suites add 836 and 245
   passing assertions respectively; the separate DOCX engine suite adds 996 passing and one
   skipped assertion. These include wakeable-poll/startup-
   trace lifecycle, five-format isolated/exact Session recovery, exclusive view-lease enforcement,
@@ -260,11 +260,32 @@ resource/performance budgets.
 - XLSX verification: the format test suite, community-renderer browser scenarios, Codex
   width/fullscreen matrix, and R6-05 aggregate/subphase startup tracer run against the same mounted App. The final
   command audit requires every exact replacement ID to exist in the XLSX catalog.
-- Resource guardrails: generated resources measure DOCX 3,508,609 raw / 987,899 gzip, Markdown
-  1,873,914 / 572,436, XLSX 20,867,055 / 8,532,458, PPTX 3,387,797 / 992,904, and PDF 6,631,760 /
-  3,371,431 bytes. Raw ceilings are 3,650,000 / 2,500,000 / 21,000,000 / 4,000,000 / 7,000,000
+- Resource guardrails: generated resources measure DOCX 3,519,509 raw / 990,512 gzip, Markdown
+  2,573,199 / 936,265, XLSX 19,777,247 / 8,531,694, PPTX 3,890,977 / 1,146,047, and PDF
+  6,722,550 / 3,396,372 bytes. Raw ceilings are 3,650,000 / 2,750,000 / 21,000,000 /
+  4,000,000 / 7,000,000
   respectively. XLSX additionally caps the inflated initial executable entry at 11,000,000 bytes;
   optional modules remain compressed in the same HTML resource. PDF includes gzip-compressed PDFium WASM for retained browser content-stream
   editing; its edit fonts remain lazy external assets. Budgets are regression signals, never
   reasons to delete retained capabilities.
 - Production dependency audit: as of 2026-08-28, `npm audit --omit=dev --audit-level=high` reports 45 high-severity transitive findings rooted in the pinned Univer dependency on vulnerable `nanoid`; npm reports no available fix. The operation-contract workspace and R2-01 through R2-110 integrations add no new external package to the pinned renderer dependency chain; R2-74 declares the already-installed `@univerjs/sheets` package directly because format-copy, column-width-copy, and outline actions consume its native mutation contracts.
+
+### 2026-09-06 Markdown native capability sync
+
+- Reviewed `dc4d7e5927864498913b7ba42d0da06cc7cf628e..f2c3d0879df29622d5a447935d2b4aeac033544d`
+  and selectively retained every applicable non-AI Markdown-native delta. AI panels/tools, account,
+  telemetry, Electron main/preload/IPC, conversion caches, custom resource protocols, and `ee/`
+  remain outside the product graph.
+- Added inline/block LaTeX parsing and KaTeX editing, strict currency disambiguation, slash insertion,
+  click edit/delete, native Undo, Markdown reopen, DOCX OMML/fallback output, and print CSS.
+- Added bounded canvas zoom shared by status controls, shortcuts, pinch/wheel, table/block coordinate
+  corrections, 19 locale labels, and `markdown.view.set_zoom`.
+- Adapted shared Dropdown/popover dismissal, code-copy rejection/timer cleanup, and complete block-menu
+  listener/style teardown.
+- Replaced dropped overlapping saves with a serialized queue. Extended the session save transaction
+  with renderer-planned opaque companion assets: safe Markdown/HTML scanning, content-addressed
+  deduplication, Save As rewriting, traversal rejection, collision checks, rollback, document-last
+  commit, and session-owned hash-checked orphan collection under ADR 0016.
+- Added `markdown.math.insert`, `markdown.math.set`, and `markdown.view.set_zoom`; Markdown now owns 25
+  operations and the generated product Manifest contains 364. Source-current release evidence must be
+  recaptured, so the readiness gate remains fail closed.

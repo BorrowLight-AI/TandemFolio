@@ -41,7 +41,7 @@ describe('packaged editor UI', () => {
       // Registry completion grows the retained renderer deliberately; this
       // remains a regression ceiling, never permission to delete capabilities.
       [packagedEditor, 3_650_000],
-      [packagedMarkdownEditor, 2_500_000],
+      [packagedMarkdownEditor, 2_750_000],
       // Full permitted pinned Univer renderer; this is a regression ceiling,
       // not permission to delete community capabilities for bundle size.
       [packagedXlsxEditor, 21_000_000],
@@ -71,6 +71,13 @@ describe('packaged editor UI', () => {
     ]) {
       expect(html, `missing packaged selector ${selector}`).toContain(selector)
     }
+  })
+
+  it('embeds the KaTeX WOFF2 fonts needed by the self-contained Markdown resource', async () => {
+    const html = await readFile(packagedMarkdownEditor, 'utf8')
+
+    expect(html).toContain('data:font/woff2;base64,')
+    expect(html).not.toMatch(/url\([^)]*KaTeX[^)]*\.(?:woff2?|ttf)\)/)
   })
 
   it('lists every Agent-visible generated operation in the installed Skill reference', async () => {

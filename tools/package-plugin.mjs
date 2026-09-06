@@ -17,12 +17,33 @@ const pluginEditor = join(pluginRoot, 'assets/editor')
 const pluginEditors = join(pluginRoot, 'assets/editors')
 const pluginFonts = join(pluginRoot, 'assets/fonts')
 
-async function inlineEditor(dist) {
+async function inlineWoff2Fonts(css, cssPath) {
+  const matches = [
+    ...css.matchAll(
+      /src:url\(([^)]+\.woff2)\) format\("woff2"\)(?:,url\([^)]+\) format\("(?:woff|truetype)"\))*/g,
+    ),
+  ]
+  let output = css
+  for (const match of matches.reverse()) {
+    const fontPath = resolve(dirname(cssPath), match[1].replace(/^\.\//, ''))
+    const encoded = (await readFile(fontPath)).toString('base64')
+    const replacement = `src:url(data:font/woff2;base64,${encoded}) format("woff2")`
+    output =
+      output.slice(0, match.index) + replacement + output.slice(match.index + match[0].length)
+  }
+  return output.replace(
+    /(src:url\(data:font\/woff2;base64,[^)]+\) format\("woff2"\))(?:,url\([^)]+\) format\("(?:woff|truetype)"\))+/g,
+    '$1',
+  )
+}
+
+async function inlineEditor(dist, options = {}) {
   let html = await readFile(join(dist, 'index.html'), 'utf8')
 
   for (const match of [...html.matchAll(/<link[^>]+href="([^"]+\.css)"[^>]*>/g)]) {
     const cssPath = resolve(dist, match[1])
-    const css = await readFile(cssPath, 'utf8')
+    let css = await readFile(cssPath, 'utf8')
+    if (options.inlineWoff2) css = await inlineWoff2Fonts(css, cssPath)
     html = html.replace(match[0], () => `<style>${css}</style>`)
   }
 
@@ -208,7 +229,10 @@ await mkdir(join(pluginEditors, 'pptx'), { recursive: true })
 await mkdir(join(pluginEditors, 'pdf'), { recursive: true })
 await copyFile(serverBundle, join(pluginDist, 'server.js'))
 await writeFile(join(pluginEditor, 'index.html'), await inlineEditor(editorDist))
-await writeFile(join(pluginEditors, 'markdown/index.html'), await inlineEditor(markdownEditorDist))
+await writeFile(
+  join(pluginEditors, 'markdown/index.html'),
+  await inlineEditor(markdownEditorDist, { inlineWoff2: true }),
+)
 await writeFile(join(pluginEditors, 'xlsx/index.html'), await inlineDeferredEditor(xlsxEditorDist))
 await writeFile(join(pluginEditors, 'pptx/index.html'), await inlineEditor(pptxEditorDist))
 await writeFile(join(pluginEditors, 'pdf/index.html'), await inlineEditor(pdfEditorDist))

@@ -729,6 +729,14 @@ descriptors belongs to a typed UI/ingress/native-input family and no `missing` d
 Markdown retained-command parity is complete; shared packaged-host, resource, smoke, and root
 release gates remain before `ready` changes.
 
+Markdown-current-01 through -03 select the applicable native deltas from reviewed candidate
+`f2c3d0879df29622d5a447935d2b4aeac033544d`. Formula parsing/editing/export adds
+`markdown.math.insert` and `markdown.math.set`; canvas controls add `markdown.view.set_zoom`; and
+ADR 0016 extends the opaque save transaction with safe companion image files, serialization,
+rollback, and session-owned orphan collection. Markdown owns 25 operations (23 Agent-visible and
+two internal), and the product Manifest contains 364. AI and Electron source remains prohibited;
+source-current release evidence remains pending and fail closed.
+
 R6-01 closes those shared gates. It adds an approved release-evidence contract, deterministic
 small/medium/large fixtures for all formats, pinned-source visual provenance, 7/7/21 canonical
 runtime samples, ACK decomposition, peak JS heap and renderer RSS, source/upstream fingerprints,
@@ -843,7 +851,7 @@ Existing behavior moves first and must remain behaviorally equivalent. Each repl
 | XLSX     |                 111 files | 76 permitted pinned files plus TandemFolio host/operation adapters; pinned App mounted | Renderer/mutation parity and R6-01 release gate complete; ready   |
 | PPTX     |                 104 files | 61 identical + 19 adapted permitted files; original App mounted                        | Retained-command parity and R6-01 release gate complete; ready    |
 | PDF      |                  40 files | Pinned renderer plus applicable candidate-native PDF modules boot from `src/renderer` | Candidate-native parity complete; release recapture pending       |
-| Markdown |         30 renderer files | 21 pinned non-AI files plus browser/operation adapters                                 | Retained-command parity and R6-01 release gate complete; ready    |
+| Markdown |         30 renderer files | Pinned non-AI files plus candidate math/zoom/UI and browser save adapters               | Candidate-native parity complete; release recapture pending       |
 
 These counts are pinned-source evidence, not a completion metric by themselves. Completion is determined by the source and capability gates below.
 

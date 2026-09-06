@@ -17,7 +17,7 @@ The first release is intentionally live-bound. The mounted editor remains author
 ADR 0003 rejects simplified renderer replacements as the first-release target, and all parallel
 replacement renderer directories have been removed. All five pinned non-AI renderer structures are
 mounted through format-owned browser/MCP adapters. Their machine-checked producer baselines have no
-unexplained state-changing gap: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 25 PDF operations feed
+unexplained state-changing gap: 103 DOCX, 25 Markdown, 123 XLSX, 81 PPTX, and 32 PDF operations feed
 the generated product Manifest. Native renderer history or explicitly declared format-owned
 journals remain authoritative, and persisted families have save/reopen evidence. The remaining work
 is no longer an unexplained renderer-parity migration. The prior R6-01 capture records approved pinned-source

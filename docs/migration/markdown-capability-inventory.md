@@ -1,10 +1,15 @@
 # Markdown renderer and capability inventory
 
 - Pinned source: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
-- Current state: community renderer restored and packaged; retained-command MCP parity plus R6-03 traced/bounded staged loading complete
-- Capability flag: `ready: true`
+- Reviewed candidate: `genspark-ai/genoffice@f2c3d0879df29622d5a447935d2b4aeac033544d`
+- Current state: all applicable non-AI Markdown-native capability deltas selectively ported and packaged
+- Capability flag: fail closed until source-current evidence is recaptured
 
-This inventory distinguishes source restoration from release readiness. The original non-AI Markdown editing surface is back in the product graph, and its twenty public plus two internal operations are mapped by the format-owned retained-command audit. The approved shared packaged-host, resource, smoke, repository, and R6-03 staged-load gates generate `ready: true`; release-relevant source drift still fails closed until evidence is recaptured.
+This inventory distinguishes source restoration from release readiness. The reviewed non-AI
+Markdown surface now includes formulas, canvas zoom, serialized saves, companion-image lifecycle,
+and editor interaction fixes. Its twenty-three public plus two internal operations are mapped by the
+format-owned retained-command audit. Release-relevant source drift still fails closed until evidence
+is recaptured.
 
 ## Source classification
 
@@ -13,11 +18,11 @@ The pinned `apps/markdown/src/renderer` tree contains 30 files. TandemFolio reta
 | Classification               | Files or areas                                                                              | Disposition                                                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Retained community UI        | `components/{FrontmatterPanel,Ribbon,SlashMenu,TableMenu,icons}.tsx`                        | Original non-AI Ribbon, menus, and frontmatter editing remain available.                                               |
-| Retained community editor    | `editor/{CodeBlockView,blockDragHandle,blockKeymap,extensions,localImage,slashCommand}.ts*` | TipTap/ProseMirror document state, history, block commands, tables, code blocks, and images remain renderer-owned.     |
+| Retained community editor    | `editor/{CodeBlockView,blockDragHandle,blockKeymap,extensions,localImage,math,mathEdit,slashCommand}.ts*` | TipTap/ProseMirror state, history, blocks, tables, code, images, and KaTeX formulas remain renderer-owned. |
 | TandemFolio parser guard            | `editor/linearMarkdownExtensions.ts`                                                        | Adds constant-time candidate guards, then delegates actual ordered-list/task-list/table syntax to retained tokenizers. |
 | Retained format behavior     | `markdown/docText.ts`, `export/{docxExport,printHtml}.ts`                                   | Markdown envelope round-trip, DOCX export, and print output remain format-owned.                                       |
 | Host-adapted community entry | `App.tsx`, `main.tsx`, `env.d.ts`, `index.html`, i18n, and styles                           | Electron/AI calls are replaced by browser and MCP session adapters without replacing the editor.                       |
-| TandemFolio browser host adapter    | `host/browser-files.ts`                                                                     | Browser file open/save/download and image selection.                                                                   |
+| TandemFolio browser host adapter    | `host/{browser-files,asset-save-plan,save-queue}.ts`                                        | Browser file open/save, serialized saves, content-addressed companion assets, and image selection.                     |
 | TandemFolio operation registry      | `operations/catalog.ts`, `operations/registry.ts`                                           | Format-owned descriptors, canonical public ids, one internal staged-load alias, exact validation, and TipTap handlers. |
 | Prohibited AI source         | `ai/{AiPanel,markdown-skill,search-skill,tools,transport}.ts*`, `editor/aiHighlight.ts`     | Not restored because these files implement product AI/provider behavior.                                               |
 | Prohibited AI assets         | `assets/{send-enter-off,send-enter-on,send-stop}.png`                                       | Not restored because they belong only to the removed AI composer.                                                      |
@@ -42,7 +47,6 @@ The pinned `apps/markdown/src/renderer` tree contains 30 files. TandemFolio reta
 | Replace the active text selection           | `office_execute: markdown.text.replace_selection`                   | Complete registry tracer; generated discovery, exact validation, native undo, and revision acknowledgement.                                                                     |
 | Set an explicit text selection              | `office_execute: markdown.selection.set`                            | R2-235 complete view-state tracer; bounded positions make arbitrary insert/delete/replace targeting reproducible without adding an Undo entry or recovery snapshot.             |
 | Save Markdown                               | `office_execute: markdown.document.save`                            | Complete registry tracer; exact output, explicit failure, generated discovery, and revision acknowledgement.                                                                    |
-| Save Markdown to a new destination          | `office_execute: markdown.document.save_as`                         | R2-231 complete persistence tracer; the retained Shift-Save shortcut and Registry share the forced picker path, return the final file name, and report cancellation explicitly. |
 | Export DOCX                                 | `office_execute: markdown.document.export_docx`                     | R2-232 complete output tracer; UI/Registry share the DOCX engine and bounded PNG/JPEG/GIF loader, returning the exported file name or explicit failure.                         |
 | Open Print / PDF dialog                     | `office_execute: markdown.document.open_print_dialog`               | R2-233 complete host-view tracer; success means the host dialog opened, while popup blocking is reported explicitly.                                                            |
 | Set autosave preference                     | `office_execute: markdown.document.set_auto_save`                   | R2-234 complete explicit-final-state tracer; UI/Registry share the same persisted preference action and do not checkpoint document recovery.                                    |
@@ -56,6 +60,8 @@ The pinned `apps/markdown/src/renderer` tree contains 30 files. TandemFolio reta
 | Update a table relative to a cell           | `office_execute: markdown.table.update`                             | R2-228 aggregate tracer; eight bounded actions include explicit header final state and share one TableMenu/Registry action with Undo/reopen evidence.                           |
 | Duplicate/delete/add/move top-level blocks  | `office_execute: markdown.block.update`                             | R2-229 aggregate tracer; menu, keyboard, plus, drag-drop, and Registry share one explicit block transaction with invariant/Undo evidence.                                       |
 | Set code-block language                     | `office_execute: markdown.code_block.set_language`                  | R2-230 complete tracer; 30 finite final states, NodeView/Registry convergence, plaintext null mapping, native Undo, and reopen evidence.                                        |
+| Insert, edit, or delete a formula           | `markdown.math.insert` / `markdown.math.set`                         | Inline `$…$` and block `$$…$$` formulas use currency-safe parsing, KaTeX UI, addressed native transactions, Undo, reopen, DOCX OMML, and visible fallback evidence.              |
+| Set canvas zoom                             | `markdown.view.set_zoom`                                            | Bounded 50–200 percent view state is shared by MCP, status controls, shortcuts, and pinch/wheel input without a document Undo entry or recovery checkpoint.                       |
 | Read active selection and block type        | `office_get_context`                                                | Implemented as bounded context.                                                                                                                                                 |
 | Inline/fullscreen display                   | show tool plus display controller                                   | Implemented without remounting for data operations.                                                                                                                             |
 | Local recovery snapshot                     | session recovery transport                                          | Implemented with renderer-produced Markdown bytes.                                                                                                                              |
@@ -71,19 +77,27 @@ dispatches operation ids.
 `operations/baseline.ts` is the machine-checked mapping for every retained Markdown command
 producer. It classifies document ingress as `typed-ingress`, native typing/deletion/text
 paste-drop as `native-input` reproduced by explicit selection plus insert/replace, and all finite
-format, structure, image, history, persistence, output, and preference commands as
-`typed-operation`. Its test requires every one of the 22 Registry descriptors to be mapped and
+format, structure, image, history, persistence, output, preference, formula, and zoom commands as
+`typed-operation`. Its test requires every one of the 25 Registry descriptors to be mapped and
 rejects any `missing` disposition.
 
 ## Browser-host fidelity adaptations
 
 - R2-236 replaces the removed `md-asset` protocol for MCP local open with a session-owned asset root, 256 KiB app-only chunk reads, 20 MiB image bounds, MIME/magic validation, and display-only data-URL hydration. Serialization preserves the authored relative or absolute path.
 - R2-237 makes standalone browser Open directory-aware. It retains the selected Markdown file handle, resolves selected-tree relative images for display and DOCX export, and preserves authored paths on save. Browser security intentionally requires explicit directory authorization; MCP local open handles absolute filesystem paths through the session-bound bridge.
+- Current-source Save and Save As use a renderer-planned companion transaction. Markdown and raw
+  HTML image references are scanned outside code ranges; unsafe traversal and remote sources are
+  excluded from copying and left unchanged; repeated images are content-addressed and deduplicated; assets commit before the
+  document; collision or write failure rolls back newly created files. Later saves collect only
+  session-owned, hash-matching orphan assets and preserve user-modified files.
+- Manual, autosave, and MCP saves run in arrival order. A failed request cannot poison the following
+  request, and no overlapping save is silently dropped.
 - R2-232 wires the same bounded image loader into UI and Agent DOCX export. Unavailable or invalid images degrade to alt text instead of disappearing silently.
 - Print/PDF remains a host dialog rather than a headless PDF generator. R2-233 reports popup blocking as a deterministic operation failure.
 
 These are host adaptations rather than unexplained capability gaps. R6-01 runs the shared
-cross-format gates together and includes Markdown in the generated `ready: true` projection.
+cross-format gates together; the generated projection remains `ready: false` until source-current
+evidence is recaptured.
 
 R6-03 makes staged-open performance part of that evidence. Successful internal load ACKs report
 decode, parse, TipTap state installation, and final React layout commit; ACK follows the committed
@@ -93,12 +107,12 @@ table parse/serialize/parse tests protect the guarded retained tokenizers from s
 
 ## Verification evidence
 
-- Markdown unit suites cover all twenty public and two internal Registry contracts, the retained-command audit, explicit selection, persistence/output/preferences, local-image hydration, code-language NodeView convergence, invariants/Undo, and envelope/reopen behavior.
-- MCP integration tests prove generated canonical discovery for all twenty public operations, internal visibility/staging, queue/acknowledgement, pre-enqueue validation, session-bound local-asset reads, and exact persistence/output results.
+- Markdown unit suites cover all twenty-three public and two internal Registry contracts, the retained-command audit, formulas, zoom, serialized persistence, companion assets, local-image hydration, code-language NodeView convergence, invariants/Undo, and envelope/reopen behavior.
+- MCP integration tests prove generated canonical discovery for all twenty-three public operations, internal visibility/staging, queue/acknowledgement, pre-enqueue validation, session-bound local-asset reads, and exact persistence/output results.
 - Shared host-bridge tests prove canonical staged loads and session-bound local assets are hydrated before renderer execution while legacy transport names remain supported for unmigrated formats.
 - The root typecheck, five-editor build, MCP package test, real stdio smoke test, and asset budget gate include Markdown.
 - The packaged resource is `plugins/tandemfolio/assets/editors/markdown/index.html` and is exposed as `ui://tandemfolio/markdown.html`.
 - A standalone in-app-browser smoke test mounted the Ribbon and TipTap surface, entered and formatted text, and reported no console errors.
 - Packaged-host R6-03 tests assert the exact four-phase trace at acknowledgement time, visible committed content/status, and the fixed five-second canonical-large gate. Release evidence stores per-size nearest-rank phase summaries.
 
-Markdown retained-command migration and the shared cross-format release gate are complete.
+Markdown retained-command migration and the approved non-AI native capability sync are complete.

@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { EditorFileIcon, EditorFullscreenIcon, EditorSaveIcon } from '@genoffice/ui'
+import {
+  Dropdown,
+  EditorFileIcon,
+  EditorFullscreenIcon,
+  EditorSaveIcon,
+  useDismissablePopover,
+} from '@genoffice/ui'
 import type { Editor } from '@tiptap/core'
 import { useEditorState } from '@tiptap/react'
 import { useI18n } from '../i18n/locale'
@@ -148,6 +154,7 @@ export function Ribbon({
   const [linkOpen, setLinkOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const linkInputRef = useRef<HTMLInputElement>(null)
+  const linkAnchorRef = useRef<HTMLSpanElement>(null)
 
   const state = useEditorState({
     editor,
@@ -180,6 +187,10 @@ export function Ribbon({
   useEffect(() => {
     if (linkOpen) linkInputRef.current?.focus()
   }, [linkOpen])
+
+  useDismissablePopover(linkOpen, () => setLinkOpen(false), {
+    inside: () => [linkAnchorRef.current],
+  })
 
   const off = disabled || !editor || !state
 
@@ -297,18 +308,16 @@ export function Ribbon({
       <div className="ribbon-body">
         <div className="ribbon-group">
           <div className="ribbon-group-items">
-            <select
+            <Dropdown
               className="rb-style"
               value={state?.style ?? 'paragraph'}
               disabled={off}
-              onChange={(e) => editor && applyBlockStyle(editor, e.target.value as BlockStyle)}
-            >
-              {(Object.keys(STYLE_LABEL) as BlockStyle[]).map((s) => (
-                <option key={s} value={s}>
-                  {t(STYLE_LABEL[s])}
-                </option>
-              ))}
-            </select>
+              options={(Object.keys(STYLE_LABEL) as BlockStyle[]).map((style) => ({
+                value: style,
+                label: t(STYLE_LABEL[style]),
+              }))}
+              onPick={(style) => editor && applyBlockStyle(editor, style)}
+            />
           </div>
         </div>
 
@@ -348,7 +357,7 @@ export function Ribbon({
             >
               <IconInlineCode size={ICON} />
             </IconBtn>
-            <span className="rb-link-anchor">
+            <span className="rb-link-anchor" ref={linkAnchorRef}>
               <IconBtn title={t('link')} active={state?.link} disabled={off} onClick={openLink}>
                 <IconLink size={ICON} />
               </IconBtn>

@@ -450,6 +450,11 @@ the trace for the retry; the first successful poll consumes it. Later polls omit
   active view lease; writes require exact ordered offsets; commit flushes and atomically renames the
   temporary file. `save` overwrites the Session binding, `save-as` writes and rebinds a collision-safe
   file, and `export-copy` writes without rebinding.
+- Under ADR 0016, Markdown begin requests may also declare up to 128 relative companion image files.
+  Each companion uses its own ordered offset stream inside the same 256 MiB budget. The Broker treats
+  all payloads as opaque bytes, rejects traversal and conflicting existing files, commits companions
+  before the document, and rolls back new companions when the document cannot commit. Later saves may
+  collect only content-addressed files owned by that live Session whose bytes still match the name.
 - `office_editor_reset_document` invalidates the owner Session's Save binding, outstanding document
   uploads, and old recovery before a browser-selected file or a new blank document replaces content.
   It rejects active commands, except the exact owning `pptx.document.create_blank` command supplied
@@ -620,9 +625,9 @@ rather than dispatched through a compatibility executor.
 
 ### Markdown
 
-Markdown owns 22 generated Registry operations: twenty public text/selection/mark, block/list,
-table/divider, image, frontmatter, history, persistence/output/preference operations plus two
-internal staged document/image routes. Exact schemas are returned by `office_get_capabilities`;
+Markdown owns 25 generated Registry operations: twenty-three public text/selection/mark, block/list,
+table/divider, image, formula, zoom, frontmatter, history, persistence/output/preference operations
+plus two internal staged document/image routes. Exact schemas are returned by `office_get_capabilities`;
 the format-owned retained-command mapping requires every descriptor to belong to a retained UI,
 typed ingress, or native-input family.
 

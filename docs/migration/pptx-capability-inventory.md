@@ -77,7 +77,7 @@ saved OOXML bytes.
 - Integration coverage opens real fixtures through `BrowserPresentation`, dispatches the new typed
   operations, verifies native Undo/Redo and monotonic revisions, saves, reopens, and checks the
   resulting geometry, effects, text-body, and background state.
-- The generated Manifest contains 361 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 32
+- The generated Manifest contains 364 operations: 103 DOCX, 25 Markdown, 123 XLSX, 81 PPTX, and 32
   PDF. Registry descriptors, handlers, and retained-producer mappings have no missing entry.
 - AI/Electron dependency scans remain empty for the admitted PPTX product graph.
 

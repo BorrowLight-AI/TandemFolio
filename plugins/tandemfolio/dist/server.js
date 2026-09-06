@@ -31774,6 +31774,15 @@ function assertTargetPath(format, path) {
   }
   assertFileName(format, basename2(path));
 }
+function assertCompanion(companion) {
+  const segments = companion.relativePath.split("/");
+  if (companion.relativePath.length < 1 || companion.relativePath.length > 512 || companion.relativePath.includes("\\") || companion.relativePath.startsWith("/") || segments.some((segment) => !segment || segment === "." || segment === "..") || !/\.(png|jpe?g|gif)$/i.test(companion.relativePath) || !Number.isInteger(companion.size) || companion.size < 1 || companion.size > 20971520) {
+    throw new SessionError(
+      "invalid_arguments",
+      "Markdown companion assets must be bounded relative PNG, JPEG, or GIF paths."
+    );
+  }
+}
 async function pathExists(path) {
   try {
     await access(path);
@@ -31795,6 +31804,7 @@ var DocumentSaveStore = class {
   #uploads = /* @__PURE__ */ new Map();
   #bindings = /* @__PURE__ */ new Map();
   #reservedTargets = /* @__PURE__ */ new Set();
+  #ownedCompanions = /* @__PURE__ */ new Map();
   hasPending(sessionId) {
     return [...this.#uploads.values()].some((upload) => upload.sessionId === sessionId);
   }
@@ -31821,12 +31831,48 @@ var DocumentSaveStore = class {
     }
     await rm(this.#bindingPath(sessionId), { force: true });
     this.#bindings.delete(sessionId);
+    this.#ownedCompanions.delete(sessionId);
   }
-  async begin(sessionId, format, fileName, size, mode) {
+  async begin(sessionId, format, fileName, size, mode, companionFiles = [], removeCompanionPaths = []) {
     if (!Number.isInteger(size) || size < 0 || size > this.maxBytes) {
       throw new SessionError(
         "invalid_arguments",
         `Saved documents must be between 0 and ${this.maxBytes} bytes.`
+      );
+    }
+    if (companionFiles.length > 128 || removeCompanionPaths.length > 128 || (companionFiles.length > 0 || removeCompanionPaths.length > 0) && format !== "markdown") {
+      throw new SessionError(
+        "invalid_arguments",
+        "Only Markdown saves may include up to 128 companion assets."
+      );
+    }
+    const companionPaths = /* @__PURE__ */ new Set();
+    let totalSize = size;
+    for (const companion of companionFiles) {
+      assertCompanion(companion);
+      if (companionPaths.has(companion.relativePath)) {
+        throw new SessionError(
+          "invalid_arguments",
+          "Markdown companion asset paths must be unique."
+        );
+      }
+      companionPaths.add(companion.relativePath);
+      totalSize += companion.size;
+    }
+    const uniqueRemovals = [...new Set(removeCompanionPaths)];
+    for (const relativePath of uniqueRemovals) {
+      assertCompanion({ relativePath, size: 1 });
+      if (!/^assets\/[a-z0-9_.-]+-[a-f0-9]{12}\.(?:png|jpe?g|gif)$/i.test(relativePath)) {
+        throw new SessionError(
+          "invalid_arguments",
+          "Only content-addressed Markdown companion assets may be collected."
+        );
+      }
+    }
+    if (totalSize > this.maxBytes) {
+      throw new SessionError(
+        "invalid_arguments",
+        `Saved document bundles must be at most ${this.maxBytes} bytes.`
       );
     }
     const binding = mode === "save" ? await this.#binding(sessionId, format) : null;
@@ -31839,6 +31885,7 @@ var DocumentSaveStore = class {
     );
     await mkdir(dirname2(targetPath), { recursive: true });
     const handle = await open(temporaryPath, "wx");
+    const companions = /* @__PURE__ */ new Map();
     try {
       if (await pathExists(targetPath)) {
         const target = await stat(targetPath);
@@ -31846,6 +31893,20 @@ var DocumentSaveStore = class {
           throw new SessionError("invalid_arguments", "The saved document target is not a file.");
         }
         await handle.chmod(target.mode);
+      }
+      for (const companion of companionFiles) {
+        const companionTargetPath = join(dirname2(targetPath), ...companion.relativePath.split("/"));
+        const companionTemporaryPath = `${companionTargetPath}.${randomUUID3()}.save.tmp`;
+        await mkdir(dirname2(companionTargetPath), { recursive: true });
+        const companionHandle = await open(companionTemporaryPath, "wx");
+        companions.set(companion.relativePath, {
+          ...companion,
+          targetPath: companionTargetPath,
+          temporaryPath: companionTemporaryPath,
+          nextOffset: 0,
+          handle: companionHandle,
+          closed: false
+        });
       }
       const upload = {
         uploadId: randomUUID3(),
@@ -31858,7 +31919,9 @@ var DocumentSaveStore = class {
         size,
         nextOffset: 0,
         handle,
-        closed: false
+        closed: false,
+        companions,
+        removeCompanionPaths: uniqueRemovals
       };
       this.#uploads.set(upload.uploadId, upload);
       this.#reservedTargets.add(targetPath);
@@ -31866,27 +31929,38 @@ var DocumentSaveStore = class {
     } catch (error51) {
       await handle.close();
       await rm(temporaryPath, { force: true });
+      for (const companion of companions.values()) {
+        await companion.handle.close().catch(() => void 0);
+        await rm(companion.temporaryPath, { force: true });
+      }
       throw error51;
     }
   }
-  async write(sessionId, uploadId, offset, base643) {
+  async write(sessionId, uploadId, offset, base643, relativePath) {
     const upload = this.#get(sessionId, uploadId);
-    if (offset !== upload.nextOffset) {
+    const target = relativePath ? upload.companions.get(relativePath) : upload;
+    if (!target) {
+      throw new SessionError(
+        "invalid_arguments",
+        `Unknown Markdown companion asset: ${relativePath}`
+      );
+    }
+    if (offset !== target.nextOffset) {
       throw new SessionError(
         "revision_conflict",
-        `Document save upload expected offset ${upload.nextOffset}, received ${offset}.`
+        `Document save upload expected offset ${target.nextOffset}, received ${offset}.`
       );
     }
     if (base643.length > 262144 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base643)) {
       throw new SessionError("invalid_arguments", "Document save chunks must be bounded base64.");
     }
     const chunk = Buffer.from(base643, "base64");
-    if (chunk.length === 0 || offset + chunk.length > upload.size) {
+    if (chunk.length === 0 || offset + chunk.length > target.size) {
       throw new SessionError("invalid_arguments", "Document save chunk exceeds the declared size.");
     }
     let written = 0;
     while (written < chunk.length) {
-      const result2 = await upload.handle.write(
+      const result2 = await target.handle.write(
         chunk,
         written,
         chunk.length - written,
@@ -31900,8 +31974,8 @@ var DocumentSaveStore = class {
       }
       written += result2.bytesWritten;
     }
-    upload.nextOffset += chunk.length;
-    return upload.nextOffset;
+    target.nextOffset += chunk.length;
+    return target.nextOffset;
   }
   async commit(sessionId, uploadId) {
     const upload = this.#get(sessionId, uploadId);
@@ -31911,16 +31985,72 @@ var DocumentSaveStore = class {
         `Document save upload is incomplete at ${upload.nextOffset} of ${upload.size} bytes.`
       );
     }
+    for (const companion of upload.companions.values()) {
+      if (companion.nextOffset !== companion.size) {
+        throw new SessionError(
+          "invalid_arguments",
+          `Markdown companion ${companion.relativePath} is incomplete at ${companion.nextOffset} of ${companion.size} bytes.`
+        );
+      }
+    }
+    const createdCompanions = [];
     try {
       await upload.handle.sync();
       await upload.handle.close();
       upload.closed = true;
+      for (const companion of upload.companions.values()) {
+        await companion.handle.sync();
+        await companion.handle.close();
+        companion.closed = true;
+        if (await pathExists(companion.targetPath)) {
+          const existing = await stat(companion.targetPath);
+          if (!existing.isFile()) {
+            throw new SessionError(
+              "invalid_arguments",
+              `Markdown companion target is not a file: ${companion.relativePath}`
+            );
+          }
+          const [existingBytes, stagedBytes] = await Promise.all([
+            readFile3(companion.targetPath),
+            readFile3(companion.temporaryPath)
+          ]);
+          if (!existingBytes.equals(stagedBytes)) {
+            throw new SessionError(
+              "revision_conflict",
+              `Markdown companion target already contains different bytes: ${companion.relativePath}`
+            );
+          }
+          await rm(companion.temporaryPath, { force: true });
+        }
+      }
+      for (const companion of upload.companions.values()) {
+        if (!await pathExists(companion.temporaryPath)) continue;
+        await rename(companion.temporaryPath, companion.targetPath);
+        createdCompanions.push(companion.targetPath);
+      }
       await rename(upload.temporaryPath, upload.targetPath);
       const bound = upload.mode !== "export-copy";
       if (bound) await this.bind(upload.sessionId, upload.format, upload.targetPath);
+      if (bound && upload.format === "markdown") {
+        const owned = upload.mode === "save-as" ? /* @__PURE__ */ new Set() : new Set(this.#ownedCompanions.get(upload.sessionId) ?? []);
+        for (const companion of upload.companions.values()) owned.add(companion.targetPath);
+        for (const relativePath of upload.removeCompanionPaths) {
+          const targetPath = join(dirname2(upload.targetPath), ...relativePath.split("/"));
+          if (!owned.has(targetPath)) continue;
+          try {
+            const expected = /-([a-f0-9]{12})\.(?:png|jpe?g|gif)$/i.exec(targetPath)?.[1];
+            const actual = createHash("sha256").update(await readFile3(targetPath)).digest("hex");
+            if (expected && actual.startsWith(expected)) await rm(targetPath);
+          } catch {
+          }
+          owned.delete(targetPath);
+        }
+        this.#ownedCompanions.set(upload.sessionId, owned);
+      }
       this.#release(upload);
       return { path: upload.targetPath, bound };
     } catch (error51) {
+      await Promise.all(createdCompanions.map((path) => rm(path, { force: true })));
       await this.#discard(upload);
       throw error51;
     }
@@ -31985,6 +32115,10 @@ var DocumentSaveStore = class {
       upload.closed = true;
     }
     await rm(upload.temporaryPath, { force: true });
+    for (const companion of upload.companions.values()) {
+      if (!companion.closed) await companion.handle.close().catch(() => void 0);
+      await rm(companion.temporaryPath, { force: true });
+    }
     this.#release(upload);
   }
 };
@@ -42550,6 +42684,109 @@ var operation_manifest_default = {
         "selection"
       ],
       effects: [
+        "document",
+        "selection"
+      ],
+      family: "math",
+      format: "markdown",
+      id: "markdown.math.insert",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          display: {
+            enum: [
+              "inline",
+              "block"
+            ],
+            type: "string"
+          },
+          latex: {
+            maxLength: 65536,
+            minLength: 1,
+            type: "string"
+          },
+          position: {
+            maximum: 1e8,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "position",
+          "display",
+          "latex"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {},
+        required: [],
+        type: "object"
+      },
+      risk: "low",
+      summary: "Insert one inline or block Markdown formula at an explicit document position.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document",
+        "selection"
+      ],
+      effects: [
+        "document",
+        "selection"
+      ],
+      family: "math",
+      format: "markdown",
+      id: "markdown.math.set",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          latex: {
+            maxLength: 65536,
+            minLength: 1,
+            type: [
+              "string",
+              "null"
+            ]
+          },
+          position: {
+            maximum: 1e8,
+            minimum: 0,
+            type: "integer"
+          }
+        },
+        required: [
+          "position",
+          "latex"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {},
+        required: [],
+        type: "object"
+      },
+      risk: "low",
+      summary: "Set or delete one explicitly addressed Markdown formula.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document",
+        "selection"
+      ],
+      effects: [
         "selection"
       ],
       family: "selection",
@@ -42870,6 +43107,52 @@ var operation_manifest_default = {
       risk: "low",
       summary: "Set the complete inline-mark state of one explicit Markdown range.",
       undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "view"
+      ],
+      family: "view",
+      format: "markdown",
+      id: "markdown.view.set_zoom",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          percent: {
+            maximum: 200,
+            minimum: 50,
+            type: "integer"
+          }
+        },
+        required: [
+          "percent"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          percent: {
+            maximum: 200,
+            minimum: 50,
+            type: "integer"
+          }
+        },
+        required: [
+          "percent"
+        ],
+        type: "object"
+      },
+      risk: "low",
+      summary: "Set the Markdown canvas zoom percentage.",
+      undoable: false,
       visibility: "agent"
     },
     {
@@ -61883,7 +62166,7 @@ var release_readiness_default = {
     pdf: false
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "9e3f4e227232ed6fd475fa8757ff92205ae90947008bb917f1d7be451d7c1a0a"
+  sourceFingerprint: "a177e71dcd05871fbbecc3c8d719157ab99348b03e3c3c2c238eafa2c5a4ad4c"
 };
 
 // src/capabilities.ts
@@ -62984,12 +63267,9 @@ server.registerTool(
       }
       const staged = await localFiles.stage(sessionId, "xlsx", path);
       blobId = staged.blobId;
-      const command = store.enqueue(
-        sessionId,
-        baseRevision,
-        stagedWorkbookMergeOperation(),
-        { ...staged }
-      );
+      const command = store.enqueue(sessionId, baseRevision, stagedWorkbookMergeOperation(), {
+        ...staged
+      });
       const completion = await store.waitForCommand(sessionId, command.commandId);
       return result({ ok: true, command, result: completion });
     } catch (error51) {
@@ -63221,17 +63501,41 @@ server.registerTool(
       mountId: external_exports.string().min(1).optional(),
       fileName: external_exports.string().min(1).max(240),
       size: external_exports.number().int().nonnegative().max(268435456),
-      mode: external_exports.enum(["save", "save-as", "export-copy"]).default("save")
+      mode: external_exports.enum(["save", "save-as", "export-copy"]).default("save"),
+      companionFiles: external_exports.array(
+        external_exports.object({
+          relativePath: external_exports.string().min(1).max(512),
+          size: external_exports.number().int().positive().max(20971520)
+        })
+      ).max(128).optional(),
+      removeCompanionPaths: external_exports.array(external_exports.string().min(1).max(512)).max(128).optional()
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, mountId, fileName, size, mode }) => {
+  async ({
+    sessionId,
+    viewId,
+    mountId,
+    fileName,
+    size,
+    mode,
+    companionFiles,
+    removeCompanionPaths
+  }) => {
     try {
       const session = store.assertView(sessionId, leaseView(viewId, mountId));
       const begun = await persistInOrder(sessionId, () => {
         store.assertView(sessionId, leaseView(viewId, mountId));
         store.assertNotHandingOff(sessionId);
-        return documentSaves.begin(sessionId, session.format, fileName, size, mode);
+        return documentSaves.begin(
+          sessionId,
+          session.format,
+          fileName,
+          size,
+          mode,
+          companionFiles,
+          removeCompanionPaths
+        );
       });
       return result({ ok: true, ...begun });
     } catch (error51) {
@@ -63250,16 +63554,17 @@ server.registerTool(
       mountId: external_exports.string().min(1).optional(),
       uploadId: external_exports.string().min(1),
       offset: external_exports.number().int().nonnegative(),
-      data: external_exports.string().max(262144)
+      data: external_exports.string().max(262144),
+      relativePath: external_exports.string().min(1).max(512).optional()
     },
     _meta: { ui: { visibility: ["app"] } }
   },
-  async ({ sessionId, viewId, mountId, uploadId, offset, data }) => {
+  async ({ sessionId, viewId, mountId, uploadId, offset, data, relativePath }) => {
     try {
       store.assertView(sessionId, leaseView(viewId, mountId));
       const nextOffset = await persistInOrder(
         sessionId,
-        () => documentSaves.write(sessionId, uploadId, offset, data)
+        () => documentSaves.write(sessionId, uploadId, offset, data, relativePath)
       );
       return result({ ok: true, nextOffset });
     } catch (error51) {

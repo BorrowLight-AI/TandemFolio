@@ -4,9 +4,9 @@
 
 - 查询分支：`genspark-ai/genoffice` 的 `main`；最终 fetch 后固定候选为 `f2c3d0879df29622d5a447935d2b4aeac033544d`（2026-09-06）。
 - 提取基线仍为 `dc4d7e5927864498913b7ba42d0da06cc7cf628e`。两者相差 53 个提交、1,498 个社区变更路径；未检查或引入 `ee/`。
-- 按用户确认，完整移植候选中适用于浏览器挂载权威边界的 DOCX、XLSX、PPTX 与 PDF 原生编辑、排版、渲染、导入导出与保真能力。采用选择性来源移植，不创建 merge parent，也不把五格式整体源码固定点提升到候选提交。
+- 按用户确认，完整移植候选中适用于浏览器挂载权威边界的 DOCX、XLSX、PPTX、PDF 与 Markdown 原生编辑、排版、渲染、导入导出与保真能力。采用选择性来源移植，不创建 merge parent，也不把五格式整体源码固定点提升到候选提交。
 - 明确排除 AI 面板/工具/提示词、账号、遥测、Electron main/preload、IPC、OCR 原生 sidecar、加密保持写回和企业版来源。PDF 保留浏览器打印及密码打开后的只读查看；现有 DOCX OOXML 文档保护及其 typed MCP 路由保留。
-- DOCX 新增 `docx.image.set_z_order`，并扩展表格边框路由以覆盖单边及整表内部横/纵边框；XLSX 新增计算、保护、分页符、名称和工作簿合并路由，并修复越界定位、剪贴板尾换行与整格替换空格；PPTX 新增背景、对象效果/几何和文字框属性路由；PDF 新增空白创建、评论编辑及页面插入/替换/裁剪/纸张尺寸路由。生成目录现为 103 个 DOCX 操作、123 个 XLSX 操作、81 个 PPTX 操作、32 个 PDF 操作、361 个总操作。它们与各自原生 UI 共用挂载编辑器状态、Undo、恢复及保存路径。
+- DOCX 新增 `docx.image.set_z_order`，并扩展表格边框路由；XLSX 新增计算、保护、分页符、名称和工作簿合并路由；PPTX 新增背景、对象效果/几何和文字框属性路由；PDF 新增空白创建、评论编辑及页面组织路由；Markdown 新增公式插入/更新和画布缩放路由。生成目录现为 103 个 DOCX 操作、123 个 XLSX 操作、81 个 PPTX 操作、32 个 PDF 操作、25 个 Markdown 操作、364 个总操作。它们与各自原生 UI 共用挂载编辑器状态、Undo、恢复及保存路径。
 
 ## 已合入的 DOCX 原生特性
 
@@ -53,6 +53,18 @@
 PDF Registry 从 25 项扩展到 32 项（29 个公开、3 个内部）；新增能力及明确排除清单见
 [`pdf-capability-inventory.md`](pdf-capability-inventory.md)。真实 PDFium WASM 和 PDF-lib 重开测试覆盖文字、评论、页面变换、保存失败与历史恢复。
 
+## 已合入的 Markdown 原生特性
+
+| 能力组 | 具体特性与修复 |
+| --- | --- |
+| 公式 | 支持行内 `$…$`、块级 `$$…$$`、数组/对齐环境和货币文本防误判；斜杠菜单创建、点击浮层编辑/删除、KaTeX 预览、原生 Undo 与保存重开共用格式动作 |
+| Word 与打印输出 | 可转换子集输出原生 DOCX OMML；不支持的块公式和行内公式保留可见 LaTeX；打印页面内嵌 KaTeX CSS 和基础 URL |
+| 缩放与坐标 | 50–200% 状态栏控件、Cmd/Ctrl `+`/`-`/`0`、触控板缩放及 19 语言标签；表格浮层和块拖拽坐标按 CSS zoom 修正 |
+| 编辑交互 | 块样式与代码语言使用共享主题 Dropdown；链接和块菜单统一处理外部点击/失焦；复制失败不产生未处理拒绝；计时器、监听器和临时定位样式在卸载时清理 |
+| 保存与图片 | 手动、自动和 MCP 保存串行排队；Markdown 与 HTML 图片引用安全扫描；Save As 复制、内容寻址去重、遍历拒绝、冲突回滚、文档最后提交，以及仅删除会话所有且哈希未变孤儿文件 |
+
+Markdown Registry 从 22 项扩展到 25 项（23 个公开、2 个内部）。AI 面板、AI 工具、Electron 关闭回调和自定义资源协议没有进入产品图；其浏览器等价能力由格式自有动作、宿主保存队列和不解析文档内容的透明文件事务提供。
+
 ## 未移植项及原因
 
 | 上游区域                                                                 | 处置                                                                                                        |
@@ -63,7 +75,7 @@ PDF Registry 从 25 项扩展到 32 项（29 个公开、3 个内部）；新增
 | `ee/`                                                                    | 禁止检查和导入                                                                                              |
 | 上游 i18n 目录拆分、共享 font-list 的结构性搬家                          | 本地保留等价的 19 语言表和浏览器字体枚举；Office ColorPicker 已按浏览器宿主边界接入 XLSX，不引入 AI catalog |
 
-DOCX、XLSX、PPTX 与 PDF 候选范围内没有剩余待移植的适用原生能力。XLSX 已完成全文件查找、筛选一致性、错误扫描、活动行列高亮、CSV 导出、工作簿合并、RTL、OLE、Office 配色、1904 日期系统、手动分页符、分页预览、精确打印设置和首页/奇偶页页眉页脚布局。后续清单只保留尚未进入当前交付片的 Markdown 数学公式、缩放控件与资源生命周期，以及新的上游提交审查。
+DOCX、XLSX、PPTX、PDF 与 Markdown 候选范围内没有剩余待移植的适用原生能力。后续清单只保留新的上游提交审查和因浏览器产品边界明确排除的桌面/AI 能力。
 
 ## 逐提交处置
 
@@ -82,7 +94,7 @@ DOCX、XLSX、PPTX 与 PDF 候选范围内没有剩余待移植的适用原生�
 | [da3b1ca](https://github.com/genspark-ai/genoffice/commit/da3b1ca) | 2026-08-25 | fix(slides): sweep generated-page temp files with a TTL at startup (#141)                    | 排除：AI、桌面壳、生命周期/设置或其文档，不属于本次原生编排范围。                                                  |
 | [bc1dceb](https://github.com/genspark-ai/genoffice/commit/bc1dceb) | 2026-08-25 | fix(sheets): row-batch over-cap sidecar reads so streaming survives big viewports (#140)     | 已移植：XLSX 大视口读取按 18,000 单元格预算分批，索引落后时停止。                                                  |
 | [7a814db](https://github.com/genspark-ai/genoffice/commit/7a814db) | 2026-08-25 | fix(sheets): keep filter-hidden rows out of full-sheet find results (#133)                   | 已移植：全文件查找合并文件命中时排除筛选隐藏行。                                                                   |
-| [f81dd3d](https://github.com/genspark-ai/genoffice/commit/f81dd3d) | 2026-08-26 | fix(markdown): wait for in-flight saves during close instead of silently failing (#149)      | 不直接移植：修复 Electron 关闭回调；本地已无该关闭协议。                                                           |
+| [f81dd3d](https://github.com/genspark-ai/genoffice/commit/f81dd3d) | 2026-08-26 | fix(markdown): wait for in-flight saves during close instead of silently failing (#149)      | 已适配：不引入 Electron 关闭回调；浏览器手动保存、自动保存和 MCP 保存改为同一串行队列，不再丢弃并发请求。            |
 | [b1a01e2](https://github.com/genspark-ai/genoffice/commit/b1a01e2) | 2026-08-26 | fix(ai-provider): release SSE reader when the consumer abandons the stream mid-flight (#150) | 排除：AI、桌面壳、生命周期/设置或其文档，不属于本次原生编排范围。                                                  |
 | [72a4a42](https://github.com/genspark-ai/genoffice/commit/72a4a42) | 2026-08-26 | fix(ai-provider): skip malformed SSE frames instead of killing the AI turn (#151)            | 排除：AI、桌面壳、生命周期/设置或其文档，不属于本次原生编排范围。                                                  |
 | [9792915](https://github.com/genspark-ai/genoffice/commit/9792915) | 2026-08-26 | feat(slides): flag horizontal text overflow in the layout audit (#154)                       | 排除 AI 布局审计入口；原生文字布局修复另行评估。                                                                   |
@@ -118,7 +130,7 @@ DOCX、XLSX、PPTX 与 PDF 候选范围内没有剩余待移植的适用原生�
 | [ea13074](https://github.com/genspark-ai/genoffice/commit/ea13074) | 2026-09-06 | fix(slides): route saveAs through the save queue (#218)                                      | 已由本地先行适配覆盖：Save 与 Save As 共用串行队列，失败后下一次写入仍可继续。                                     |
 | [1ee2407](https://github.com/genspark-ai/genoffice/commit/1ee2407) | 2026-09-06 | fix(slides): clear answered clarifications on New chat (#219)                                | 排除：仅涉及 AI 对话状态。                                                                                          |
 | [09fd67b](https://github.com/genspark-ai/genoffice/commit/09fd67b) | 2026-09-06 | fix(shell): harden Home rename validation (#221)                                             | 排除：Electron shell/Home 文件管理不属于浏览器挂载编辑器。                                                         |
-| [8630d11](https://github.com/genspark-ai/genoffice/commit/8630d11) | 2026-09-06 | feat(markdown): localize zoom control labels (#222)                                          | 暂不适用：当前交付片尚未保留 Markdown 缩放控件；与 Markdown 原生缩放一起列入后续范围。                             |
+| [8630d11](https://github.com/genspark-ai/genoffice/commit/8630d11) | 2026-09-06 | feat(markdown): localize zoom control labels (#222)                                          | 已移植：19 语言缩放标签与 50–200% 控件、快捷键、触控板手势和 typed view route 一起接入。                            |
 | [a5b5903](https://github.com/genspark-ai/genoffice/commit/a5b5903) | 2026-09-06 | fix(docs): complete ruler tab cycle with Bar, hide clear stops (#223)                        | 已移植：标尺循环加入 Bar tab，clear stop 保留写回语义但不绘制伪标记。                                              |
 | [d9769d1](https://github.com/genspark-ai/genoffice/commit/d9769d1) | 2026-09-06 | fix(ai-panels): clear restored transcript on New chat (#209)                                 | 排除：仅涉及 AI 对话历史。                                                                                          |
 | [f2c3d08](https://github.com/genspark-ai/genoffice/commit/f2c3d08) | 2026-09-06 | fix(docs): drop staged attachments on New chat (#224)                                        | 排除：仅涉及 AI 对话附件。                                                                                          |
@@ -126,15 +138,16 @@ DOCX、XLSX、PPTX 与 PDF 候选范围内没有剩余待移植的适用原生�
 ## 验证与发布状态
 
 - PPTX 局部验证：engine 81 个文件/836 项、render 10 个文件/245 项、Slides 21 个文件/266 项通过；三个工作区类型检查通过。
-- 生成 Manifest 为 361 个操作，其中 DOCX 103 个、Markdown 22 个、XLSX 123 个、PPTX 81 个、PDF 32 个；确定性 Manifest、全仓类型检查、构建和发布门禁状态以本次最终验证记录为准。
-- 各根工作区测试通过：405 个测试文件、4,855 项；另有 1 个环境条件文件/断言跳过。DOCX 的 149 个文件、1,686 项，XLSX 的 174 个文件、1,988 项，PDF 的 35 个文件、332 项和 MCP server 的 13 个文件、387 项全量通过。
+- 生成 Manifest 为 364 个操作，其中 DOCX 103 个、Markdown 25 个、XLSX 123 个、PPTX 81 个、PDF 32 个；确定性 Manifest、全仓类型检查、构建和发布门禁状态以本次最终验证记录为准。
+- 各根工作区测试通过：408 个测试文件、4,898 项；另有 1 个环境条件文件/断言跳过。Host Bridge 的 4 个文件、46 项，DOCX 的 149 个文件、1,686 项，Markdown 的 10 个文件、165 项，XLSX 的 174 个文件、1,988 项，PPTX 的 21 个文件、266 项，PDF 的 35 个文件、332 项和 MCP server 的 13 个文件、391 项全量通过。
 - `npm test -w @genoffice/docx-engine`：87 个文件通过，996 项通过、1 项跳过；覆盖候选的 OOXML 解析、保存、复杂排版和对象保真。
 - `npm test -w @genoffice/docs`：149 个文件、1,686 项通过；包括从 AI tool 解耦后的字符单位缩进 UI→保存→重开、标尺 Bar tab 和表格单边/内部边框用例。
 - `npm run build`：五格式与 MCP 插件重新构建通过。生成资源保留在本地工作区供开发验证，并非获准发布的归档。
 - `npm run smoke:mcp`：26 个总工具（11 个公开、15 个 app-only）冒烟通过，包括 `office_merge_local_workbook`。
-- `npm run measure:assets`：五格式通过。DOCX 实测 3,519,371 raw / 990,505 gzip，XLSX 实测 19,776,759 / 8,531,618，PPTX 实测 3,890,839 / 1,146,015，PDF 实测 6,722,411 / 3,396,327，均低于各自 raw 上限；XLSX 启动入口为 9,674,481 bytes，低于 11,000,000 上限。`npm run licenses` 与 `npm run upstream:check` 通过。
+- `npm run measure:assets`：五格式通过。DOCX 实测 3,519,509 raw / 990,512 gzip，Markdown 实测 2,573,199 / 936,265，XLSX 实测 19,777,247 / 8,531,694，PPTX 实测 3,890,977 / 1,146,047，PDF 实测 6,722,550 / 3,396,372，均低于各自 raw 上限；XLSX 启动入口低于 11,000,000 上限。`npm run licenses` 与 `npm run upstream:check` 通过。
 - `npx playwright test --config playwright.host.config.ts tests/visual/docx-community.spec.ts`：5 项真实浏览器测试通过，覆盖可访问原生工具栏、File 菜单、Session 绑定保存、离屏释放/恢复和恢复版本单调性。
 - `npx playwright test --config playwright.host.config.ts tests/visual/pdf-community.spec.ts`：16 项真实浏览器测试通过，覆盖原生工具栏、保存重开、文字/图片/批注写回、共享 Undo、窄屏/分屏/全屏、离屏释放/恢复和单次挂载。
+- `npx playwright test tests/visual/release-markdown.spec.ts --config playwright.host.config.ts`：9 项真实浏览器测试通过，覆盖公式渲染、会话缩放、保存、唤醒轮询、离屏恢复、恢复快照和大文件分阶段打开。
 - `npm run release:gate` 按设计以 `source_mismatch` 阻断，写入 `ready: false`；未改证据哈希、阈值或批准状态绕过发布检查。
 
 原生 renderer/engine 源码变化后，旧批准证据不再 source-current；生成的 `release-readiness.json` 已由门禁置为 `ready: false`。正式发布仍需重新采集五格式性能/视觉证据，不把功能回归通过当作正式发布批准。本次未修改证据、阈值、掩码或批准状态来规避检查。

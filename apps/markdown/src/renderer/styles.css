@@ -614,15 +614,16 @@ button {
 
 /* block-style picker: same box as the docs/slides font pickers (.rb-font-btn:
  * 28px tall, 3px radius, 13px label, 7px inline padding, strong border) */
-.rb-style {
+.rb-style.gs-dd {
+  min-width: 108px;
+}
+
+.rb-style .gs-dd-btn {
   height: 28px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 3px;
-  background: var(--surface);
+  padding: 0 7px;
+  border-color: var(--color-border-strong);
   color: var(--text-primary);
   font-size: 13px;
-  padding: 0 7px;
-  min-width: 108px;
 }
 
 /* Anchor for the link popover, which is position: fixed so it escapes the
@@ -928,11 +929,9 @@ button {
   opacity: 1;
 }
 
-.md-codeblock-lang {
+.md-codeblock-lang .gs-dd-btn {
   height: 22px;
-  border: 1px solid var(--border-strong);
   border-radius: 5px;
-  background: var(--surface);
   color: var(--text-secondary);
   font-size: 11.5px;
   padding: 0 4px;
@@ -1070,4 +1069,147 @@ button {
 
 .md-block-menu-item.danger:hover {
   background: var(--danger-bg);
+}
+.tiptap-mathematics-render {
+  border-radius: 5px;
+}
+
+span.tiptap-mathematics-render {
+  display: inline-block;
+  padding: 0 2px;
+}
+
+div.tiptap-mathematics-render {
+  padding: 8px 12px;
+  margin: 0.5em 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.tiptap-mathematics-render--editable {
+  cursor: pointer;
+}
+
+.tiptap-mathematics-render--editable:hover {
+  background: var(--hover);
+}
+
+.tiptap-mathematics-render.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tiptap-mathematics-render.block-math-error,
+.tiptap-mathematics-render.inline-math-error {
+  color: var(--danger);
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  white-space: pre-wrap;
+}
+
+.md-math-pop {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(400px, calc(100vw - 16px));
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px var(--md-shadow-color);
+}
+
+.md-math-input {
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 8px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  outline: none;
+}
+
+.md-math-input:focus {
+  border-color: var(--accent);
+}
+
+.md-math-preview {
+  display: flex;
+  align-items: safe center;
+  justify-content: safe center;
+  min-height: 36px;
+  max-height: 40vh;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--hover);
+  overflow: auto;
+}
+
+.md-math-preview-empty {
+  display: none;
+}
+
+.md-math-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.md-math-actions button {
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  font-size: 12.5px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.md-math-apply {
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.md-math-delete {
+  background: transparent;
+  color: var(--danger);
+}
+
+.md-math-delete:hover {
+  background: var(--danger-bg);
+}
+.zoom-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background: var(--active-bg);
+}
+
+.zoom-btn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.zoom-slider {
+  width: 110px;
+  accent-color: var(--text-muted);
+  height: 3px;
+}
+
+.zoom-value {
+  min-width: 38px;
+  text-align: right;
 }

@@ -92,6 +92,11 @@ export interface LiveEditorFileSave {
   readonly fileName: string
   readonly data: ArrayBuffer
   readonly mode?: 'save' | 'save-as' | 'export-copy'
+  readonly companionFiles?: ReadonlyArray<{
+    readonly relativePath: string
+    readonly data: ArrayBuffer
+  }>
+  readonly removeCompanionPaths?: readonly string[]
 }
 
 export type LiveEditorFileSaveResult =
@@ -444,6 +449,17 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
           fileName: file.fileName,
           size: file.data.byteLength,
           mode: file.mode ?? 'save',
+          ...(file.companionFiles?.length
+            ? {
+                companionFiles: file.companionFiles.map((companion) => ({
+                  relativePath: companion.relativePath,
+                  size: companion.data.byteLength,
+                })),
+              }
+            : {}),
+          ...(file.removeCompanionPaths?.length
+            ? { removeCompanionPaths: file.removeCompanionPaths }
+            : {}),
         },
       })
       const begunPayload = begun.structuredContent as
@@ -456,29 +472,36 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
         )
       }
       uploadId = begunPayload.uploadId
-      const bytes = new Uint8Array(file.data)
-      for (let offset = 0; offset < bytes.length; offset += 196_608) {
-        const chunk = bytes.subarray(offset, Math.min(offset + 196_608, bytes.length))
-        const response = await app.callServerTool({
-          name: 'office_editor_write_document_save_chunk',
-          arguments: {
-            sessionId,
-            viewId,
-            uploadId,
-            offset,
-            data: encodeBase64(chunk),
-          },
-        })
-        const payload = response.structuredContent as
-          { ok?: unknown; nextOffset?: unknown; message?: unknown } | undefined
-        if (payload?.ok !== true || payload.nextOffset !== offset + chunk.length) {
-          throw new Error(
-            typeof payload?.message === 'string'
-              ? payload.message
-              : 'The local document save upload returned an invalid offset.',
-          )
+      const uploadBytes = async (data: ArrayBuffer, relativePath?: string): Promise<void> => {
+        const bytes = new Uint8Array(data)
+        for (let offset = 0; offset < bytes.length; offset += 196_608) {
+          const chunk = bytes.subarray(offset, Math.min(offset + 196_608, bytes.length))
+          const response = await app.callServerTool({
+            name: 'office_editor_write_document_save_chunk',
+            arguments: {
+              sessionId,
+              viewId,
+              uploadId,
+              offset,
+              data: encodeBase64(chunk),
+              ...(relativePath ? { relativePath } : {}),
+            },
+          })
+          const payload = response.structuredContent as
+            { ok?: unknown; nextOffset?: unknown; message?: unknown } | undefined
+          if (payload?.ok !== true || payload.nextOffset !== offset + chunk.length) {
+            throw new Error(
+              typeof payload?.message === 'string'
+                ? payload.message
+                : 'The local document save upload returned an invalid offset.',
+            )
+          }
         }
       }
+      for (const companion of file.companionFiles ?? []) {
+        await uploadBytes(companion.data, companion.relativePath)
+      }
+      await uploadBytes(file.data)
       const committed = await app.callServerTool({
         name: 'office_editor_commit_document_save',
         arguments: { sessionId, viewId, uploadId },

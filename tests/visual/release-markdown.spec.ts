@@ -20,6 +20,48 @@ test('Markdown exposes file, save, and fullscreen as accessible icon-only contro
   }
 })
 
+test('Markdown renders native math and applies session-scoped zoom through typed commands', async ({
+  page,
+}) => {
+  await page.goto('/?format=markdown&width=720&height=900')
+  await page.waitForFunction(() => window.__codexVisualHost?.initialized)
+
+  await page.evaluate(() => {
+    window.__codexVisualHost.enqueueCommand({
+      commandId: 'markdown-math-insert',
+      baseRevision: 0,
+      operation: 'markdown.math.insert',
+      arguments: { position: 1, display: 'block', latex: 'E=mc^2' },
+    })
+  })
+  await page.waitForFunction(() =>
+    window.__codexVisualHost.acknowledgements.some(
+      (entry) => entry.commandId === 'markdown-math-insert' && entry.ok === true,
+    ),
+  )
+
+  const editor = page.frameLocator('#editor-frame')
+  await expect(editor.locator('.tiptap-mathematics-render')).toHaveCount(1)
+  await expect(editor.locator('.tiptap-mathematics-render')).toContainText('E')
+
+  await page.evaluate(() => {
+    window.__codexVisualHost.enqueueCommand({
+      commandId: 'markdown-zoom',
+      baseRevision: 1,
+      operation: 'markdown.view.set_zoom',
+      arguments: { percent: 150 },
+    })
+  })
+  await page.waitForFunction(() =>
+    window.__codexVisualHost.acknowledgements.some(
+      (entry) => entry.commandId === 'markdown-zoom' && entry.ok === true,
+    ),
+  )
+
+  await expect(editor.locator('.doc-page')).toHaveCSS('zoom', '1.5')
+  await expect(editor.locator('.zoom-value')).toHaveText('150%')
+})
+
 test('a generated Markdown file saves through the session-bound local persistence protocol', async ({
   page,
 }) => {

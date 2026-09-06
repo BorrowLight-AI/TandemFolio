@@ -40,6 +40,14 @@ function textPosition(editor: Editor, text: string): number {
   return found
 }
 
+function nodePosition(editor: Editor, type: string): number {
+  let found = -1
+  editor.state.doc.descendants((node, position) => {
+    if (found < 0 && node.type.name === type) found = position
+  })
+  return found
+}
+
 const services = {
   loadStaged: async () => undefined,
   save: async () => ({ ok: true as const, fileName: 'notes.md' }),
@@ -47,6 +55,7 @@ const services = {
   openPrintDialog: () => ({ ok: true as const }),
   setAutoSave: () => undefined,
   setFrontmatter: () => undefined,
+  setZoom: ({ percent }: { percent: number }) => percent,
 }
 
 describe('Markdown operation registry', () => {
@@ -56,6 +65,27 @@ describe('Markdown operation registry', () => {
     expect([...mapped].sort()).toEqual(
       markdownOperationCatalog.operations.map((operation) => operation.id).sort(),
     )
+  })
+
+  it('sets the Markdown canvas zoom through the shared view service', async () => {
+    const editor = createEditor('Zoom')
+    let applied = 0
+
+    await expect(
+      executeMarkdownOperation(
+        editor,
+        { operation: 'markdown.view.set_zoom', arguments: { percent: 175 } },
+        { ...services, setZoom: ({ percent }) => (applied = percent) },
+      ),
+    ).resolves.toEqual({
+      handled: true,
+      operationId: 'markdown.view.set_zoom',
+      ok: true,
+      output: { percent: 175 },
+      checkpointRecovery: false,
+    })
+    expect(applied).toBe(175)
+    expect(editor.commands.undo()).toBe(false)
   })
 
   it('sets an explicit Markdown text selection without adding an undo entry', async () => {
@@ -135,6 +165,81 @@ describe('Markdown operation registry', () => {
 
     expect(editor.commands.undo()).toBe(true)
     expect(editor.state.doc.child(0).attrs.language).toBe('javascript')
+  })
+
+  it('inserts block math at an explicit position with native undo and reopen fidelity', async () => {
+    const editor = createEditor('Before')
+
+    await expect(
+      executeMarkdownOperation(
+        editor,
+        {
+          operation: 'markdown.math.insert',
+          arguments: { position: 7, display: 'block', latex: '\\frac{a}{b}' },
+        },
+        services,
+      ),
+    ).resolves.toEqual({
+      handled: true,
+      operationId: 'markdown.math.insert',
+      ok: true,
+    })
+    expect(editor.getMarkdown()).toContain('\\frac{a}{b}')
+    const reopened = createEditor(editor.getMarkdown())
+    expect(reopened.getJSON().content?.some((node) => node.type === 'blockMath')).toBe(true)
+
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.getJSON().content?.some((node) => node.type === 'blockMath')).toBe(false)
+  })
+
+  it('updates an addressed formula with native undo and reopen fidelity', async () => {
+    const editor = createEditor('$$\nx + 1\n$$')
+    const position = nodePosition(editor, 'blockMath')
+
+    await expect(
+      executeMarkdownOperation(
+        editor,
+        {
+          operation: 'markdown.math.set',
+          arguments: { position, latex: 'x + 2' },
+        },
+        services,
+      ),
+    ).resolves.toEqual({
+      handled: true,
+      operationId: 'markdown.math.set',
+      ok: true,
+    })
+    expect(editor.getMarkdown()).toContain('x + 2')
+    expect(createEditor(editor.getMarkdown()).getMarkdown()).toContain('x + 2')
+
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.getMarkdown()).toContain('x + 1')
+  })
+
+  it('deletes an addressed formula with native undo and reopen fidelity', async () => {
+    const editor = createEditor('Before\n\n$$\nx + 1\n$$\n\nAfter')
+    const position = nodePosition(editor, 'blockMath')
+
+    await expect(
+      executeMarkdownOperation(
+        editor,
+        {
+          operation: 'markdown.math.set',
+          arguments: { position, latex: null },
+        },
+        services,
+      ),
+    ).resolves.toEqual({
+      handled: true,
+      operationId: 'markdown.math.set',
+      ok: true,
+    })
+    expect(editor.getMarkdown()).not.toContain('x + 1')
+    expect(createEditor(editor.getMarkdown()).getMarkdown()).not.toContain('x + 1')
+
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.getMarkdown()).toContain('x + 1')
   })
 
   it('maps the plaintext final state to a null code-block language', async () => {

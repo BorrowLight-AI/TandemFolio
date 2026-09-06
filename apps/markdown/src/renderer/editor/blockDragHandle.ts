@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core'
 import type { Editor } from '@tiptap/core'
 import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
+import { installPopoverDismiss } from '@genoffice/ui'
 import { t } from '../i18n/locale'
 import { updateMarkdownBlock } from './block-actions'
 
@@ -50,7 +51,8 @@ function dragHandlePlugin(editor: Editor): Plugin {
         const targetIndex = view.state.doc.resolve(targetPosition).index(0)
         const dom = view.nodeDOM(targetPosition)
         const afterTarget =
-          dom instanceof HTMLElement && event.clientY >= dom.getBoundingClientRect().top + dom.getBoundingClientRect().height / 2
+          dom instanceof HTMLElement &&
+          event.clientY >= dom.getBoundingClientRect().top + dom.getBoundingClientRect().height / 2
         const afterBlockIndex = afterTarget ? targetIndex : targetIndex - 1
         event.preventDefault()
         view.dragging = null
@@ -93,6 +95,8 @@ function dragHandlePlugin(editor: Editor): Plugin {
       menu.className = 'md-block-menu'
       menu.style.display = 'none'
 
+      const previousContainerPosition = container?.style.position ?? ''
+      const setContainerPosition = Boolean(container && !container.style.position)
       if (container) {
         container.style.position ||= 'relative'
         container.append(handle, menu)
@@ -106,9 +110,13 @@ function dragHandlePlugin(editor: Editor): Plugin {
         hoverPos = null
       }
 
+      let offDismiss: (() => void) | null = null
+
       const hideMenu = () => {
         menu.style.display = 'none'
         menuPos = null
+        offDismiss?.()
+        offDismiss = null
       }
 
       const onMouseMove = (event: MouseEvent) => {
@@ -121,10 +129,11 @@ function dragHandlePlugin(editor: Editor): Plugin {
         if (!(dom instanceof HTMLElement)) return hideHandle()
         const blockRect = dom.getBoundingClientRect()
         const containerRect = container.getBoundingClientRect()
+        const scale = container.offsetWidth ? containerRect.width / container.offsetWidth : 1
         hoverPos = pos
         handle.style.display = 'flex'
-        handle.style.top = `${blockRect.top - containerRect.top + container.scrollTop + 2}px`
-        handle.style.left = `${Math.max(0, blockRect.left - containerRect.left - 52)}px`
+        handle.style.top = `${(blockRect.top - containerRect.top) / scale + container.scrollTop + 2}px`
+        handle.style.left = `${Math.max(0, (blockRect.left - containerRect.left) / scale - 52)}px`
       }
 
       // hoverPos was computed on a past mousemove — validate before selecting
@@ -208,24 +217,18 @@ function dragHandlePlugin(editor: Editor): Plugin {
         menu.style.display = 'block'
         menu.style.top = `${parseFloat(handle.style.top) + 26}px`
         menu.style.left = handle.style.left
+        offDismiss ??= installPopoverDismiss(
+          () => {
+            hideMenu()
+            hideHandle()
+          },
+          { inside: () => [menu, handle] },
+        )
       }
 
       const onGripClick = () => {
         if (menu.style.display === 'block') hideMenu()
         else openMenu()
-      }
-
-      const onDocMouseDown = (event: MouseEvent) => {
-        if (menu.style.display !== 'block') return
-        if (
-          event.target instanceof Node &&
-          (menu.contains(event.target) || handle.contains(event.target))
-        )
-          return
-        hideMenu()
-        // the open menu blocked the grace-period hide — don't leave the gutter
-        // stranded unless the pointer is back over the editor (hover re-syncs it)
-        if (!(event.target instanceof Node) || !view.dom.contains(event.target)) hideHandle()
       }
 
       const onScrollOrLeave = () => {
@@ -250,19 +253,20 @@ function dragHandlePlugin(editor: Editor): Plugin {
         }, 250)
       }
 
+      const onHandleMouseMove = (event: MouseEvent) => event.stopPropagation()
+      const onDragEnd = () => {
+        draggedBlockIndex = null
+      }
       view.dom.addEventListener('mousemove', onMouseMove)
       view.dom.addEventListener('mouseenter', cancelHide)
       view.dom.addEventListener('mouseleave', scheduleHide)
-      handle.addEventListener('mousemove', (e) => e.stopPropagation())
+      handle.addEventListener('mousemove', onHandleMouseMove)
       handle.addEventListener('mouseenter', cancelHide)
       handle.addEventListener('mouseleave', scheduleHide)
       grip.addEventListener('dragstart', onDragStart)
-      grip.addEventListener('dragend', () => {
-        draggedBlockIndex = null
-      })
+      grip.addEventListener('dragend', onDragEnd)
       grip.addEventListener('click', onGripClick)
       plus.addEventListener('click', onPlusClick)
-      document.addEventListener('mousedown', onDocMouseDown, true)
       document.addEventListener('scroll', onScrollOrLeave, true)
 
       return {
@@ -272,13 +276,23 @@ function dragHandlePlugin(editor: Editor): Plugin {
         },
         destroy() {
           cancelHide()
+          hideMenu()
           view.dom.removeEventListener('mousemove', onMouseMove)
           view.dom.removeEventListener('mouseenter', cancelHide)
           view.dom.removeEventListener('mouseleave', scheduleHide)
-          document.removeEventListener('mousedown', onDocMouseDown, true)
+          handle.removeEventListener('mousemove', onHandleMouseMove)
+          handle.removeEventListener('mouseenter', cancelHide)
+          handle.removeEventListener('mouseleave', scheduleHide)
+          grip.removeEventListener('dragstart', onDragStart)
+          grip.removeEventListener('dragend', onDragEnd)
+          grip.removeEventListener('click', onGripClick)
+          plus.removeEventListener('click', onPlusClick)
           document.removeEventListener('scroll', onScrollOrLeave, true)
           handle.remove()
           menu.remove()
+          if (container && setContainerPosition && container.style.position === 'relative') {
+            container.style.position = previousContainerPosition
+          }
         },
       }
     },

@@ -11,6 +11,7 @@ import {
 } from './block-type-actions'
 import { setMarkdownListType, type MarkdownListType } from './list-actions'
 import { insertMarkdownDivider, insertMarkdownTable } from './structure-actions'
+import { openMathCreate } from './mathEdit'
 
 export interface SlashItem {
   id: string
@@ -132,6 +133,15 @@ export function buildSlashItems(extra?: { insertImage?: () => void }): SlashItem
       labelKey: 'insertHr',
       keywords: ['divider', 'rule', '---'],
       run: applySlashDivider,
+    },
+    {
+      id: 'math',
+      labelKey: 'insertMath',
+      keywords: ['formula', 'equation', 'latex', 'katex', '$$'],
+      run: (editor, range) => {
+        chain(editor, range).run()
+        openMathCreate(editor)
+      },
     },
   ]
   if (extra?.insertImage) {

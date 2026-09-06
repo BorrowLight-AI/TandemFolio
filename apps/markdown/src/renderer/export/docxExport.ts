@@ -4,6 +4,8 @@ import {
   TABLE_HEADER_FILL,
   buildBlankDocx,
   generateTableModelXml,
+  latexToOmml,
+  mathParagraphXml,
   parseDocx,
   saveDocx,
 } from '@genoffice/docx-engine'
@@ -154,6 +156,11 @@ function runsFromInline(content: JSONContent[] | undefined): Run[] {
   for (const child of content ?? []) {
     if (child.type === 'hardBreak') {
       runs.push({ text: '\n' })
+      continue
+    }
+    if (child.type === 'inlineMath') {
+      const latex = String(child.attrs?.latex ?? '')
+      if (latex) runs.push({ text: `$${latex}$`, font: CODE_FONT })
       continue
     }
     if (child.type !== 'text' || !child.text) continue
@@ -336,6 +343,19 @@ function walkBlock(ctx: WalkContext, node: JSONContent, base?: ParaFormat): void
     case 'table':
       ctx.blocks.push({ kind: 'xml', xml: generateTableModelXml(mapTable(node)) })
       break
+    case 'blockMath': {
+      const latex = String(node.attrs?.latex ?? '')
+      try {
+        ctx.blocks.push({ kind: 'xml', xml: mathParagraphXml(latexToOmml(latex)) })
+      } catch {
+        pushParagraph(ctx, {
+          type: 'paragraph',
+          runs: [{ text: `$$${latex}$$`, font: CODE_FONT }],
+          format: base,
+        })
+      }
+      break
+    }
     default: {
       // unknown block: keep its text so nothing silently disappears
       const text = plainText(node)

@@ -77,6 +77,20 @@ export const markdownRetainedCommandAudit = [
     rationale: 'UI and Registry replace the complete raw YAML envelope through one service.',
   },
   {
+    family: 'math',
+    retainedSources: ['Slash menu', 'math edit popover'],
+    disposition: 'typed-operation',
+    operationIds: ['markdown.math.insert', 'markdown.math.set'],
+    rationale: 'Formula insertion, editing, and deletion use addressed native TipTap commands.',
+  },
+  {
+    family: 'view',
+    retainedSources: ['status-bar zoom controls', 'native zoom shortcuts', 'pinch gesture'],
+    disposition: 'typed-operation',
+    operationIds: ['markdown.view.set_zoom'],
+    rationale: 'UI gestures and Agent commands converge on one bounded canvas zoom service.',
+  },
+  {
     family: 'history',
     retainedSources: ['Ribbon undo/redo', 'native shortcuts'],
     disposition: 'typed-operation',

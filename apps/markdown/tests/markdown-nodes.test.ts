@@ -95,6 +95,59 @@ describe('markdown round-trip for GFM nodes', () => {
   })
 })
 
+describe('math nodes — $ / $$ syntax', () => {
+  const editor = createEditor()
+
+  function collect(node: Record<string, unknown>, type: string): Record<string, unknown>[] {
+    const hits: Record<string, unknown>[] = []
+    if (node.type === type) hits.push(node)
+    for (const child of (node.content as Record<string, unknown>[] | undefined) ?? []) {
+      hits.push(...collect(child, type))
+    }
+    return hits
+  }
+
+  it('round-trips inline LaTeX as an inline math node', () => {
+    const manager = editor.markdown!
+    const parsed = manager.parse('the variable $x_{1}$ is free') as Record<string, unknown>
+    const hits = collect(parsed, 'inlineMath')
+
+    expect(hits).toHaveLength(1)
+    expect((hits[0]?.attrs as { latex: string }).latex).toBe('x_{1}')
+    expect(manager.serialize(parsed)).toBe('the variable $x_{1}$ is free')
+  })
+
+  it('keeps currency amounts as plain text', () => {
+    const manager = editor.markdown!
+    const markdown = 'I paid $5 and $10 in total'
+    const parsed = manager.parse(markdown) as Record<string, unknown>
+
+    expect(collect(parsed, 'inlineMath')).toHaveLength(0)
+    expect(manager.serialize(parsed)).toBe(markdown)
+  })
+
+  it('round-trips a block array formula without consuming LaTeX row separators', () => {
+    const markdown = [
+      '$$',
+      '\\begin{array}{ll}',
+      '\\max & f = 1.25 x_{1} + 1.5 x_{2}, \\\\',
+      '\\text{s.t.} & 0.025 x_{1} + 0.05 x_{2} \\le 400, \\\\',
+      '& x_{1}, x_{2} \\ge 0.',
+      '\\end{array}',
+      '$$',
+    ].join('\n')
+    const manager = editor.markdown!
+    const parsed = manager.parse(markdown) as Record<string, unknown>
+    const hits = collect(parsed, 'blockMath')
+
+    expect(hits).toHaveLength(1)
+    expect(String((hits[0]?.attrs as { latex: string }).latex)).toContain('\\\\')
+    const serialized = manager.serialize(parsed)
+    expect(serialized).toContain('\\begin{array}{ll}')
+    expect(JSON.stringify(manager.parse(serialized))).toBe(JSON.stringify(parsed))
+  })
+})
+
 describe('only pure markdown syntax is ever produced', () => {
   const editor = createEditor()
 

@@ -76,7 +76,7 @@ describe('generate-operation-manifest CLI', () => {
     const manifest = JSON.parse(await readFile(outputPath, 'utf8')) as {
       operations: Array<{ id: string; compatibilityAliases?: string[] }>
     }
-    expect(manifest.operations).toHaveLength(22)
+    expect(manifest.operations).toHaveLength(25)
     expect(manifest.operations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -93,11 +93,23 @@ describe('generate-operation-manifest CLI', () => {
           compatibilityAliases: [],
         }),
         expect.objectContaining({
+          id: 'markdown.math.insert',
+          compatibilityAliases: [],
+        }),
+        expect.objectContaining({
+          id: 'markdown.math.set',
+          compatibilityAliases: [],
+        }),
+        expect.objectContaining({
           id: 'markdown.text.insert',
           compatibilityAliases: [],
         }),
         expect.objectContaining({
           id: 'markdown.text.replace_selection',
+          compatibilityAliases: [],
+        }),
+        expect.objectContaining({
+          id: 'markdown.view.set_zoom',
           compatibilityAliases: [],
         }),
       ]),

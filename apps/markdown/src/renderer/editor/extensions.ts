@@ -12,6 +12,7 @@ import { BlockDragHandle } from './blockDragHandle'
 import { BlockKeymap } from './blockKeymap'
 import { SlashCommand } from './slashCommand'
 import { LinearOrderedList, LinearTable, LinearTaskList } from './linearMarkdownExtensions'
+import { buildMathExtensions } from './math'
 import type { SlashController, SlashItem } from './slashCommand'
 import { t } from '../i18n/locale'
 
@@ -50,6 +51,7 @@ export function buildExtensions(options: BuildExtensionsOptions): AnyExtension[]
     LinearTaskList,
     TaskItem.configure({ nested: true }),
     LinearOrderedList,
+    ...buildMathExtensions(),
     LocalImage,
     BlockDragHandle,
     BlockKeymap,

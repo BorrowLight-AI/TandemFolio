@@ -7,6 +7,11 @@ export interface LoadedMarkdown {
   assetFiles?: ReadonlyMap<string, File>
 }
 
+export interface MarkdownSaveCompanion {
+  readonly relativePath: string
+  readonly data: ArrayBuffer
+}
+
 const MAX_BROWSER_ASSET_BYTES = 20 * 1024 * 1024
 
 function normalizeSelectedAssetPath(basePath: string, authoredPath: string): string | null {
@@ -78,6 +83,8 @@ export async function readLoadedMarkdownAsset(
 }
 
 let activeHandle: FileSystemFileHandle | null = null
+let activeDirectory: FileSystemDirectoryHandle | null = null
+let ownedCompanions = new Map<string, ArrayBuffer>()
 
 interface MarkdownFileCandidate {
   readonly relativePath: string
@@ -191,7 +198,12 @@ export async function openMarkdownFile(): Promise<LoadedMarkdown | null> {
   if (window.showDirectoryPicker) {
     try {
       const directory = await window.showDirectoryPicker()
-      return loadedMarkdownFromFiles(await collectDirectoryFiles(directory))
+      const loaded = await loadedMarkdownFromFiles(await collectDirectoryFiles(directory))
+      if (loaded) {
+        activeDirectory = directory
+        ownedCompanions = new Map()
+      }
+      return loaded
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return null
       throw error
@@ -202,6 +214,8 @@ export async function openMarkdownFile(): Promise<LoadedMarkdown | null> {
       const [handle] = await window.showOpenFilePicker({ multiple: false, types: pickerTypes() })
       if (!handle) return null
       activeHandle = handle
+      activeDirectory = null
+      ownedCompanions = new Map()
       const file = await handle.getFile()
       return { fileName: file.name, text: await file.text() }
     } catch (error) {
@@ -210,15 +224,100 @@ export async function openMarkdownFile(): Promise<LoadedMarkdown | null> {
     }
   }
   activeHandle = null
+  activeDirectory = null
+  ownedCompanions = new Map()
   return chooseWithInput()
 }
 
 export function detachMarkdownFileHandle(): void {
   activeHandle = null
+  activeDirectory = null
+  ownedCompanions = new Map()
 }
 
 export function canOverwriteMarkdownFile(): boolean {
   return activeHandle !== null
+}
+
+export function canPersistMarkdownCompanions(saveAs: boolean): boolean {
+  if (window.parent !== window) return true
+  return saveAs ? Boolean(window.showDirectoryPicker) : activeDirectory !== null
+}
+
+async function directoryForRelativePath(
+  root: FileSystemDirectoryHandle,
+  relativePath: string,
+): Promise<{ directory: FileSystemDirectoryHandle; name: string }> {
+  const segments = relativePath.split('/')
+  if (
+    segments.length < 2 ||
+    segments.some((segment) => !segment || segment === '.' || segment === '..')
+  ) {
+    throw new Error('Markdown companion paths must be safe relative paths.')
+  }
+  let directory = root
+  for (const segment of segments.slice(0, -1)) {
+    directory = await directory.getDirectoryHandle(segment, { create: true })
+  }
+  return { directory, name: segments.at(-1)! }
+}
+
+async function equalFileBytes(file: File, data: ArrayBuffer): Promise<boolean> {
+  if (file.size !== data.byteLength) return false
+  const left = new Uint8Array(await file.arrayBuffer())
+  const right = new Uint8Array(data)
+  return left.every((byte, index) => byte === right[index])
+}
+
+async function writeDirectoryBundle(
+  directory: FileSystemDirectoryHandle,
+  documentHandle: FileSystemFileHandle,
+  text: string,
+  companionFiles: readonly MarkdownSaveCompanion[],
+  removedCompanions: ReadonlyMap<string, ArrayBuffer>,
+): Promise<void> {
+  const created: Array<{ directory: FileSystemDirectoryHandle; name: string }> = []
+  try {
+    for (const companion of companionFiles) {
+      const target = await directoryForRelativePath(directory, companion.relativePath)
+      let handle: FileSystemFileHandle
+      try {
+        handle = await target.directory.getFileHandle(target.name)
+        if (!(await equalFileBytes(await handle.getFile(), companion.data))) {
+          throw new Error(
+            `Markdown companion target already contains different bytes: ${companion.relativePath}`,
+          )
+        }
+        continue
+      } catch (error) {
+        if (!(error instanceof DOMException) || error.name !== 'NotFoundError') throw error
+        handle = await target.directory.getFileHandle(target.name, { create: true })
+        created.push(target)
+      }
+      const writable = await handle.createWritable()
+      await writable.write(companion.data)
+      await writable.close()
+    }
+    const writable = await documentHandle.createWritable()
+    await writable.write(text)
+    await writable.close()
+    for (const [relativePath, previousData] of removedCompanions) {
+      try {
+        const target = await directoryForRelativePath(directory, relativePath)
+        const handle = await target.directory.getFileHandle(target.name)
+        if (await equalFileBytes(await handle.getFile(), previousData)) {
+          await target.directory.removeEntry(target.name)
+        }
+      } catch {
+        // Preserve missing or user-modified files and relinquish ownership.
+      }
+    }
+  } catch (error) {
+    await Promise.all(
+      created.map((target) => target.directory.removeEntry(target.name).catch(() => undefined)),
+    )
+    throw error
+  }
 }
 
 function downloadBlob(blob: Blob, fileName: string): void {
@@ -234,8 +333,15 @@ export async function saveMarkdownFile(
   text: string,
   suggestedName: string,
   saveAs = false,
+  companionFiles: readonly MarkdownSaveCompanion[] = [],
 ): Promise<{ ok: true; fileName: string } | { ok: false }> {
   let handle = saveAs ? null : activeHandle
+  const currentCompanions = new Map(
+    companionFiles.map((companion) => [companion.relativePath, companion.data] as const),
+  )
+  const removedCompanions = saveAs
+    ? new Map<string, ArrayBuffer>()
+    : new Map([...ownedCompanions].filter(([path]) => !currentCompanions.has(path)))
   if (window.parent !== window) {
     const bytes = new TextEncoder().encode(text)
     const persisted = await saveLiveEditorFile({
@@ -245,8 +351,33 @@ export async function saveMarkdownFile(
         bytes.byteOffset + bytes.byteLength,
       ) as ArrayBuffer,
       mode: saveAs ? 'save-as' : 'save',
+      ...(companionFiles.length ? { companionFiles } : {}),
+      ...(removedCompanions.size ? { removeCompanionPaths: [...removedCompanions.keys()] } : {}),
     })
-    return persisted.ok ? { ok: true, fileName: suggestedName } : { ok: false }
+    if (!persisted.ok) return { ok: false }
+    ownedCompanions = currentCompanions
+    return { ok: true, fileName: suggestedName }
+  }
+  if (companionFiles.length > 0 || removedCompanions.size > 0) {
+    let directory = saveAs ? null : activeDirectory
+    if (!directory && window.showDirectoryPicker) {
+      try {
+        directory = await window.showDirectoryPicker()
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return { ok: false }
+        throw error
+      }
+    }
+    if (!directory) return { ok: false }
+    const documentHandle = saveAs
+      ? await directory.getFileHandle(suggestedName, { create: true })
+      : activeHandle
+    if (!documentHandle) return { ok: false }
+    await writeDirectoryBundle(directory, documentHandle, text, companionFiles, removedCompanions)
+    activeDirectory = directory
+    activeHandle = documentHandle
+    ownedCompanions = currentCompanions
+    return { ok: true, fileName: documentHandle.name }
   }
   if (!handle && window.showSaveFilePicker) {
     try {
@@ -264,9 +395,11 @@ export async function saveMarkdownFile(
     await writable.write(text)
     await writable.close()
     activeHandle = handle
+    if (saveAs) ownedCompanions = new Map()
     return { ok: true, fileName: handle.name }
   }
   downloadBlob(new Blob([text], { type: 'text/markdown;charset=utf-8' }), suggestedName)
+  if (saveAs) ownedCompanions = new Map()
   return { ok: true, fileName: suggestedName }
 }
 

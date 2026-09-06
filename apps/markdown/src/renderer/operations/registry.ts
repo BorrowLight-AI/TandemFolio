@@ -23,6 +23,11 @@ import {
   type MarkdownCodeBlockLanguage,
 } from '../editor/code-block-actions'
 import { setMarkdownSelection } from '../editor/selection-actions'
+import {
+  insertMarkdownMath,
+  setMarkdownMath,
+  type MarkdownMathDisplay,
+} from '../editor/math-actions'
 
 type MarkdownOperationDescriptor = (typeof markdownOperationCatalog.operations)[number]
 type MarkdownOperationId = MarkdownOperationDescriptor['id']
@@ -57,6 +62,7 @@ export interface MarkdownOperationServices {
   readonly openPrintDialog: () => { readonly ok: true } | { readonly ok: false }
   readonly setAutoSave: (input: { readonly enabled: boolean }) => void
   readonly setFrontmatter: (input: { readonly yaml: string }) => void
+  readonly setZoom: (input: { readonly percent: number }) => number
 }
 
 type MarkdownOperationHandler = (
@@ -188,6 +194,10 @@ const handlers = {
     const enabled = arguments_.enabled as boolean
     services.setAutoSave({ enabled })
     return { ok: true, output: { enabled }, checkpointRecovery: false }
+  },
+  'markdown.view.set_zoom': (_editor, arguments_, services) => {
+    const percent = services.setZoom({ percent: arguments_.percent as number })
+    return { ok: true, output: { percent }, checkpointRecovery: false }
   },
   'markdown.document.load_staged': async (_editor, arguments_, services) => {
     if (!isArrayBuffer(arguments_.data)) {
@@ -330,6 +340,23 @@ const handlers = {
     const result = setMarkdownCodeBlockLanguage(editor, {
       textBlockIndex: arguments_.textBlockIndex as number,
       language: arguments_.language as MarkdownCodeBlockLanguage,
+    })
+    if (result.ok) return { ok: true }
+    return { ok: false, error: 'execution_failed', message: result.message }
+  },
+  'markdown.math.insert': (editor, arguments_) => {
+    const result = insertMarkdownMath(editor, {
+      position: arguments_.position as number,
+      display: arguments_.display as MarkdownMathDisplay,
+      latex: arguments_.latex as string,
+    })
+    if (result.ok) return { ok: true }
+    return { ok: false, error: 'execution_failed', message: result.message }
+  },
+  'markdown.math.set': (editor, arguments_) => {
+    const result = setMarkdownMath(editor, {
+      position: arguments_.position as number,
+      latex: arguments_.latex as string | null,
     })
     if (result.ok) return { ok: true }
     return { ok: false, error: 'execution_failed', message: result.message }

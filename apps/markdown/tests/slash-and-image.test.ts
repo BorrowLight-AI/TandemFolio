@@ -30,6 +30,10 @@ describe('filterSlashItems', () => {
     expect(hits.map((i) => i.id)).toContain('task')
   })
 
+  it('offers native formula insertion by LaTeX keyword', () => {
+    expect(filterSlashItems(items, 'latex').map((item) => item.id)).toEqual(['math'])
+  })
+
   it('image item only appears when an insert handler is provided', () => {
     expect(items.map((i) => i.id)).not.toContain('image')
     const withImage = buildSlashItems({ insertImage: () => {} })
@@ -263,5 +267,40 @@ describe('buildPrintHtml', () => {
     expect(html).toContain('x = 1')
     expect(html).not.toContain('md-codeblock-bar')
     expect(html).not.toContain('<select')
+  })
+
+  it('embeds KaTeX styles and a base URL for printable formulas', async () => {
+    const { buildPrintHtml } = await import('../src/renderer/export/printHtml')
+    const root = document.createElement('div')
+    root.innerHTML = '<span class="katex"><span class="katex-html">x</span></span>'
+    const html = buildPrintHtml(root, 'Math')
+
+    expect(html).toContain('.katex')
+    expect(html).toContain(`<base href="${document.baseURI}">`)
+    expect(html).toContain('katex-html')
+  })
+
+  it('copies the loaded self-contained KaTeX font faces into print output', async () => {
+    const { buildPrintHtml } = await import('../src/renderer/export/printHtml')
+    Object.defineProperty(document, 'styleSheets', {
+      configurable: true,
+      value: [
+        {
+          cssRules: [
+            {
+              cssText:
+                '@font-face { font-family: KaTeX_Test; src: url(data:font/woff2;base64,QUJDRA==) format("woff2"); }',
+            },
+          ],
+        },
+      ],
+    })
+    const root = document.createElement('div')
+    root.innerHTML = '<span class="katex">x</span>'
+
+    const html = buildPrintHtml(root, 'Math fonts')
+
+    expect(html).toContain('data:font/woff2;base64,QUJDRA==')
+    delete (document as unknown as { styleSheets?: unknown }).styleSheets
   })
 })

@@ -97,6 +97,36 @@ describe('docx export', () => {
     expect(table?.table?.rows[1]?.[1]?.paras.join('')).toBe('1')
   })
 
+  it('exports block math as a native Word OMML equation', async () => {
+    const editor = createEditor('$$\n\\frac{a}{b}\n$$')
+    const mapping = await mapDocToSaveBlocks(editor.getJSON(), noImages)
+    const equation = mapping.blocks.find((block) => block.kind === 'xml')
+
+    expect(equation && 'xml' in equation && equation.xml).toContain('<m:oMath>')
+  })
+
+  it('keeps unsupported block LaTeX visible in Word export', async () => {
+    const editor = createEditor('$$\n\\notacommand{x}\n$$')
+    const mapping = await mapDocToSaveBlocks(editor.getJSON(), noImages)
+    const text = mapping.blocks
+      .flatMap((block) => (block.kind === 'generated' ? (block.block.runs ?? []) : []))
+      .map((run) => run.text)
+      .join('')
+
+    expect(text).toContain('$$\\notacommand{x}$$')
+  })
+
+  it('keeps inline LaTeX visible in Word export', async () => {
+    const editor = createEditor('value $x_{1}$ end')
+    const mapping = await mapDocToSaveBlocks(editor.getJSON(), noImages)
+    const text = mapping.blocks
+      .flatMap((block) => (block.kind === 'generated' ? (block.block.runs ?? []) : []))
+      .map((run) => run.text)
+      .join('')
+
+    expect(text).toContain('$x_{1}$')
+  })
+
   it('task lists render checkbox glyphs', async () => {
     const parsed = await exportAndParse('- [x] done\n- [ ] open')
     const texts = parsed.blocks.map((b) => (b.runs ?? []).map((r) => r.text).join(''))

@@ -1234,7 +1234,7 @@ The source-current PPTX migration adds seven canonical native mutation routes:
 accept the expanded native gradient/effect/RTL/3D fields without introducing aliases. All 81 PPTX
 descriptors (80 Agent-visible and one internal) dispatch through the mounted
 `BrowserPresentation` history, recovery, and save/reopen seam. The generated Manifest now contains
-361 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 32 PDF.
+364 operations: 103 DOCX, 25 Markdown, 123 XLSX, 81 PPTX, and 32 PDF.
 
 ## Module map
 
@@ -1525,8 +1525,10 @@ The migration is a strangler replacement, not a second permanent command path.
 | Markdown print dialog                          | Canonical `markdown.document.open_print_dialog` host-view operation.                            | Complete in R2-233: popup success/failure is explicit and does not claim headless PDF. |
 | Markdown autosave preference                   | Explicit `markdown.document.set_auto_save { enabled }` final state.                             | Complete in R2-234: UI/Registry share persisted preference state.                      |
 | Markdown selection                             | Explicit bounded `markdown.selection.set { from, to }`.                                         | Complete in R2-235: arbitrary text targets without history/recovery pollution.         |
-| Markdown local assets                          | Session-bound chunk bridge plus browser-directory hydration.                                    | Complete in R2-236–R2-237: display/export bytes preserve authored paths.               |
-| Markdown retained-command audit                | Format-owned producer-to-operation mapping with no `missing` entry.                             | Complete in R2-238: all 22 descriptors are machine-checked.                            |
+| Markdown local assets                          | Session-bound chunk bridge, browser-directory hydration, and companion save transaction.        | Complete under ADR 0016: Save As rewrites/copies safe sources; rollback and owned orphan collection preserve user files. |
+| Markdown formulas                              | `markdown.math.insert` and `markdown.math.set` addressed native formula operations.              | Complete: UI/MCP share KaTeX nodes, native Undo, Markdown reopen, DOCX OMML/fallback, and print output. |
+| Markdown canvas zoom                           | `markdown.view.set_zoom { percent }` bounded view operation.                                    | Complete: MCP, controls, shortcuts, and pinch share 50–200% state without document history. |
+| Markdown retained-command audit                | Format-owned producer-to-operation mapping with no `missing` entry.                             | Complete: all 25 descriptors are machine-checked.                                      |
 | XLSX first five mutation aliases               | Canonical registry operations; legacy names removed in R6-09.                                   | Complete: direct branches and compatibility aliases are absent.                        |
 | XLSX column-delete and worksheet aliases       | Canonical registry operations; legacy names removed in R6-09.                                   | Complete: direct branches and compatibility aliases are absent.                        |
 | XLSX text-style Ribbon commands                | Rejected in favor of `xlsx.range.set_text_style`.                                               | Complete in R2-31 for bold, italic, underline, and strike.                             |

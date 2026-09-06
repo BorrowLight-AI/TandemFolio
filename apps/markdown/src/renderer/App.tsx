@@ -41,6 +41,7 @@ import { exportDocxBytes, loadMarkdownImageForDocx } from './export/docxExport'
 import { buildPrintHtml } from './export/printHtml'
 import {
   canOverwriteMarkdownFile,
+  canPersistMarkdownCompanions,
   detachMarkdownFileHandle,
   downloadMarkdownExport,
   openMarkdownFile,
@@ -48,7 +49,14 @@ import {
   readLoadedMarkdownAsset,
   saveMarkdownFile,
 } from './host/browser-files'
+import {
+  extractMarkdownImageSources,
+  prepareMarkdownAssetSave,
+  rewriteMarkdownImageSources,
+  type MarkdownAssetBytes,
+} from './host/asset-save-plan'
 import { executeMarkdownOperation } from './operations/registry'
+import { createMarkdownSaveQueue } from './host/save-queue'
 import { getMarkdownTextBlockIndexAtSelection } from './editor/block-type-actions'
 import { insertMarkdownImage } from './editor/image-actions'
 import { hydrateMarkdownLocalImages } from './editor/localImage'
@@ -57,6 +65,12 @@ import {
   readMarkdownAutoSavePreference,
   setMarkdownAutoSavePreference,
 } from './editor/document-preference-actions'
+import {
+  MARKDOWN_MAX_ZOOM,
+  MARKDOWN_MIN_ZOOM,
+  MARKDOWN_ZOOM_STEP,
+  normalizeMarkdownZoom,
+} from './editor/view-actions'
 
 type LoadStatus = 'loading' | 'ready' | 'error'
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed'
@@ -101,6 +115,7 @@ export default function App() {
   const [frontmatterOpen, setFrontmatterOpen] = useState(false)
   const [frontmatterText, setFrontmatterText] = useState('')
   const [autoSave, setAutoSave] = useState(readMarkdownAutoSavePreference)
+  const [zoom, setZoom] = useState(100)
   const [loadCommitId, setLoadCommitId] = useState(0)
   const [, refreshDisplayMode] = useState(0)
 
@@ -108,13 +123,14 @@ export default function App() {
   const fileNameRef = useRef<string | null>(null)
   const dirtyRef = useRef(false)
   const recoveryVersionRef = useRef(0)
-  const savingRef = useRef(false)
   const envelopeRef = useRef<DocEnvelope>({ ...EMPTY_ENVELOPE })
   const editorRef = useRef<Editor | null>(null)
   const slashMenuRef = useRef<SlashMenuHandle>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const nextLoadCommitIdRef = useRef(0)
   const loadCommitWaitersRef = useRef(new Map<number, (durationMs: number) => void>())
+  const assetBytesRef = useRef(new Map<string, MarkdownAssetBytes>())
+  const assetRewritesRef = useRef(new Map<string, string>())
 
   const setDirtyState = useCallback((next: boolean) => {
     dirtyRef.current = next
@@ -131,6 +147,20 @@ export default function App() {
   const setAutoSaveState = useCallback((enabled: boolean) => {
     setMarkdownAutoSavePreference(enabled)
     setAutoSave(enabled)
+  }, [])
+
+  const setZoomState = useCallback(({ percent }: { percent: number }): number => {
+    const normalized = normalizeMarkdownZoom(percent)
+    setZoom(normalized)
+    return normalized
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    setZoom((value) => normalizeMarkdownZoom(value - MARKDOWN_ZOOM_STEP))
+  }, [])
+
+  const zoomIn = useCallback(() => {
+    setZoom((value) => normalizeMarkdownZoom(value + MARKDOWN_ZOOM_STEP))
   }, [])
 
   const insertImage = useCallback(() => {
@@ -223,6 +253,8 @@ export default function App() {
       if (!current) throw new Error('The Markdown editor is not ready.')
       statusRef.current = 'loading'
       setStatus('loading')
+      assetBytesRef.current.clear()
+      assetRewritesRef.current.clear()
 
       const parseStartedAt = performance.now()
       const envelope = parseDocText(raw)
@@ -251,6 +283,36 @@ export default function App() {
     [awaitReactCommit, setDirtyState],
   )
 
+  const hydrateAssets = useCallback(
+    async (
+      current: Editor,
+      text: string,
+      rootId: string,
+      readAsset: (
+        rootId: string,
+        path: string,
+      ) => Promise<{
+        readonly mime: 'image/png' | 'image/jpeg' | 'image/gif'
+        readonly data: ArrayBuffer
+      } | null>,
+    ): Promise<void> => {
+      const readAndCache = async (assetRootId: string, source: string) => {
+        const cached = assetBytesRef.current.get(source)
+        if (cached) return { mime: cached.mime, data: cached.data }
+        const asset = await readAsset(assetRootId, source).catch(() => null)
+        if (asset) assetBytesRef.current.set(source, { source, ...asset })
+        return asset
+      }
+      await hydrateMarkdownLocalImages(current, rootId, readAndCache)
+      await Promise.all(
+        [...new Set(extractMarkdownImageSources(text))].map((source) =>
+          readAndCache(rootId, source),
+        ),
+      )
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!editor) return
     envelopeRef.current = { ...EMPTY_ENVELOPE }
@@ -258,20 +320,35 @@ export default function App() {
     setStatus('ready')
   }, [editor])
 
-  const doSave = useCallback(
+  const performSave = useCallback(
     async (saveAs = false): Promise<{ ok: true; fileName: string } | { ok: false }> => {
-      if (!editorRef.current || statusRef.current !== 'ready' || savingRef.current) {
+      if (!editorRef.current || statusRef.current !== 'ready') {
         return { ok: false }
       }
-      savingRef.current = true
       setSaveState('saving')
       try {
-        const text = serializeCurrent()
+        const serializedText = serializeCurrent()
+        const originalText = rewriteMarkdownImageSources(serializedText, assetRewritesRef.current)
         const suggestedName = fileNameRef.current ?? 'Untitled.md'
-        const result = await saveMarkdownFile(text, suggestedName, saveAs)
+        const prepared = canPersistMarkdownCompanions(saveAs)
+          ? await prepareMarkdownAssetSave(originalText, [...assetBytesRef.current.values()], {
+              copyRelative: saveAs,
+            })
+          : { text: originalText, companionFiles: [], rewrites: new Map<string, string>() }
+        const result = await saveMarkdownFile(
+          prepared.text,
+          suggestedName,
+          saveAs,
+          prepared.companionFiles,
+        )
         if (!result.ok) {
           setSaveState('idle')
           return { ok: false }
+        }
+        for (const [source, target] of prepared.rewrites) {
+          assetRewritesRef.current.set(source, target)
+          const asset = assetBytesRef.current.get(source)
+          if (asset) assetBytesRef.current.set(target, { ...asset, source: target })
         }
         fileNameRef.current = result.fileName
         setFileName(result.fileName)
@@ -282,12 +359,13 @@ export default function App() {
         console.error('[markdown] save failed:', error)
         setSaveState('failed')
         return { ok: false }
-      } finally {
-        savingRef.current = false
       }
     },
     [serializeCurrent, setDirtyState],
   )
+
+  const saveQueue = useMemo(() => createMarkdownSaveQueue(performSave), [performSave])
+  const doSave = useCallback((saveAs = false) => saveQueue(saveAs), [saveQueue])
 
   const openFile = useCallback(() => {
     void openMarkdownFile()
@@ -297,7 +375,7 @@ export default function App() {
           await loadText(loaded.fileName, loaded.text, true)
         })
         if (loaded.assetFiles?.size) {
-          await hydrateMarkdownLocalImages(editor, 'browser-directory', (_rootId, path) =>
+          await hydrateAssets(editor, loaded.text, 'browser-directory', (_rootId, path) =>
             readLoadedMarkdownAsset(loaded, path),
           )
         }
@@ -307,7 +385,7 @@ export default function App() {
         statusRef.current = 'error'
         setStatus('error')
       })
-  }, [editor, loadText])
+  }, [editor, hydrateAssets, loadText])
 
   const exportDocx = useCallback(async (): Promise<
     { ok: true; fileName: string } | { ok: false }
@@ -379,7 +457,7 @@ export default function App() {
                 phases: { decodeMs, ...phases },
               }
               if (assetRootId) {
-                await hydrateMarkdownLocalImages(editor, assetRootId, readLiveEditorLocalAsset)
+                await hydrateAssets(editor, raw, assetRootId, readLiveEditorLocalAsset)
               }
             },
             save: ({ saveAs }) => doSave(saveAs),
@@ -387,6 +465,7 @@ export default function App() {
             openPrintDialog,
             setAutoSave: ({ enabled }) => setAutoSaveState(enabled),
             setFrontmatter: ({ yaml }) => applyFrontmatter(yaml),
+            setZoom: setZoomState,
           })
           if (registered.handled) {
             if (!registered.ok) {
@@ -434,10 +513,12 @@ export default function App() {
     doSave,
     editor,
     exportDocx,
+    hydrateAssets,
     loadText,
     openPrintDialog,
     serializeCurrent,
     setAutoSaveState,
+    setZoomState,
   ])
 
   useEffect(() => {
@@ -457,14 +538,39 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 's') {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return
+      const key = event.key.toLowerCase()
+      if (key === 's') {
         event.preventDefault()
         void doSave(event.shiftKey)
+      } else if (key === 'p' && !event.shiftKey) {
+        event.preventDefault()
+        openPrintDialog()
+      } else if (key === '=' || key === '+') {
+        event.preventDefault()
+        zoomIn()
+      } else if (key === '-' || key === '_') {
+        event.preventDefault()
+        zoomOut()
+      } else if (key === '0') {
+        event.preventDefault()
+        setZoomState({ percent: 100 })
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [doSave])
+  }, [doSave, openPrintDialog, setZoomState, zoomIn, zoomOut])
+
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return
+      if (!(event.target as HTMLElement | null)?.closest?.('.editor-scroll')) return
+      event.preventDefault()
+      setZoom((value) => normalizeMarkdownZoom(value - event.deltaY * 0.6))
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [])
 
   const statusText =
     saveState === 'saving'
@@ -508,7 +614,7 @@ export default function App() {
         <div className="app-content">
           {editorActive ? (
             <div className="editor-scroll" ref={scrollRef}>
-              <div className="doc-page">
+              <div className="doc-page" style={{ zoom: zoom / 100 }}>
                 {frontmatterOpen && (
                   <FrontmatterPanel value={frontmatterText} onChange={applyFrontmatter} />
                 )}
@@ -526,12 +632,41 @@ export default function App() {
               {statusText && (
                 <span className={'status-save status-' + saveState}>{statusText}</span>
               )}
+              <button
+                type="button"
+                className="zoom-btn"
+                aria-label={t('zoomOut')}
+                onClick={zoomOut}
+                disabled={zoom <= MARKDOWN_MIN_ZOOM}
+              >
+                −
+              </button>
+              <input
+                className="zoom-slider"
+                type="range"
+                min={MARKDOWN_MIN_ZOOM}
+                max={MARKDOWN_MAX_ZOOM}
+                step={MARKDOWN_ZOOM_STEP}
+                value={zoom}
+                aria-label={t('zoom')}
+                onChange={(event) => setZoomState({ percent: Number(event.target.value) })}
+              />
+              <button
+                type="button"
+                className="zoom-btn"
+                aria-label={t('zoomIn')}
+                onClick={zoomIn}
+                disabled={zoom >= MARKDOWN_MAX_ZOOM}
+              >
+                +
+              </button>
+              <span className="zoom-value">{zoom}%</span>
             </div>
           </footer>
         </div>
       </div>
       <SlashMenu ref={slashMenuRef} state={slashState} onDismiss={() => setSlashState(null)} />
-      <TableMenu editor={editor} scrollRef={scrollRef} />
+      <TableMenu editor={editor} scrollRef={scrollRef} zoom={zoom} />
     </main>
   )
 }

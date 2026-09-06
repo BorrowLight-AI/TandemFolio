@@ -3,38 +3,10 @@
  *
  *  1. a press anywhere outside the popover closes it
  *  2. window blur closes it (app/window switch)
- *  3. a press on the shell tab strip — a sibling WebContentsView whose input
- *     never reaches this document — closes it via the app:chrome-pressed IPC
- *     relay (the shell main process also broadcasts it on window drag)
- *
- * Apps whose ribbon tab row doubles as the frameless-window drag region must
- * additionally suspend that region while a popover is open (drag regions
- * swallow mouse events, so no listener can see presses on the blank band).
  * While any popover installed here is open, `<html>` carries the
- * `genoffice-popover-open` class — suspend the drag region with
- * `html.genoffice-popover-open .your-drag-row { -webkit-app-region: no-drag; }`.
+ * `genoffice-popover-open` class for format-neutral styling.
  */
 import { useEffect, useRef } from 'react'
-
-type ChromePressedApi = { onChromePressed?: (handler: () => void) => () => void }
-
-/** Each app's preload exposes the app:chrome-pressed subscription under its
- * own namespace; probe the known ones so callers never need to care. */
-function subscribeChromePressed(handler: () => void): (() => void) | undefined {
-  const w = window as unknown as Record<string, ChromePressedApi | undefined>
-  for (const name of [
-    'slidesApi',
-    'desktopApi',
-    'desktop',
-    'pdfApi',
-    'markdownApi',
-    'aiOfficeTabs',
-  ]) {
-    const sub = w[name]?.onChromePressed
-    if (typeof sub === 'function') return sub.call(w[name], handler)
-  }
-  return undefined
-}
 
 /** open-popover refcount driving the html-level drag-region suspension class */
 let openPopovers = 0
@@ -54,7 +26,7 @@ export interface PopoverDismissOptions {
   inside?: () => ReadonlyArray<Element | null | undefined>
 }
 
-/** Install the three dismissal listeners; returns a teardown function. */
+/** Install browser-native dismissal listeners; returns a teardown function. */
 export function installPopoverDismiss(
   close: () => void,
   options?: PopoverDismissOptions,
@@ -73,13 +45,11 @@ export function installPopoverDismiss(
   if (inside) window.addEventListener('pointerdown', onPress, true)
   else window.addEventListener('mousedown', onPress)
   window.addEventListener('blur', onBlur)
-  const offChrome = subscribeChromePressed(close)
   bumpOpenPopovers(1)
   return () => {
     if (inside) window.removeEventListener('pointerdown', onPress, true)
     else window.removeEventListener('mousedown', onPress)
     window.removeEventListener('blur', onBlur)
-    offChrome?.()
     bumpOpenPopovers(-1)
   }
 }

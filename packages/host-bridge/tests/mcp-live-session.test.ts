@@ -686,6 +686,41 @@ describe('format-neutral MCP live session', () => {
     }
   })
 
+  it('uploads Markdown companion assets in the same local save transaction', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true }),
+      snapshot: (revision) => ({ revision, fileName: 'notes.md', dirty: false, selection: null }),
+    })
+
+    try {
+      await vi.waitFor(() => expect(mcp.instance).not.toBeNull())
+      bindEditor('session-assets', 'view-assets')
+      await vi.waitFor(() =>
+        expect(document.documentElement.dataset.liveEditorConnection).toBe('connected'),
+      )
+      await saveLiveEditorFile({
+        fileName: 'notes.md',
+        data: new TextEncoder().encode('![x](assets/x.png)').buffer,
+        companionFiles: [{ relativePath: 'assets/x.png', data: Uint8Array.from([1, 2, 3]).buffer }],
+      })
+
+      const calls = mcp.calls.filter((call) => call.name.includes('document_save'))
+      expect(calls[0]?.arguments).toMatchObject({
+        companionFiles: [{ relativePath: 'assets/x.png', size: 3 }],
+      })
+      expect(calls[1]?.arguments).toMatchObject({
+        relativePath: 'assets/x.png',
+        offset: 0,
+        data: 'AQID',
+      })
+      expect(calls[2]?.arguments).not.toHaveProperty('relativePath')
+      expect(calls.at(-1)?.name).toBe('office_editor_commit_document_save')
+    } finally {
+      teardown()
+    }
+  })
+
   it('reports whether the live editor is embedded through the shared display snapshot', () => {
     expect(getLiveEditorDisplayMode().embedded).toBe(false)
 
@@ -1470,8 +1505,10 @@ describe('format-neutral MCP live session', () => {
         size: mcp.stagedBytes.byteLength,
       },
     })
-    let executed: { readonly operation: string; readonly arguments: Record<string, unknown> } | null =
-      null
+    let executed: {
+      readonly operation: string
+      readonly arguments: Record<string, unknown>
+    } | null = null
     const teardown = attachMcpLiveSession({
       execute: async (command) => {
         executed = command

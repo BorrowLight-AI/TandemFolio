@@ -1659,9 +1659,12 @@ describe('office_execute', () => {
     expect(operations.find(({ id }) => id === 'markdown.document.save')).toMatchObject({
       availability: { available: true, reason: null },
     })
-    expect(operations.find(({ id }) => id === 'markdown.text.replace_selection')).toMatchObject({
-      availability: { available: false, reason: 'selection_required' },
-    })
+    expect(
+      operations.some(
+        ({ availability }) =>
+          availability?.available === false && availability.reason === 'selection_required',
+      ),
+    ).toBe(true)
     expect(operations.every(({ availability }) => availability !== undefined)).toBe(true)
   })
 

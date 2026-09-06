@@ -7,8 +7,9 @@ Execute the selected canonical id with a fresh caller `requestId` and a one-item
 `operations: [{ id, arguments }]` array. After a caller timeout, replay that exact request id and
 payload; do not create a second mutation while its final acknowledgement is unknown.
 
-This is the current 347-operation catalog projection. All five retained state-changing producer
-baselines have typed mappings and the R6-01 shared release gate passes, so `ready` is true. An
+This is the current 364-operation catalog projection. All five retained state-changing producer
+baselines have typed mappings. The source-current release gate remains fail-closed until its formal
+evidence is recaptured. An
 operation absent from summary discovery is unavailable and must not be inferred from visible UI.
 Supplying the current `sessionId` also returns stable availability without hiding the operation.
 
@@ -128,11 +129,14 @@ baseline. DOCX is included in the passing R6-01 readiness projection.
   `markdown.list.set_type`, `markdown.divider.insert`, `markdown.table.insert`,
   `markdown.table.update`, `markdown.code_block.set_language`.
 - Metadata/media: `markdown.frontmatter.set`, `markdown.image.insert`.
+- Native formulas: `markdown.math.insert`, `markdown.math.set`.
+- View: `markdown.view.set_zoom`.
 
 Context includes the active selection, bounded selected text, and active block type. YAML
 frontmatter, original line endings, UTF-8 BOM state, trailing-newline behavior, and local images are
-preserved by the format-owned round-trip layer. The 20 public and two internal Markdown operations
-cover its retained producer baseline. Markdown is included in the passing R6-01 readiness projection.
+preserved by the format-owned round-trip layer. The 23 public and two internal Markdown operations
+cover its retained producer baseline. Markdown companion images are committed beside the document
+through the session-bound save transaction. The source-current release gate remains fail-closed.
 
 ## XLSX
 

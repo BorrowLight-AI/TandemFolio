@@ -10558,6 +10558,109 @@
         "selection"
       ],
       "effects": [
+        "document",
+        "selection"
+      ],
+      "family": "math",
+      "format": "markdown",
+      "id": "markdown.math.insert",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "display": {
+            "enum": [
+              "inline",
+              "block"
+            ],
+            "type": "string"
+          },
+          "latex": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "type": "string"
+          },
+          "position": {
+            "maximum": 100000000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "position",
+          "display",
+          "latex"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "risk": "low",
+      "summary": "Insert one inline or block Markdown formula at an explicit document position.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document",
+        "selection"
+      ],
+      "effects": [
+        "document",
+        "selection"
+      ],
+      "family": "math",
+      "format": "markdown",
+      "id": "markdown.math.set",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "latex": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "position",
+          "latex"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "risk": "low",
+      "summary": "Set or delete one explicitly addressed Markdown formula.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document",
+        "selection"
+      ],
+      "effects": [
         "selection"
       ],
       "family": "selection",
@@ -10878,6 +10981,52 @@
       "risk": "low",
       "summary": "Set the complete inline-mark state of one explicit Markdown range.",
       "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "view"
+      ],
+      "family": "view",
+      "format": "markdown",
+      "id": "markdown.view.set_zoom",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "percent": {
+            "maximum": 200,
+            "minimum": 50,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "percent"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "percent": {
+            "maximum": 200,
+            "minimum": 50,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "percent"
+        ],
+        "type": "object"
+      },
+      "risk": "low",
+      "summary": "Set the Markdown canvas zoom percentage.",
+      "undoable": false,
       "visibility": "agent"
     },
     {

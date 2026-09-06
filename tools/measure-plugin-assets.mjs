@@ -7,7 +7,7 @@ const resources = [
   // The 2026-09-05 source-current DOCX port adds the upstream pagination,
   // layout, fonts and native dialogs; retain modest headroom over that audited build.
   ['DOCX', 'plugins/tandemfolio/assets/editor/index.html', 3_650_000],
-  ['Markdown', 'plugins/tandemfolio/assets/editors/markdown/index.html', 2_500_000],
+  ['Markdown', 'plugins/tandemfolio/assets/editors/markdown/index.html', 2_750_000],
   // The restored Univer renderer is intentionally much larger than the
   // rejected five-file scaffold. This is a regression ceiling, not a target
   // that permits deleting community capabilities.
