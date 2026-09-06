@@ -1,96 +1,86 @@
 # PPTX community renderer capability inventory
 
-- Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
-- Governing decisions: [ADR 0003](../adr/0003-complete-community-renderers-and-mcp-parity.md) and [ADR 0004](../adr/0004-format-owned-operation-registries.md)
-- Status: permitted renderer restored; retained state-changing command parity complete through R2-308; R6-01 passed; `ready === true`
-- Evidence date: 2026-08-30
+- Extraction baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
+- Selectively reviewed PPTX source: `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`
+- Governing decisions: [ADR 0003](../adr/0003-complete-community-renderers-and-mcp-parity.md), [ADR 0004](../adr/0004-format-owned-operation-registries.md), and [ADR 0005](../adr/0005-reproducible-release-evidence-gate.md)
+- Evidence date: 2026-09-06
+- Capability status: applicable non-AI PPTX-native work in the reviewed range is integrated; functional checks pass; release readiness remains fail-closed until source-current evidence is recaptured.
 
-## Pinned source accounting
+## Source disposition
 
-The pinned `apps/slides/src/renderer` tree contains 104 files. Every path has an explicit
-disposition:
+The reviewed candidate expands `apps/slides/src/renderer` to 205 paths. Path count is provenance
+evidence rather than a completion metric: the candidate also contains AI panels, Agent layouts,
+provider lifecycle code, desktop font download/catalog behavior, and generated-page assets that are
+outside the product boundary. This migration selectively admits the native presentation engine,
+renderer, editor controls, and localized UI required by the mounted browser editor. It does not move
+the extraction baseline or create a merge parent.
 
-| Classification                                      | Count | Current evidence                                                                                                                                                                                                                                                                                |
-| --------------------------------------------------- | ----: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Byte-identical pinned renderer files                |    61 | Hash equals the pinned blob at the same path.                                                                                                                                                                                                                                                   |
-| Host/product-boundary-adapted pinned renderer files |    19 | `App.tsx`; `AnimationPane.tsx`, `CommentsPane.tsx`, `FormatPane.tsx`, `Ribbon.tsx`, `RibbonHomeTab.tsx`, `icons.tsx`, `ribbon-shared.tsx`; `export-render.tsx`; locale/string modules; `index.html`, `keyboard-actions.ts`, `main.tsx`, `show-actions.ts`, `styles.css`, and `undo-routing.ts`. |
-| Prohibited pinned files intentionally absent        |    24 | Nine `renderer/ai/**` modules, 14 AI/chat/branding assets, and `i18n/strings-ai.ts`.                                                                                                                                                                                                            |
+The retained and adapted source-current areas are:
 
-The 61 + 19 + 24 classification covers all pinned renderer paths. TandemFolio-owned support consists of
-the three `renderer/host/**` files, three `renderer/operations/**` files, and `bidi-js.d.ts`.
-The pure `apps/slides/src/main/edit-text.ts` mapper is restored byte-for-byte outside the renderer
-tree and reused by the browser host. Electron `slides-main.ts` is behavior evidence only and is
-not shipped or imported. No enterprise source was inspected or used.
+- `packages/pptx-engine/src`: OOXML parse/generate, chart and ChartEx, diagram hierarchy,
+  SmartArt fallback, embedded-font discovery, theme/default-text inheritance, group/picture/table
+  editing, relationship cleanup, WordArt/effect properties, and stable object identity;
+- `packages/pptx-render/src`: chart geometry, pattern and group fills, DrawingML effects, scene 3D,
+  preset/custom geometry, text layout, vertical/warped text, RTL, and image effects;
+- `apps/slides/src/renderer`: canvas/text/table interaction, format/background panes, shape gallery,
+  color history, chart gallery, print HTML, embedded-font registration, keyboard and wheel navigation,
+  and the split 19-locale application/Ribbon/pane catalogs;
+- TandemFolio-owned `renderer/host` and `renderer/operations`: browser-safe package ownership,
+  typed MCP validation and dispatch, monotonic revision, native history, recovery, and save/reopen.
 
-## Mounted renderer and host boundary
+Explicitly excluded source includes `renderer/ai/**`, AI layout audit and generation tools, Agent-run
+lifecycle code, account/provider/telemetry code, Electron main/preload/IPC, desktop font download
+services, generated-page temporary files, and `ee/`. The desktop `PrintDialog` is not imported;
+the mounted browser renderer already exposes equivalent native page, handout, and notes layouts
+through its format-owned print path.
 
-`renderer/main.tsx` mounts the original community `App`, Ribbon, Konva canvas, dialogs, panes,
-views, text editor, notes, comments, master view, ink, clipboard, keyboard, and context menus.
-`?mode=audience` again mounts the original `AudienceView`; a same-origin browser channel shares
-the presentation render snapshot, animations, transitions, Morph keys, absolute show state,
-navigation, and ink with `PresenterView`.
+## Integrated native capabilities
 
-`BrowserPresentation` is the one format-owned package/state adapter. User and Agent changes share
-its package model, selection context, monotonically revised live session, dirty state, native
-snapshot history, renderer refresh, recovery checkpoint, and save seam. `BrowserSlidesHost` is
-now a compile-time-complete `SlidesApi`; the former `Partial` plus unsupported-method Proxy is
-removed. AI-only URL image methods/history batching and the unused whole-section setter were
-removed from the retained interface instead of being reimplemented as product capability.
+| Capability group                  | Source-current behavior retained in the mounted editor                                                                                                                                                                                                                   |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| OOXML and round trip              | Relationship-safe deletion, unknown-part preservation, theme override/default text style inheritance, explicit-off run properties, paragraph tabs, symbol fonts, background inheritance, hidden shapes, placeholder picture geometry, group fills, and resource cleanup. |
+| Charts                            | ChartEx parsing and fallback, sparse caches, category/axis/legend fidelity, line and marker styles, data-label placement, richer chart rendering, and native `bar3D`/`pie3D` insertion and update.                                                                       |
+| SmartArt and diagrams             | Diagram hierarchy parsing, stable identity, fallback rendering, group-child editing, and preservation of unsupported diagram payloads on save.                                                                                                                           |
+| Shapes, WordArt, and 3D           | Preset/custom geometry, adjustment handles, shape conversion, pattern/gradient/picture fills, complete line caps/joins/compound/gradient settings, shadow/glow/reflection/soft-edge effects, scene 3D, bevels, and WordArt text effects.                                 |
+| Text and RTL                      | Horizontal, stacked, vertical, 270-degree, and WordArt vertical modes; wrap/autofit/insets; highlights; warped text; East Asian and Korean font classification; RTL paragraphs and RTL table direction; explicit formatting preservation during edits.                   |
+| Tables and interaction            | Rotated/flipped table cell hit testing, RTL resize direction, native table-style RTL flag, robust selection/drag transforms, centered rotation pivots, and one-history-unit adjustment drags.                                                                            |
+| Pictures and media                | Source-rectangle inset crop fidelity, blip effects, image-fill tile/stretch details, placeholder geometry, embedded media/3D preservation, and relationship cleanup after replacement or deletion.                                                                       |
+| Fonts                             | Shared Carlito metric fallbacks load lazily through the host font asset bridge, while embedded OOXML font faces are discovered and registered through browser `FontFace` before first render; missing or malformed faces fail soft.                                      |
+| Background, print, and navigation | Solid, gradient, image, reset, and hide-master-graphics background actions; printable slide/handout/notes HTML; current-slide presentation shortcut; bounded wheel page flipping; and live deck refresh in an open audience window.                                      |
+| Localized editor UI               | Source-current format panes, background pane, shape and chart galleries, color controls, and application/Ribbon/pane strings across the retained 19 locales.                                                                                                             |
 
-Browser host effects are implemented without pretending to be document mutations:
+## Typed mutation parity
 
-- image and media pickers normalize files to bounded bytes before shared retained mutations;
-- image/PDF export uses browser downloads, with directory-handle writes where available;
-- print uses an isolated frame for full-page, handout, and notes layouts;
-- Presenter/Audience uses same-origin channel transport; display swapping returns false where the
-  browser cannot move windows across physical displays.
+PPTX now owns 81 serializable/executable descriptors: 80 Agent-visible operations and internal
+`pptx.document.load_staged`. Seven new routes expose source-current mutations through the same
+`OpenedPptx`, renderer refresh, history, recovery, and save seam:
 
-## Retained mutation parity
+- `pptx.slide.set_background_gradient`
+- `pptx.slide.set_background_image`
+- `pptx.slide.reset_background`
+- `pptx.slide.set_background_graphics_hidden`
+- `pptx.object.set_effects`
+- `pptx.object.set_geometry`
+- `pptx.text.set_body_properties`
 
-PPTX owns 74 serializable/executable descriptors: 73 Agent-visible operations and internal
-`pptx.document.load_staged`. R2-239 through R2-253 established the first document, selection,
-history, slide, object, text, and paragraph tracers. R2-254 through R2-308 close the retained
-families:
-
-- slides, layouts, size, background, hidden state, transitions, timings, header/footer, and
-  explicit slide/object copy;
-- explicit object lifecycle, z-order, group/ungroup, flip, fill/image-fill/stroke, batch geometry,
-  connector endpoints, and parent-addressed group-child text/font/paragraph/transform edits;
-- tables, pictures, charts, SmartArt, theme, animations, hyperlinks, notes, comments, sections,
-  ink, embedded images/media/3D, and master/layout-part editing;
-- picker-driven image insert/fill and internal element/slide clipboards converge on the same
-  primitives as their bounded Agent operations.
-
-`renderer/operations/baseline.ts` machine-checks every descriptor against a retained producer
-family and has no `missing` disposition. Export/print/presenter routes are explicitly classified as
-non-mutating `host-effect`. R6-09 retires the legacy `save`, `select_objects`,
-`replace_selected_text`, and `move_selected_objects` aliases; `open_local_file` remains an internal
-transport alias. The MCP server contains no handwritten PPTX schemas and the browser host contains
-no operation-id dispatch branches.
-
-Undo/package regressions found during the migration are now locked down: table preset style-part
-injection occurs inside the history unit, so Undo removes the injected `tableStyles.xml`; Morph
-keys read stable `cNvPr id`; master caches reset with history restoration; group-child operations
-write their direct group slices without ungrouping.
+Existing routes were widened without aliases: object fill accepts alpha, complete gradients and path
+focus; stroke accepts alpha, gradient, caps, joins and compound lines; paragraph and table style
+accept RTL; chart add/update accept `bar3D` and `pie3D`. Preview adjustment drags coalesce into one
+native undo unit. UI gestures and Agent commands therefore converge on the same document state and
+saved OOXML bytes.
 
 ## Verification
 
-- Slides workspace: four test files / 168 passing tests.
-- Registry/baseline: every descriptor has a handler and retained producer mapping; generated
-  Manifest has 337 operations total, including 74 PPTX operations.
-- Browser/engine evidence covers real-fixture open, shared UI/Agent primitives, native Undo/Redo,
-  package checkpoint/save, master edits, clipboards, embedded resources, and package-part rollback.
-- `tests/visual/pptx-community.spec.ts` retains 17 original-App and Codex-host scenarios, including
-  open/navigation, text/geometry/formatting/deletion, slide lifecycle/history, save/reopen, and the
-  four width/fullscreen states.
-- Typecheck, deterministic Manifest generation/check, PPTX production build, plugin packaging,
-  `git diff --check`, and the resource guard pass.
-- Generated self-contained PPTX resource: 3,370,397 raw bytes / 986,896 gzip bytes against the
-  4,000,000 raw-byte ceiling. The ceiling is a regression guard, never permission to remove
-  retained capability.
+- `@genoffice/pptx-engine`: 81 test files / 836 passing tests; typecheck passes.
+- `@genoffice/pptx-render`: 10 test files / 245 passing tests; typecheck passes.
+- `@genoffice/slides`: 21 test files / 266 passing tests; typecheck passes.
+- Integration coverage opens real fixtures through `BrowserPresentation`, dispatches the new typed
+  operations, verifies native Undo/Redo and monotonic revisions, saves, reopens, and checks the
+  resulting geometry, effects, text-body, and background state.
+- The generated Manifest contains 354 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 25
+  PDF. Registry descriptors, handlers, and retained-producer mappings have no missing entry.
+- AI/Electron dependency scans remain empty for the admitted PPTX product graph.
 
-## Shared release evidence
-
-R6-01 closes the ADR 0003 cross-format gate with pinned-source visual provenance, canonical
-runtime/resource samples, MCP smoke, license/product-boundary checks, and repository verification.
-`office_get_capabilities(format: "pptx").ready` is generated as `true` with the other four formats.
+The previous release projection predates these source changes. `ready` must remain false until the
+five-format source-current performance, visual, packaged-host, license, and smoke evidence is
+recaptured and approved; functional and round-trip tests do not replace that gate.

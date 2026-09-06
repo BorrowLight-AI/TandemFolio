@@ -17,13 +17,14 @@ The first release is intentionally live-bound. The mounted editor remains author
 ADR 0003 rejects simplified renderer replacements as the first-release target, and all parallel
 replacement renderer directories have been removed. All five pinned non-AI renderer structures are
 mounted through format-owned browser/MCP adapters. Their machine-checked producer baselines have no
-unexplained state-changing gap: 103 DOCX, 22 Markdown, 120 XLSX, 74 PPTX, and 25 PDF operations feed
+unexplained state-changing gap: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 25 PDF operations feed
 the generated product Manifest. Native renderer history or explicitly declared format-owned
 journals remain authoritative, and persisted families have save/reopen evidence. The remaining work
-is no longer a renderer-parity or release-evidence migration: R6-01 records approved pinned-source
+is no longer an unexplained renderer-parity migration. The prior R6-01 capture records approved pinned-source
 visual, packaged-host performance/resource, MCP smoke, license/prohibited-dependency, and repository
-gate evidence for all five formats. `ready` is generated from that approved, source-fingerprinted
-evidence rather than maintained as a hand-written capability claim.
+gate evidence for all five formats, but the 2026-09 source-current DOCX/XLSX/PPTX ports make that
+capture historical. `ready` remains generated from source-fingerprinted evidence and fails closed
+until the current source is recaptured; it is never maintained as a hand-written capability claim.
 
 R6-02 keeps that authority model but removes the fixed 500 ms command cadence. Every mounted
 renderer performs one immediate bootstrap poll and then holds one bounded app-only poll that the

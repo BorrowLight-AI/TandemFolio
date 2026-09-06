@@ -915,7 +915,17 @@ run together with the other formats.
 
 Status: Complete through R2-308 and the shared R6-01 release gate.
 
-Current evidence: all 80 permitted pinned renderer paths are present: 61 are byte-identical and 19 contain audited browser-host or prohibited-product cleanup adaptations; the remaining 24 pinned paths are prohibited AI modules/assets. The TandemFolio host adapters mount the original `App`, Ribbon, Konva canvas, dialogs, panes, views, text editor, and Presenter/Audience entry. Seventeen public browser scenarios remain, while four workspace test files / 168 assertions cover Registry and real-fixture browser primitives. Seventy-four PPTX-owned descriptors cover the retained mutation inventory, generated discovery/Broker validation, native Undo/Redo and package state. The producer baseline has no missing entry and the complete `SlidesApi` is compile-time enforced. Original focused-test classification and shared visual/performance/package release gates remain. See [`pptx-capability-inventory.md`](pptx-capability-inventory.md).
+Current evidence: all 80 permitted pinned renderer paths remain present, and the applicable
+browser-safe PPTX-native engine/render/editor work from the reviewed 205-path candidate is
+selectively admitted. AI, Agent lifecycle, desktop font-service, Electron/IPC, and generated-page
+paths remain excluded. The TandemFolio host adapters mount the original `App`, Ribbon, Konva
+canvas, dialogs, panes, views, text editor, and Presenter/Audience entry. Twenty workspace test
+files / 266 assertions cover Registry, real-fixture browser primitives, native Undo, and
+save/reopen. Eighty-one PPTX-owned descriptors cover the retained mutation inventory,
+generated discovery/Broker validation, native Undo/Redo, and package state. The producer baseline
+has no missing entry and the complete `SlidesApi` is compile-time enforced. Source-current
+visual/performance/package release evidence remains pending. See
+[`pptx-capability-inventory.md`](pptx-capability-inventory.md).
 
 - Restore the pinned Konva renderer, Ribbon, dialogs, slide lifecycle, text, shape, picture, table, chart, design, transition, animation, slideshow, review, notes, media, master, ink, and view behavior.
 - Preserve the retained PPTX parse/render engines and reconnect the original UI/state routes.

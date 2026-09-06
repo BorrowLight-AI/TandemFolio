@@ -1221,8 +1221,19 @@ The source-current XLSX Merge Workbooks action adds internal
 `office_merge_local_workbook` hydrate source workbooks into secondary browser sessions, then append
 their sheets through the mounted Univer command/history and existing additions/cell/style/merge
 save journal. Source formulas intentionally become cached values because their external workbook
-references are not valid in the destination. The generated Manifest contains 347 operations,
-including 123 XLSX operations (120 Agent-visible and three internal).
+references are not valid in the destination. At completion of that XLSX slice, the generated
+Manifest contained 347 operations, including 123 XLSX operations (120 Agent-visible and three
+internal).
+
+The source-current PPTX migration adds seven canonical native mutation routes:
+`pptx.slide.set_background_gradient`, `pptx.slide.set_background_image`,
+`pptx.slide.reset_background`, `pptx.slide.set_background_graphics_hidden`,
+`pptx.object.set_effects`, `pptx.object.set_geometry`, and
+`pptx.text.set_body_properties`. Existing fill, stroke, paragraph, table-style, and chart routes
+accept the expanded native gradient/effect/RTL/3D fields without introducing aliases. All 81 PPTX
+descriptors (80 Agent-visible and one internal) dispatch through the mounted
+`BrowserPresentation` history, recovery, and save/reopen seam. The generated Manifest now contains
+354 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 25 PDF.
 
 ## Module map
 

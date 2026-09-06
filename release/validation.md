@@ -1,8 +1,8 @@
 # Release evidence verification — 2026-09-04
 
-## Current status: recapture required after 2026-09-05 upstream ports
+## Current status: recapture required after 2026-09-06 upstream ports
 
-The selectively ported DOCX-native candidate plus three cross-format fixes changed the source fingerprint. The
+The selectively ported DOCX-, XLSX-, and PPTX-native candidate work changed the source fingerprint. The
 2026-09-04 approval below is historical and cannot authorize this source tree.
 See [upstream review](../docs/migration/upstream-review-2026-09-05.md) for changes
 and functional validation. No release ceiling or fail-closed check was changed.
