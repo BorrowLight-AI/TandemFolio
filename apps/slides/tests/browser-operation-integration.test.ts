@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -165,13 +166,16 @@ describe('PPTX browser operation integration', () => {
 
   it('overwrites the selected PPTX file on later saves without reopening the picker', async () => {
     let persisted = new ArrayBuffer(0)
-    const createWritable = vi.fn(async () => ({
-      write: async (data: FileSystemWriteChunkType) => {
-        if (!(data instanceof ArrayBuffer)) throw new Error('Expected PPTX ArrayBuffer bytes.')
-        persisted = data.slice(0)
-      },
-      close: async () => undefined,
-    }) as unknown as FileSystemWritableFileStream)
+    const createWritable = vi.fn(
+      async () =>
+        ({
+          write: async (data: FileSystemWriteChunkType) => {
+            if (!(data instanceof ArrayBuffer)) throw new Error('Expected PPTX ArrayBuffer bytes.')
+            persisted = data.slice(0)
+          },
+          close: async () => undefined,
+        }) as unknown as FileSystemWritableFileStream,
+    )
     const handle = {
       kind: 'file' as const,
       name: 'Quarterly Review.pptx',
@@ -221,7 +225,8 @@ describe('PPTX browser operation integration', () => {
         createWritable: async () =>
           ({
             write: async (data: FileSystemWriteChunkType) => {
-              if (!(data instanceof ArrayBuffer)) throw new Error('Expected PPTX ArrayBuffer bytes.')
+              if (!(data instanceof ArrayBuffer))
+                throw new Error('Expected PPTX ArrayBuffer bytes.')
               bytesByName.set(name, data.slice(0))
             },
             close: async () => undefined,
@@ -414,10 +419,14 @@ describe('PPTX browser operation integration', () => {
       open: vi.fn(() => audience),
     } as unknown as Window
     Object.assign(fakeWindow, { parent: fakeWindow })
+    const channels: FakeBroadcastChannel[] = []
     class FakeBroadcastChannel {
       onmessage: ((event: MessageEvent) => void) | null = null
       readonly postMessage = vi.fn()
       readonly close = vi.fn()
+      constructor() {
+        channels.push(this)
+      }
     }
     vi.stubGlobal('window', fakeWindow)
     vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel)
@@ -450,6 +459,26 @@ describe('PPTX browser operation integration', () => {
         expect.stringContaining('mode=audience'),
         'genoffice-pptx-audience',
         'popup',
+      )
+      channels[0]!.postMessage.mockClear()
+      await host.api.addElement({
+        slideIndex: 0,
+        kind: 'rect',
+        text: 'Updated during show',
+        xPx: 10,
+        yPx: 10,
+        wPx: 50,
+        hPx: 50,
+        fitWidthPx: 1200,
+      })
+      await vi.waitFor(() =>
+        expect(channels[0]?.postMessage).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'snapshot',
+            slides: expect.any(Array),
+            size: expect.objectContaining({ cx: expect.any(Number), cy: expect.any(Number) }),
+          }),
+        ),
       )
       host.api.presenterSync(sync)
       host.api.presenterInk({ type: 'clear' })
@@ -1943,7 +1972,7 @@ describe('PPTX browser operation integration', () => {
     })
     try {
       await expect(
-        host.api.editImageFill({ slideIndex: 0, sourceId: restoredId! }),
+        host.api.editImageFill({ slideIndex: 0, sourceId: restoredId!, mode: 'stretch' }),
       ).resolves.toMatchObject({
         nodes: [expect.objectContaining({ fill: expect.objectContaining({ kind: 'image' }) })],
       })

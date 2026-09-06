@@ -13133,9 +13133,11 @@
               "barStacked",
               "barPercentStacked",
               "barH",
+              "bar3D",
               "line",
               "area",
               "pie",
+              "pie3D",
               "doughnut",
               "scatter",
               "radar",
@@ -13291,9 +13293,11 @@
               "barStacked",
               "barPercentStacked",
               "barH",
+              "bar3D",
               "line",
               "area",
               "pie",
+              "pie3D",
               "doughnut",
               "scatter",
               "radar",
@@ -14413,7 +14417,7 @@
                 "type": "number"
               },
               "color": {
-                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 "type": "string"
               },
               "from": {
@@ -14509,7 +14513,7 @@
             "additionalProperties": false,
             "properties": {
               "color": {
-                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 "type": "string"
               },
               "widthEmu": {
@@ -14694,6 +14698,9 @@
                   "maximum": 1000,
                   "minimum": 1,
                   "type": "number"
+                },
+                "rtl": {
+                  "type": "boolean"
                 },
                 "runs": {
                   "items": {
@@ -15284,6 +15291,9 @@
                   "maximum": 1000,
                   "minimum": 1,
                   "type": "number"
+                },
+                "rtl": {
+                  "type": "boolean"
                 },
                 "runs": {
                   "items": {
@@ -15912,6 +15922,195 @@
       ],
       "family": "object",
       "format": "pptx",
+      "id": "pptx.object.set_effects",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "glow": {
+            "additionalProperties": false,
+            "properties": {
+              "color": {
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                "type": "string"
+              },
+              "radiusEmu": {
+                "maximum": 20000000,
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "color",
+              "radiusEmu"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "objectId": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "reflection": {
+            "additionalProperties": false,
+            "properties": {
+              "blurRadiusEmu": {
+                "maximum": 20000000,
+                "minimum": 0,
+                "type": "number"
+              },
+              "distanceEmu": {
+                "maximum": 20000000,
+                "minimum": 0,
+                "type": "number"
+              },
+              "endPosition": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "startAlpha": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "blurRadiusEmu",
+              "startAlpha",
+              "endPosition",
+              "distanceEmu"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "shadow": {
+            "additionalProperties": false,
+            "properties": {
+              "algn": {
+                "enum": [
+                  "tl",
+                  "t",
+                  "tr",
+                  "l",
+                  "ctr",
+                  "r",
+                  "bl",
+                  "b",
+                  "br"
+                ],
+                "type": "string"
+              },
+              "blurRadiusEmu": {
+                "maximum": 20000000,
+                "minimum": 0,
+                "type": "number"
+              },
+              "color": {
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                "type": "string"
+              },
+              "directionDeg": {
+                "maximum": 360,
+                "minimum": -360,
+                "type": "number"
+              },
+              "distanceEmu": {
+                "maximum": 20000000,
+                "minimum": 0,
+                "type": "number"
+              },
+              "inner": {
+                "type": "boolean"
+              },
+              "kxDeg": {
+                "maximum": 90,
+                "minimum": -90,
+                "type": "number"
+              },
+              "kyDeg": {
+                "maximum": 90,
+                "minimum": -90,
+                "type": "number"
+              },
+              "sx": {
+                "maximum": 10,
+                "minimum": -10,
+                "type": "number"
+              },
+              "sy": {
+                "maximum": 10,
+                "minimum": -10,
+                "type": "number"
+              }
+            },
+            "required": [
+              "color",
+              "blurRadiusEmu",
+              "distanceEmu",
+              "directionDeg"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "softEdgeRadiusEmu": {
+            "maximum": 20000000,
+            "minimum": 0,
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "slideIndex",
+          "objectId"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "updated": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Set or clear native shadow, glow, reflection, and soft-edge effects.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "object",
+      "format": "pptx",
       "id": "pptx.object.set_fill",
       "inputSchema": {
         "additionalProperties": false,
@@ -15924,12 +16123,32 @@
                 "minimum": -3600,
                 "type": "number"
               },
+              "center": {
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "maximum": 1,
+                    "minimum": 0,
+                    "type": "number"
+                  },
+                  "y": {
+                    "maximum": 1,
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "type": "object"
+              },
               "color": {
-                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 "type": "string"
               },
               "from": {
-                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 "type": "string"
               },
               "kind": {
@@ -15940,11 +16159,43 @@
                 ],
                 "type": "string"
               },
+              "path": {
+                "enum": [
+                  "circle",
+                  "rect",
+                  "shape"
+                ],
+                "type": "string"
+              },
               "radial": {
                 "type": "boolean"
               },
+              "stops": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "color": {
+                      "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                      "type": "string"
+                    },
+                    "pos": {
+                      "maximum": 1,
+                      "minimum": 0,
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "pos",
+                    "color"
+                  ],
+                  "type": "object"
+                },
+                "maxItems": 32,
+                "minItems": 2,
+                "type": "array"
+              },
               "to": {
-                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 "type": "string"
               }
             },
@@ -16002,7 +16253,7 @@
         "type": "object"
       },
       "risk": "medium",
-      "summary": "Set an explicit none, solid, or two-stop gradient object fill.",
+      "summary": "Set an explicit none, solid, or multi-stop native gradient object fill.",
       "undoable": true,
       "visibility": "agent"
     },
@@ -16085,6 +16336,78 @@
       ],
       "family": "object",
       "format": "pptx",
+      "id": "pptx.object.set_geometry",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustments": {
+            "additionalProperties": {
+              "maximum": 100000000,
+              "minimum": -100000000,
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "groupId": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "objectId": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "preset": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9]+$",
+            "type": "string"
+          },
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slideIndex",
+          "objectId"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "updated": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Change a native preset shape and its adjustment values.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "object",
+      "format": "pptx",
       "id": "pptx.object.set_image_fill",
       "inputSchema": {
         "additionalProperties": false,
@@ -16105,6 +16428,18 @@
               "webp",
               "tif",
               "tiff"
+            ],
+            "type": "string"
+          },
+          "groupId": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "stretch",
+              "tile"
             ],
             "type": "string"
           },
@@ -16193,8 +16528,26 @@
           "stroke": {
             "additionalProperties": false,
             "properties": {
+              "cap": {
+                "enum": [
+                  "flat",
+                  "rnd",
+                  "sq"
+                ],
+                "type": "string"
+              },
               "color": {
                 "pattern": "^#[0-9A-Fa-f]{6}$",
+                "type": "string"
+              },
+              "compound": {
+                "enum": [
+                  "sng",
+                  "dbl",
+                  "thickThin",
+                  "thinThick",
+                  "tri"
+                ],
                 "type": "string"
               },
               "dash": {
@@ -16210,6 +16563,53 @@
                   "sysDash",
                   "sysDashDot",
                   "sysDashDotDot"
+                ],
+                "type": "string"
+              },
+              "gradient": {
+                "additionalProperties": false,
+                "properties": {
+                  "angleDeg": {
+                    "maximum": 360,
+                    "minimum": -360,
+                    "type": "number"
+                  },
+                  "stops": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "color": {
+                          "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                          "type": "string"
+                        },
+                        "pos": {
+                          "maximum": 1,
+                          "minimum": 0,
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "pos",
+                        "color"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 32,
+                    "minItems": 2,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "stops",
+                  "angleDeg"
+                ],
+                "type": "object"
+              },
+              "join": {
+                "enum": [
+                  "round",
+                  "bevel",
+                  "miter"
                 ],
                 "type": "string"
               },
@@ -16590,6 +16990,9 @@
             "maxItems": 100,
             "minItems": 1,
             "type": "array"
+          },
+          "rtl": {
+            "type": "boolean"
           },
           "slideIndex": {
             "maximum": 100000,
@@ -17515,6 +17918,53 @@
       ],
       "family": "slide",
       "format": "pptx",
+      "id": "pptx.slide.reset_background",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slideIndex"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "enum": [
+              1
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Reset one slide to its inherited layout or master background.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "slide",
+      "format": "pptx",
       "id": "pptx.slide.set_advance_times",
       "inputSchema": {
         "additionalProperties": false,
@@ -17628,6 +18078,210 @@
       },
       "risk": "medium",
       "summary": "Set a solid background on one slide or every slide.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "slide",
+      "format": "pptx",
+      "id": "pptx.slide.set_background_gradient",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "angleDeg": {
+            "maximum": 360,
+            "minimum": -360,
+            "type": "number"
+          },
+          "from": {
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "type": "string"
+          },
+          "radial": {
+            "type": "boolean"
+          },
+          "scope": {
+            "enum": [
+              "slide",
+              "all"
+            ],
+            "type": "string"
+          },
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "to": {
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "maximum": 100001,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Set a two-stop native gradient background on one slide or every slide.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "slide",
+      "format": "pptx",
+      "id": "pptx.slide.set_background_graphics_hidden",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "hidden": {
+            "type": "boolean"
+          },
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slideIndex",
+          "hidden"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "enum": [
+              1
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Show or hide inherited master graphics on one slide.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "slide",
+      "format": "pptx",
+      "id": "pptx.slide.set_background_image",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "maxLength": 140000000,
+            "minLength": 4,
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+            "type": "string"
+          },
+          "extension": {
+            "enum": [
+              "png",
+              "jpg",
+              "jpeg",
+              "gif",
+              "bmp",
+              "webp",
+              "tif",
+              "tiff"
+            ],
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "stretch",
+              "tile"
+            ],
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "slide",
+              "all"
+            ],
+            "type": "string"
+          },
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scope",
+          "data",
+          "extension",
+          "mode"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "maximum": 100001,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Set a native stretched or tiled image background on one slide or every slide.",
       "undoable": true,
       "visibility": "agent"
     },
@@ -18307,6 +18961,9 @@
                   "minimum": 1,
                   "type": "number"
                 },
+                "rtl": {
+                  "type": "boolean"
+                },
                 "runs": {
                   "items": {
                     "additionalProperties": false,
@@ -18678,6 +19335,9 @@
           "firstRow": {
             "type": "boolean"
           },
+          "rtl": {
+            "type": "boolean"
+          },
           "shadingColor": {
             "pattern": "^(?:#[0-9A-Fa-f]{6}|none)$",
             "type": [
@@ -18857,6 +19517,100 @@
       ],
       "family": "text",
       "format": "pptx",
+      "id": "pptx.text.set_body_properties",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "autofit": {
+            "enum": [
+              "none",
+              "shrink",
+              "resize"
+            ],
+            "type": "string"
+          },
+          "insetBottomEmu": {
+            "maximum": 20000000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "insetLeftEmu": {
+            "maximum": 20000000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "insetRightEmu": {
+            "maximum": 20000000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "insetTopEmu": {
+            "maximum": 20000000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "objectId": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "slideIndex": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "vertical": {
+            "enum": [
+              "horizontal",
+              "eastAsianVertical",
+              "vertical",
+              "vert270",
+              "wordArtVertical"
+            ],
+            "type": "string"
+          },
+          "wrap": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slideIndex",
+          "objectId"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "updated": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Set native text direction, autofit, wrapping, and text-box insets.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document"
+      ],
+      "family": "text",
+      "format": "pptx",
       "id": "pptx.text.set_font",
       "inputSchema": {
         "additionalProperties": false,
@@ -18994,6 +19748,9 @@
                   "maximum": 1000,
                   "minimum": 1,
                   "type": "number"
+                },
+                "rtl": {
+                  "type": "boolean"
                 },
                 "runs": {
                   "items": {

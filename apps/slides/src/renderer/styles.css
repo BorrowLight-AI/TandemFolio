@@ -1,3 +1,7 @@
+/* The host lazily registers the shared Carlito/Carlito GO metric substitutes
+ * before first render; keeping them outside this stylesheet avoids embedding
+ * four large font binaries into the self-contained PPTX HTML resource. */
+
 /* Per-app accent (powerpoint-orange family) + slides-only tokens.
  * Chrome tokens (surface/text/border/…) come from
  * @genoffice/ui/tokens.css; nothing here may shadow those names. */
@@ -11,19 +15,22 @@
   --slides-rail-bg: #ececec;
   --slides-statusbar-border: #e1e4e8;
   --slides-statusbar-hover: rgb(0 0 0 / 8%);
+  /* same relative darkening as the ribbon's --active-bg selected gray on white */
+  --slides-statusbar-active: rgb(0 0 0 / 8%);
   --slides-ctl-border: #8a8886;
+  --slides-thumb-shadow: 0 0 1px rgb(0 0 0 / 28%), 0 1px 4px rgb(0 0 0 / 30%);
   --slides-text-disabled: #b0b0b0;
-  --slides-hover-wash: rgb(16 110 190 / 10%);
-  --slides-hover-wash-soft: rgb(16 110 190 / 8%);
+  --slides-hover-wash: color-mix(in srgb, var(--accent) 10%, transparent);
+  --slides-hover-wash-soft: color-mix(in srgb, var(--accent) 8%, transparent);
   --slides-stagebar-ink: #374151;
   --slides-comment-bg: #fffdfa;
   --slides-chip-bg: #f6f8fc;
   --slides-att-bg: #fafafa;
   --slides-att-border: #ececee;
-  --slides-select-border: #0070c0;
-  --slides-select-hover-bg: #f0f7ff;
-  --slides-select-active-bg: #e5f1fb;
-  --slides-cell-focus-bg: #eef5fd;
+  --slides-select-border: var(--accent);
+  --slides-select-hover-bg: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  --slides-select-active-bg: var(--accent-soft);
+  --slides-cell-focus-bg: color-mix(in srgb, var(--accent) 8%, var(--surface));
   --slides-ok: #2e9e44;
   --slides-error: #ef4444;
   --slides-error-bg: #fdecec;
@@ -131,19 +138,21 @@
   --slides-rail-bg: #252525;
   --slides-statusbar-border: #3a3a3a;
   --slides-statusbar-hover: rgb(255 255 255 / 10%);
+  --slides-statusbar-active: rgb(255 255 255 / 12%);
   --slides-ctl-border: #777;
+  --slides-thumb-shadow: 0 0 1px rgb(0 0 0 / 55%), 0 1px 4px rgb(0 0 0 / 60%);
   --slides-text-disabled: #666;
-  --slides-hover-wash: rgb(90 160 232 / 15%);
-  --slides-hover-wash-soft: rgb(90 160 232 / 12%);
+  --slides-hover-wash: color-mix(in srgb, var(--accent) 15%, transparent);
+  --slides-hover-wash-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --slides-stagebar-ink: #d0d0d0;
   --slides-comment-bg: #2b2a26;
   --slides-chip-bg: #2a2f36;
   --slides-att-bg: #2a2a2a;
   --slides-att-border: #3a3a3a;
-  --slides-select-border: #4a9eff;
-  --slides-select-hover-bg: #22303f;
-  --slides-select-active-bg: #2a3a4d;
-  --slides-cell-focus-bg: #223247;
+  --slides-select-border: var(--accent);
+  --slides-select-hover-bg: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --slides-select-active-bg: var(--accent-soft);
+  --slides-cell-focus-bg: color-mix(in srgb, var(--accent) 14%, var(--surface));
   --slides-ok: #58b380;
   --slides-error: #e57373;
   --slides-error-bg: rgb(229 115 115 / 12%);
@@ -172,19 +181,21 @@
     --slides-rail-bg: #252525;
     --slides-statusbar-border: #3a3a3a;
     --slides-statusbar-hover: rgb(255 255 255 / 10%);
+    --slides-statusbar-active: rgb(255 255 255 / 12%);
     --slides-ctl-border: #777;
+    --slides-thumb-shadow: 0 0 1px rgb(0 0 0 / 55%), 0 1px 4px rgb(0 0 0 / 60%);
     --slides-text-disabled: #666;
-    --slides-hover-wash: rgb(90 160 232 / 15%);
-    --slides-hover-wash-soft: rgb(90 160 232 / 12%);
+    --slides-hover-wash: color-mix(in srgb, var(--accent) 15%, transparent);
+    --slides-hover-wash-soft: color-mix(in srgb, var(--accent) 12%, transparent);
     --slides-stagebar-ink: #d0d0d0;
     --slides-comment-bg: #2b2a26;
     --slides-chip-bg: #2a2f36;
     --slides-att-bg: #2a2a2a;
     --slides-att-border: #3a3a3a;
-    --slides-select-border: #4a9eff;
-    --slides-select-hover-bg: #22303f;
-    --slides-select-active-bg: #2a3a4d;
-    --slides-cell-focus-bg: #223247;
+    --slides-select-border: var(--accent);
+    --slides-select-hover-bg: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    --slides-select-active-bg: var(--accent-soft);
+    --slides-cell-focus-bg: color-mix(in srgb, var(--accent) 14%, var(--surface));
     --slides-ok: #58b380;
     --slides-error: #e57373;
     --slides-error-bg: rgb(229 115 115 / 12%);
@@ -684,6 +695,31 @@ button {
   padding: 0 4px;
 }
 
+/* PowerPoint-style combined slides group: big new-slide button + stacked
+   small labeled rows (layout / add section). The column stretches to the big
+   button's height; 4px top tracks .rb-big's icon row, and the 1px bottom
+   (rather than the geometric 3px) offsets the row's centered line box so the
+   add-section text bottom-aligns with the new-slide label (measured) */
+.rb-slides-col {
+  align-items: stretch;
+  align-self: stretch;
+  justify-content: space-between;
+  gap: 0;
+  padding: 4px 0 1px;
+}
+/* these rows pair with a big button, so their glyphs use the 20px inline-row
+   size (not the 14px .rb-small default); 1.8 × 20/24 paints the standard
+   1.5px stroke at 20px */
+.rb-slides-col .rb-small svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+}
+.rb-slides-col .rb-small .rb-caret {
+  width: 10px;
+  height: 10px;
+}
+
 .rb-small {
   display: flex;
   align-items: center;
@@ -726,9 +762,16 @@ button {
   cursor: default;
 }
 
-/* Checkbox rows (View tab's Show group) */
-.rb-check-col {
-  align-items: stretch;
+/* Checkbox rows (View tab's Show group): one column-flow grid so the second
+   column's rows sit level with the first's (notes ↔ ruler, thumbnail pane ↔
+   gridlines) instead of each column centering independently */
+.rb-check-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(3, auto);
+  align-content: center;
+  column-gap: 2px;
+  row-gap: 4px;
 }
 
 .rb-check {
@@ -1210,10 +1253,31 @@ body.vib .slide-list {
   background: var(--slides-statusbar-hover);
 }
 
+/* Same self-drawn treatment as the format-pane sliders (.fp-slider): quiet
+ * two-tone track, white knob with the shared contact-ring shadow. The thumb
+ * stays at the native 16px so only its color/shadow changes. */
 .zoom-slider {
+  appearance: none;
   width: 110px;
-  accent-color: var(--slides-ctl-border);
   height: 3px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--slides-ctl-border) var(--zoom-pct, 0%),
+    var(--slides-swatch-ring) var(--zoom-pct, 0%)
+  );
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--slides-thumb-shadow);
 }
 
 .zoom-value {
@@ -1223,11 +1287,17 @@ body.vib .slide-list {
 
 /* Status-bar quick toggle button for notes */
 .status-notes-btn {
-  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
   background: none;
   color: inherit;
   font-size: 11px;
-  padding: 1px 6px;
+  /* 20px tall in the 24px status bar: the active/hover block keeps 2px of
+   * air above and below instead of touching the bar edges */
+  height: 20px;
+  padding: 0 5px;
   border-radius: 3px;
   cursor: pointer;
   margin-right: 8px;
@@ -1237,13 +1307,31 @@ body.vib .slide-list {
 }
 
 .status-notes-btn:hover {
-  background: var(--hover);
+  background: var(--slides-statusbar-hover);
 }
 
+/* Active = neutral pressed gray, not accent (PPT's Notes button stays plain);
+ * translucent wash so the shade matches the ribbon's selected gray on the
+ * darker statusbar background */
 .status-notes-btn.on {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent);
+  background: var(--slides-statusbar-active);
+}
+
+/* Start-show-from-current-slide (PowerPoint keeps this next to the zoom slider) */
+.status-play-btn {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 1px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.status-play-btn:hover {
+  background: var(--hover);
 }
 
 /* Shared header chrome for the retained format, comments, and animation panes. */
@@ -2628,12 +2716,17 @@ body.vib .slide-list {
   background: transparent;
 }
 
-/* Ruler: inside .stage-scale, scales with zoom and stays aligned with the slide */
+/* Stage rulers are fixed chrome outside the zoomed canvas: constant type size
+ * at any zoom, 0 at the slide center, and drag-from-ruler guide creation. */
 .ruler-row {
   display: flex;
+  flex-shrink: 0;
 }
 
-.ruler-body {
+.ruler-track {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
 }
 
@@ -2642,63 +2735,96 @@ body.vib .slide-list {
   height: 20px;
   flex-shrink: 0;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-right: none;
-  border-bottom: none;
+  border-right: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .ruler {
   position: relative;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
   overflow: hidden;
   user-select: none;
+  touch-action: none;
 }
 
 .ruler-h {
+  flex: 1;
   height: 20px;
-  border-bottom: none;
-  /* A small tick every 1/2 inch */
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--border-strong) 0 1px,
-    transparent 1px 48px
-  );
-  background-position: 0 bottom;
-  background-size: 100% 6px;
-  background-repeat: repeat-x;
+  border-bottom: 1px solid var(--border-strong);
+  cursor: row-resize;
 }
 
 .ruler-v {
   width: 20px;
   flex-shrink: 0;
-  border-right: none;
-  border-top: none;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--border-strong) 0 1px,
-    transparent 1px 48px
-  );
-  background-position: right 0;
-  background-size: 6px 100%;
-  background-repeat: repeat-y;
+  border-right: 1px solid var(--border-strong);
+  cursor: col-resize;
 }
 
-.ruler-tick {
+.ruler-num {
   position: absolute;
   font-size: 9px;
   color: var(--text-dim);
   line-height: 1;
 }
 
+.ruler-h .ruler-num {
+  top: 5px;
+  transform: translateX(-50%);
+}
+
+.ruler-v .ruler-num {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ruler-tick {
+  position: absolute;
+  background: var(--border-strong);
+}
+
 .ruler-h .ruler-tick {
-  top: 3px;
-  transform: translateX(2px);
+  bottom: 0;
+  width: 1px;
+  height: 5px;
 }
 
 .ruler-v .ruler-tick {
-  left: 3px;
-  transform: translateY(2px);
+  right: 0;
+  height: 1px;
+  width: 5px;
+}
+
+.ruler-indicator {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  background: var(--accent);
+}
+
+.ruler-h .ruler-indicator {
+  inset: 0 auto 0 0;
+  width: 1px;
+}
+
+.ruler-v .ruler-indicator {
+  inset: 0 0 auto;
+  height: 1px;
+}
+
+.ruler-bubble {
+  position: fixed;
+  z-index: 1000;
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  box-shadow: var(--slides-shadow-popup);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 /* Grid line / guide overlay (doesn't intercept the mouse) */
@@ -4129,13 +4255,14 @@ body.vib .slide-list {
   padding: 1px;
   cursor: pointer;
 }
-.rb-select-sm {
+/* Table border-weight dropdown: compact trigger, sized to "2.25pt" */
+.rb-border-weight-dd {
+  width: 74px;
+}
+
+.rb-border-weight-dd .gs-dd-btn {
+  height: 22px;
   font-size: 11px;
-  padding: 2px 4px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--surface);
-  color: var(--text);
 }
 
 /* Chart color scheme cards */
@@ -4426,21 +4553,43 @@ body.vib .slide-list {
     crosshair !important;
 }
 
-/* ── Split button (new slide + layout dropdown) ─────────────────────── */
-/* one-piece dropdown-capable big button (New Slide): looks identical to the
- * Layout button — icon + inline caret — where the caret glyph is a small
- * secondary hit area opening the layout gallery */
+/* ── Split button (main action + caret dropdown) ─────────────────────── */
+/* Two hit zones tiling one big button (PowerPoint split button, measured
+ * from PPT: non-hovered half light, hovered half a step darker, the halves
+ * seamlessly forming one rounded block) — the zones replace the icon-row
+ * wash instead of floating inside it */
+.rb-split .rb-big-icon {
+  gap: 0;
+  padding: 0;
+}
+/* 3px vertical padding lives in the zones (not the row) so the pill height
+   matches the plain buttons' icon-row wash exactly */
+.rb-split .rb-split-main {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 3px 4px 3px 6px;
+  border-radius: 4px 0 0 4px;
+}
 .rb-caret-hit {
   display: inline-flex;
   align-items: center;
-  padding: 3px 2px;
-  margin-left: 1px;
-  border-radius: 3px;
+  align-self: stretch;
+  padding: 3px 5px 3px 2px;
+  border-radius: 0 4px 4px 0;
 }
-
-/* The caret is only a hit area — hover/open always highlight the whole
- * icon block as one unit (PowerPoint reads the button as one piece) */
-.rb-big:has(.rb-caret-hit.active) .rb-big-icon {
+/* the two zones paint the hover themselves, edge to edge */
+.rb-split:hover:not(:disabled) .rb-big-icon {
+  background: none;
+}
+.rb-split:hover:not(:disabled) .rb-split-main,
+.rb-split:hover:not(:disabled) .rb-caret-hit {
+  background: var(--hover);
+}
+/* the half under the pointer (or with its dropdown open) darkens a step */
+.rb-split:not(:disabled) .rb-split-main:hover,
+.rb-split:not(:disabled) .rb-caret-hit:hover,
+.rb-split .rb-caret-hit.active {
   background: var(--active-bg);
 }
 
@@ -4732,27 +4881,101 @@ body.vib .slide-list {
   }
 }
 
-/* Print layout selection */
-.print-layouts {
+/* Print dialog (PowerPoint-style: preview pane + options column) */
+.modal.print-dialog {
+  width: min(880px, calc(100vw - 64px));
+}
+.print-dialog-body {
+  display: flex;
+  gap: 18px;
+  height: min(560px, calc(100vh - 220px));
+}
+.print-preview-pane {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.print-preview-pane iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.print-preview-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.print-options {
+  width: 240px;
+  flex-shrink: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 12px 0;
+  gap: 12px;
 }
-.print-layouts button {
-  padding: 8px 12px;
-  text-align: left;
+.print-options fieldset {
+  margin: 0;
+  padding: 8px 10px 6px;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
+  border-radius: 8px;
+}
+.print-options legend {
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.print-options .print-radio {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 7px;
+  font-size: 13px;
+  color: var(--text);
   cursor: pointer;
 }
-.print-layouts button:hover {
-  background: var(--hover);
+.print-options .print-radio input {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  accent-color: var(--accent);
 }
-
-.ruler-clickable {
-  cursor: crosshair;
+.print-options .print-radio:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+.print-options .print-range-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  outline: none;
+  background: var(--surface);
+}
+.print-options .print-range-input:focus {
+  border-color: var(--accent);
+}
+.print-options .print-range-input.invalid {
+  border-color: var(--danger);
+}
+.print-page-count {
+  margin-top: auto;
+  padding: 2px 2px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: right;
 }
 
 @media (prefers-reduced-motion: reduce) {

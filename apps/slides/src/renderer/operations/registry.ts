@@ -51,9 +51,11 @@ export interface PptxOperationServices {
       | 'barStacked'
       | 'barPercentStacked'
       | 'barH'
+      | 'bar3D'
       | 'line'
       | 'area'
       | 'pie'
+      | 'pie3D'
       | 'doughnut'
       | 'scatter'
       | 'radar'
@@ -74,9 +76,11 @@ export interface PptxOperationServices {
       | 'barStacked'
       | 'barPercentStacked'
       | 'barH'
+      | 'bar3D'
       | 'line'
       | 'area'
       | 'pie'
+      | 'pie3D'
       | 'doughnut'
       | 'scatter'
       | 'radar'
@@ -323,6 +327,7 @@ export interface PptxOperationServices {
     readonly spaceBeforePt?: number
     readonly spaceAfterPt?: number
     readonly align?: 'left' | 'center' | 'right' | 'justify'
+    readonly rtl?: boolean
     readonly indentDelta?: -1 | 1
   }) => number | Promise<number>
   readonly replaceAllText?: (input: {
@@ -362,11 +367,25 @@ export interface PptxOperationServices {
     readonly slideIndex: number
     readonly objectId: string
     readonly groupId?: string
-    readonly fill: Record<string, unknown>
+    readonly fill:
+      | { readonly kind: 'none' }
+      | { readonly kind: 'solid'; readonly color: string }
+      | {
+          readonly kind: 'gradient'
+          readonly from?: string
+          readonly to?: string
+          readonly stops?: readonly { readonly pos: number; readonly color: string }[]
+          readonly angleDegrees?: number
+          readonly radial?: boolean
+          readonly path?: 'circle' | 'rect' | 'shape'
+          readonly center?: { readonly x: number; readonly y: number }
+        }
   }) => boolean | Promise<boolean>
   readonly setObjectImageFill?: (input: {
     readonly slideIndex: number
     readonly objectId: string
+    readonly groupId?: string
+    readonly mode?: 'stretch' | 'tile'
     readonly data: string
     readonly extension: 'png' | 'jpg' | 'jpeg' | 'gif' | 'bmp' | 'webp' | 'tif' | 'tiff'
   }) => boolean | Promise<boolean>
@@ -378,12 +397,41 @@ export interface PptxOperationServices {
       readonly color: string
       readonly widthPt: number
       readonly dash?: string
+      readonly cap?: 'flat' | 'rnd' | 'sq'
+      readonly join?: 'round' | 'bevel' | 'miter'
+      readonly compound?: 'sng' | 'dbl' | 'thickThin' | 'thinThick' | 'tri'
+      readonly gradient?: {
+        readonly stops: readonly { readonly pos: number; readonly color: string }[]
+        readonly angleDeg: number
+      }
     } | null
   }) => boolean | Promise<boolean>
   readonly setSlideBackground?: (input: {
     readonly scope: 'slide' | 'all'
     readonly slideIndex?: number
     readonly color: string
+  }) => number | Promise<number>
+  readonly setSlideBackgroundGradient?: (input: {
+    readonly scope: 'slide' | 'all'
+    readonly slideIndex?: number
+    readonly from: string
+    readonly to: string
+    readonly angleDeg?: number
+    readonly radial?: boolean
+  }) => number | Promise<number>
+  readonly setSlideBackgroundImage?: (input: {
+    readonly scope: 'slide' | 'all'
+    readonly slideIndex?: number
+    readonly data: string
+    readonly extension: 'png' | 'jpg' | 'jpeg' | 'gif' | 'bmp' | 'webp' | 'tif' | 'tiff'
+    readonly mode: 'stretch' | 'tile'
+  }) => number | Promise<number>
+  readonly resetSlideBackground?: (input: {
+    readonly slideIndex: number
+  }) => number | Promise<number>
+  readonly setSlideBackgroundGraphicsHidden?: (input: {
+    readonly slideIndex: number
+    readonly hidden: boolean
   }) => number | Promise<number>
   readonly groupObjects?: (input: {
     readonly slideIndex: number
@@ -448,6 +496,49 @@ export interface PptxOperationServices {
     readonly slideIndex: number
     readonly objectId: string
     readonly anchor: 'top' | 'middle' | 'bottom'
+  }) => boolean | Promise<boolean>
+  readonly setObjectEffects?: (input: {
+    readonly slideIndex: number
+    readonly objectId: string
+    readonly shadow?: {
+      readonly color: string
+      readonly blurRadiusEmu: number
+      readonly distanceEmu: number
+      readonly directionDeg: number
+      readonly inner?: boolean
+      readonly sx?: number
+      readonly sy?: number
+      readonly kxDeg?: number
+      readonly kyDeg?: number
+      readonly algn?: string
+    } | null
+    readonly glow?: { readonly color: string; readonly radiusEmu: number } | null
+    readonly reflection?: {
+      readonly blurRadiusEmu: number
+      readonly startAlpha: number
+      readonly endPosition: number
+      readonly distanceEmu: number
+    } | null
+    readonly softEdgeRadiusEmu?: number | null
+  }) => boolean | Promise<boolean>
+  readonly setObjectGeometry?: (input: {
+    readonly slideIndex: number
+    readonly objectId: string
+    readonly groupId?: string
+    readonly preset?: string
+    readonly adjustments?: Readonly<Record<string, number>>
+  }) => boolean | Promise<boolean>
+  readonly setTextBodyProperties?: (input: {
+    readonly slideIndex: number
+    readonly objectId: string
+    readonly vertical?:
+      'horizontal' | 'eastAsianVertical' | 'vertical' | 'vert270' | 'wordArtVertical'
+    readonly autofit?: 'none' | 'shrink' | 'resize'
+    readonly wrap?: boolean
+    readonly insetLeftEmu?: number
+    readonly insetTopEmu?: number
+    readonly insetRightEmu?: number
+    readonly insetBottomEmu?: number
   }) => boolean | Promise<boolean>
   readonly addTable?: (input: {
     readonly slideIndex: number
@@ -586,6 +677,7 @@ export interface PptxOperationServices {
     readonly borderColor?: string
     readonly borderWidthPt?: number
     readonly borderPreset?: 'all' | 'none'
+    readonly rtl?: boolean
     readonly cells?: readonly { readonly row: number; readonly column: number }[]
   }) => string | Promise<string>
 }
@@ -1377,13 +1469,23 @@ const handlers = {
     const fill = arguments_.fill as Record<string, unknown>
     if (fill.kind === 'solid' && typeof fill.color !== 'string')
       return { ok: false, error: 'invalid_arguments', message: 'A solid PPTX fill requires color.' }
-    if (fill.kind === 'gradient' && (typeof fill.from !== 'string' || typeof fill.to !== 'string'))
+    if (
+      fill.kind === 'gradient' &&
+      !(
+        (typeof fill.from === 'string' && typeof fill.to === 'string') ||
+        (Array.isArray(fill.stops) && fill.stops.length >= 2)
+      )
+    )
       return {
         ok: false,
         error: 'invalid_arguments',
-        message: 'A gradient PPTX fill requires from and to colors.',
+        message: 'A gradient PPTX fill requires from/to colors or at least two stops.',
       }
-    if (fill.kind === 'gradient' && fill.radial === true && fill.angleDegrees !== undefined)
+    if (
+      fill.kind === 'gradient' &&
+      (fill.radial === true || fill.path !== undefined) &&
+      fill.angleDegrees !== undefined
+    )
       return {
         ok: false,
         error: 'invalid_arguments',
@@ -1396,7 +1498,7 @@ const handlers = {
       objectId: arguments_.objectId as string,
       ...(arguments_.groupId ? { groupId: arguments_.groupId as string } : {}),
       fill,
-    }
+    } as Parameters<NonNullable<PptxOperationServices['setObjectFill']>>[0]
     if (!(await services.setObjectFill(input)))
       return {
         ok: false,
@@ -1476,12 +1578,7 @@ const handlers = {
         error: 'execution_failed',
         message: 'PPTX stroke service is unavailable.',
       }
-    const input = {
-      slideIndex: arguments_.slideIndex as number,
-      objectId: arguments_.objectId as string,
-      ...(arguments_.groupId ? { groupId: arguments_.groupId as string } : {}),
-      stroke: arguments_.stroke as { color: string; widthPt: number; dash?: string } | null,
-    }
+    const input = arguments_ as Parameters<NonNullable<PptxOperationServices['setObjectStroke']>>[0]
     if (!(await services.setObjectStroke(input)))
       return {
         ok: false,
@@ -1534,6 +1631,7 @@ const handlers = {
       'spaceBeforePt',
       'spaceAfterPt',
       'align',
+      'rtl',
       'indentDelta',
     ] as const
     if (!patchKeys.some((key) => arguments_[key] !== undefined)) {
@@ -1880,6 +1978,101 @@ const handlers = {
     }
     return { ok: true, output: { changed }, refreshDocument: true }
   },
+  'pptx.slide.set_background_gradient': async (arguments_, services) => {
+    const input = arguments_ as Parameters<
+      NonNullable<PptxOperationServices['setSlideBackgroundGradient']>
+    >[0]
+    if (
+      (input.scope === 'slide' && input.slideIndex === undefined) ||
+      (input.scope === 'all' && input.slideIndex !== undefined)
+    )
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'PPTX background scope and slideIndex do not match.',
+      }
+    if (!services.setSlideBackgroundGradient)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX gradient-background service is unavailable.',
+      }
+    const changed = await services.setSlideBackgroundGradient(input)
+    if (!changed)
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX background target does not exist.',
+      }
+    return { ok: true, output: { changed }, refreshDocument: true }
+  },
+  'pptx.slide.set_background_image': async (arguments_, services) => {
+    const input = arguments_ as Parameters<
+      NonNullable<PptxOperationServices['setSlideBackgroundImage']>
+    >[0]
+    if (
+      (input.scope === 'slide' && input.slideIndex === undefined) ||
+      (input.scope === 'all' && input.slideIndex !== undefined)
+    )
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'PPTX background scope and slideIndex do not match.',
+      }
+    const dataError = validateImageData(input.data)
+    if (dataError) return { ok: false, error: 'invalid_arguments', message: dataError }
+    if (!services.setSlideBackgroundImage)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX image-background service is unavailable.',
+      }
+    const changed = await services.setSlideBackgroundImage(input)
+    if (!changed)
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX background target does not exist.',
+      }
+    return { ok: true, output: { changed }, refreshDocument: true }
+  },
+  'pptx.slide.reset_background': async (arguments_, services) => {
+    if (!services.resetSlideBackground)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX background-reset service is unavailable.',
+      }
+    const changed = await services.resetSlideBackground({
+      slideIndex: arguments_.slideIndex as number,
+    })
+    if (!changed)
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX slide does not exist.',
+      }
+    return { ok: true, output: { changed }, refreshDocument: true }
+  },
+  'pptx.slide.set_background_graphics_hidden': async (arguments_, services) => {
+    if (!services.setSlideBackgroundGraphicsHidden)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX background-graphics service is unavailable.',
+      }
+    const changed = await services.setSlideBackgroundGraphicsHidden({
+      slideIndex: arguments_.slideIndex as number,
+      hidden: arguments_.hidden as boolean,
+    })
+    if (!changed)
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX slide does not exist.',
+      }
+    return { ok: true, output: { changed }, refreshDocument: true }
+  },
   'pptx.slide.set_hidden': async (arguments_, services) => {
     if (!services.setSlideHidden)
       return {
@@ -2110,6 +2303,7 @@ const handlers = {
       'borderColor',
       'borderWidthPt',
       'borderPreset',
+      'rtl',
     ] as const
     if (!patchKeys.some((key) => input[key] !== undefined))
       return {
@@ -2267,6 +2461,94 @@ const handlers = {
       NonNullable<PptxOperationServices['setTextVerticalAnchor']>
     >[0]
     if (!(await services.setTextVerticalAnchor(input)))
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX text object does not exist.',
+      }
+    return { ok: true, output: { updated: true } }
+  },
+  'pptx.object.set_effects': async (arguments_, services) => {
+    const input = arguments_ as Parameters<
+      NonNullable<PptxOperationServices['setObjectEffects']>
+    >[0]
+    const patchKeys = ['shadow', 'glow', 'reflection', 'softEdgeRadiusEmu'] as const
+    if (!patchKeys.some((key) => input[key] !== undefined))
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'Provide at least one PPTX object effect to change.',
+      }
+    if (!services.setObjectEffects)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX object-effects service is unavailable.',
+      }
+    if (!(await services.setObjectEffects(input)))
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX object does not support effects.',
+      }
+    return { ok: true, output: { updated: true } }
+  },
+  'pptx.object.set_geometry': async (arguments_, services) => {
+    const input = arguments_ as Parameters<
+      NonNullable<PptxOperationServices['setObjectGeometry']>
+    >[0]
+    if (input.preset === undefined && input.adjustments === undefined)
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'Provide a PPTX preset geometry or adjustment map.',
+      }
+    if (input.adjustments && !Object.keys(input.adjustments).length)
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'PPTX shape adjustments must not be empty.',
+      }
+    if (!services.setObjectGeometry)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX object-geometry service is unavailable.',
+      }
+    if (!(await services.setObjectGeometry(input)))
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'The requested PPTX shape does not support that geometry.',
+      }
+    return { ok: true, output: { updated: true } }
+  },
+  'pptx.text.set_body_properties': async (arguments_, services) => {
+    const input = arguments_ as Parameters<
+      NonNullable<PptxOperationServices['setTextBodyProperties']>
+    >[0]
+    const patchKeys = [
+      'vertical',
+      'autofit',
+      'wrap',
+      'insetLeftEmu',
+      'insetTopEmu',
+      'insetRightEmu',
+      'insetBottomEmu',
+    ] as const
+    if (!patchKeys.some((key) => input[key] !== undefined))
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'Provide at least one PPTX text-body property to change.',
+      }
+    if (!services.setTextBodyProperties)
+      return {
+        ok: false,
+        error: 'execution_failed',
+        message: 'PPTX text-body service is unavailable.',
+      }
+    if (!(await services.setTextBodyProperties(input)))
       return {
         ok: false,
         error: 'invalid_arguments',

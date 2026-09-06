@@ -375,6 +375,7 @@ export interface Props {
     lineSpacingPct?: number
     spaceBeforePt?: number
     spaceAfterPt?: number
+    rtl?: boolean
     indentDelta?: 1 | -1
   }) => void
   onInsertTable: (rows: number, cols: number) => void
@@ -511,7 +512,7 @@ export interface Props {
   /** Execute a table style operation */
   onEditTableStyle?: (op: Omit<EditTableStyleOp, 'slideIndex' | 'sourceId'>) => void
   /** Selected table's header-row/banded-rows current state (toggle display) */
-  tableStyleFlags?: { firstRow: boolean; bandRow: boolean } | null
+  tableStyleFlags?: { firstRow: boolean; bandRow: boolean; rtl?: boolean } | null
   /** Cell being edited in the selected table; shading applies to just this cell */
   tableActiveCell?: { row: number; col: number } | null
   /** Execute a chart edit operation */

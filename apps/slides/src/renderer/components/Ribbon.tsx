@@ -2282,6 +2282,13 @@ export function Ribbon({
                 onClick={() => onEditTableStyle?.({ bandRow: true })}
                 offClick={() => onEditTableStyle?.({ bandRow: false })}
               />
+              <TableToggleBtn
+                label="RTL"
+                on={tableStyleFlags?.rtl ?? false}
+                disabled={!onEditTableStyle}
+                onClick={() => onEditTableStyle?.({ rtl: true })}
+                offClick={() => onEditTableStyle?.({ rtl: false })}
+              />
             </Group>
             <div className="ribbon-sep" />
             <Group label={tableActiveCell ? t('ribbonGroupShadingCell') : t('ribbonGroupShading')}>

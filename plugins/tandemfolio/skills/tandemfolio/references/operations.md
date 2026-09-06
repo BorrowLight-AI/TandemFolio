@@ -264,6 +264,8 @@ current detail schema before use. Ordinary continuation edits preserve the exist
 - Slides/sections: `pptx.slide.add_blank`, `pptx.slide.add_with_layout`,
   `pptx.slide.copy_to`, `pptx.slide.duplicate`, `pptx.slide.delete`, `pptx.slide.move`,
   `pptx.slide.set_layout`, `pptx.slide.set_size`, `pptx.slide.set_background`,
+  `pptx.slide.set_background_gradient`, `pptx.slide.set_background_image`,
+  `pptx.slide.reset_background`, `pptx.slide.set_background_graphics_hidden`,
   `pptx.slide.set_hidden`, `pptx.slide.set_transition`, `pptx.slide.set_advance_times`,
   `pptx.slide.apply_header_footer`, `pptx.section.add`, `pptx.section.rename`,
   `pptx.section.move`, `pptx.section.remove`.
@@ -271,10 +273,12 @@ current detail schema before use. Ordinary continuation edits preserve the exist
   `pptx.object.duplicate`, `pptx.object.group`, `pptx.object.ungroup`,
   `pptx.object.reorder`, `pptx.object.move_selection`, `pptx.object.set_transform`,
   `pptx.object.set_transforms`, `pptx.object.set_flip`, `pptx.object.set_fill`,
-  `pptx.object.set_image_fill`, `pptx.object.set_stroke`,
+  `pptx.object.set_image_fill`, `pptx.object.set_stroke`, `pptx.object.set_effects`,
+  `pptx.object.set_geometry`,
   `pptx.connector.set_endpoints`.
 - Text/paragraph/hyperlink: `pptx.text.set_paragraphs`, `pptx.text.replace_selection`,
   `pptx.text.replace_all`, `pptx.text.set_font`, `pptx.text.set_vertical_anchor`,
+  `pptx.text.set_body_properties`,
   `pptx.paragraph.set_format`, `pptx.hyperlink.set`.
 - Pictures/media/ink: `pptx.image.add_bytes`, `pptx.image.replace_bytes`,
   `pptx.picture.set_crop`, `pptx.picture.set_opacity`, `pptx.media.add_bytes`,
@@ -295,8 +299,9 @@ be called through `office_execute`; success returns `{ opened: true, fileName }`
 `BrowserPresentation` accepts the hydrated and length-validated bytes.
 
 Context includes active slide, selected object summaries, bounding positions, text, and notes. The
-73 public and one internal PPTX operations cover its retained producer baseline. `ready` remains
-true through the passing shared R6-01 release gate.
+80 public and one internal PPTX operations cover its retained producer baseline. The prior R6-01
+capture is historical after the source-current migration; `ready` remains fail-closed until the
+five-format evidence is recaptured and approved.
 
 ## PDF
 

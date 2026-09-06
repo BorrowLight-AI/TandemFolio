@@ -22,7 +22,7 @@ export interface FindMatch {
 }
 
 /** Laid-out text → plain text (skip bullet glyphs; restore spaces swallowed by wrapping; newline between paragraphs). */
-function layoutText(text?: RenderTextLayout): string {
+export function layoutText(text?: RenderTextLayout): string {
   if (!text) return ''
   let out = ''
   text.lines.forEach((l, i) => {
@@ -31,7 +31,7 @@ function layoutText(text?: RenderTextLayout): string {
       .filter((r) => !r.isBullet)
       .map((r) => r.text)
       .join('')
-    if (l.trailingSpace) out += ' '
+    if (l.trailingSpace) out += l.trailingText ?? ' '
   })
   return out
 }

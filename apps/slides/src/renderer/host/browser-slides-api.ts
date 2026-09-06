@@ -270,6 +270,7 @@ type PresenterMessage =
   | {
       readonly type: 'snapshot'
       readonly slides: RenderSlide[]
+      readonly size: { readonly cx: number; readonly cy: number }
       readonly animations: AnimationItem[][]
       readonly transitions: TransitionKind[]
       readonly shapeKeys: ShapeKey[][]
@@ -302,6 +303,9 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
   const showSyncListeners = new Set<(state: ShowSyncState) => void>()
   const showInkListeners = new Set<(event: ShowInkEvent) => void>()
   const audienceNavListeners = new Set<(action: AudienceNavAction) => void>()
+  const deckChangedListeners = new Set<
+    (state: { slides: RenderSlide[]; size: { cx: number; cy: number } }) => void
+  >()
 
   const historyState = () => ({
     canUndo: presentation?.canUndo ?? false,
@@ -311,6 +315,7 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
     if (presentation?.dirty) recoveryVersion += 1
     const state = historyState()
     for (const listener of historyListeners) listener(state)
+    void publishPresenterSnapshot()
   }
   const result = (width: number): OpenResult => {
     if (!presentation) throw new Error('No presentation is open.')
@@ -486,12 +491,13 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
     presenterChannel?.postMessage(message)
   }
   const publishPresenterSnapshot = async (): Promise<void> => {
-    if (!presentation) return
+    if (!presentation || !presenterChannel) return
     const slides = presentation.renderAll(fitWidthPx)
     const indexes = slides.map((_, index) => index)
     sendPresenterMessage({
       type: 'snapshot',
       slides,
+      size: presentation.size,
       animations: await Promise.all(indexes.map((index) => presentation!.animations(index))),
       transitions: await Promise.all(indexes.map((index) => presentation!.transition(index))),
       shapeKeys: await Promise.all(indexes.map((index) => presentation!.shapeKeys(index))),
@@ -506,6 +512,9 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
       audienceAnimations = message.animations
       audienceTransitions = message.transitions
       audienceShapeKeys = message.shapeKeys
+      for (const listener of deckChangedListeners) {
+        listener({ slides: message.slides, size: message.size })
+      }
       if (message.sync) {
         latestShowSync = message.sync
         for (const listener of showSyncListeners) listener(message.sync)
@@ -740,11 +749,41 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
     },
     editBackground: async (op) => {
       if (!presentation) return null
+      let imageSource: { data: string; extension: string } | undefined
+      if (op.kind === 'image' && op.pick) {
+        const file = await chooseImage()
+        if (!file) return null
+        const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
+        if (!isImageExtension(extension)) return null
+        imageSource = {
+          data: Buffer.from(await file.arrayBuffer()).toString('base64'),
+          extension,
+        }
+      }
       const result = await presentation.setBackground(
         {
           scope: op.slideIndex === -1 ? 'all' : 'slide',
           ...(op.slideIndex === -1 ? {} : { slideIndex: op.slideIndex }),
-          color: op.color,
+          ...(op.kind === 'solid'
+            ? { kind: 'solid' as const, color: op.color }
+            : op.kind === 'gradient'
+              ? {
+                  kind: 'gradient' as const,
+                  from: op.from,
+                  to: op.to,
+                  angleDeg: op.angleDeg,
+                  radial: op.radial,
+                }
+              : op.kind === 'image'
+                ? {
+                    kind: 'image' as const,
+                    mode: op.mode,
+                    sourceSlideIndex: op.sourceSlideIndex,
+                    ...imageSource,
+                  }
+                : op.kind === 'reset'
+                  ? { kind: 'reset' as const }
+                  : { kind: 'hideGraphics' as const, hidden: op.hidden }),
         },
         op.fitWidthPx,
       )
@@ -893,12 +932,144 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
       }
       return rendered
     },
+    changeShape: async (op) => {
+      if (!presentation) return null
+      const rendered = await presentation.setObjectGeometry(
+        {
+          slideIndex: op.slideIndex,
+          objectId: op.sourceId,
+          preset: op.prst,
+          ...(op.groupId ? { groupId: op.groupId } : {}),
+        },
+        fitWidthPx,
+      )
+      if (rendered) {
+        await refreshContext()
+        publishHistory()
+      }
+      return rendered
+    },
+    setShapeAdjust: async (op) => {
+      if (!presentation) return null
+      const rendered = await presentation.setObjectGeometry(
+        {
+          slideIndex: op.slideIndex,
+          objectId: op.sourceId,
+          adjustments: op.adjust,
+          ...(op.groupId ? { groupId: op.groupId } : {}),
+          ...(op.preview !== undefined ? { preview: op.preview } : {}),
+        },
+        fitWidthPx,
+      )
+      if (rendered) {
+        await refreshContext()
+        publishHistory()
+      }
+      return rendered
+    },
     setTextAnchor: async (op) => {
       if (!presentation) return null
       const rendered = await presentation.setTextVerticalAnchor(
         op.slideIndex,
         op.sourceId,
         op.anchor,
+        fitWidthPx,
+      )
+      if (rendered) {
+        await refreshContext()
+        publishHistory()
+      }
+      return rendered
+    },
+    setEffects: async (op) => {
+      if (!presentation) return null
+      const rendered = await presentation.setObjectEffects(
+        {
+          slideIndex: op.slideIndex,
+          objectId: op.sourceId,
+          ...(op.effects.shadow !== undefined
+            ? {
+                shadow:
+                  op.effects.shadow === null
+                    ? null
+                    : {
+                        color: op.effects.shadow.color,
+                        blurRadiusEmu: op.effects.shadow.blurRad,
+                        distanceEmu: op.effects.shadow.dist,
+                        directionDeg: op.effects.shadow.dirDeg,
+                        ...(op.effects.shadow.inner !== undefined
+                          ? { inner: op.effects.shadow.inner }
+                          : {}),
+                        ...(op.effects.shadow.sx !== undefined ? { sx: op.effects.shadow.sx } : {}),
+                        ...(op.effects.shadow.sy !== undefined ? { sy: op.effects.shadow.sy } : {}),
+                        ...(op.effects.shadow.kxDeg !== undefined
+                          ? { kxDeg: op.effects.shadow.kxDeg }
+                          : {}),
+                        ...(op.effects.shadow.kyDeg !== undefined
+                          ? { kyDeg: op.effects.shadow.kyDeg }
+                          : {}),
+                        ...(op.effects.shadow.algn !== undefined
+                          ? { algn: op.effects.shadow.algn }
+                          : {}),
+                      },
+              }
+            : {}),
+          ...(op.effects.glow !== undefined
+            ? {
+                glow:
+                  op.effects.glow === null
+                    ? null
+                    : { color: op.effects.glow.color, radiusEmu: op.effects.glow.radius },
+              }
+            : {}),
+          ...(op.effects.reflection !== undefined
+            ? {
+                reflection:
+                  op.effects.reflection === null
+                    ? null
+                    : {
+                        blurRadiusEmu: op.effects.reflection.blurRad,
+                        startAlpha: op.effects.reflection.startA,
+                        endPosition: op.effects.reflection.endPos,
+                        distanceEmu: op.effects.reflection.dist,
+                      },
+              }
+            : {}),
+          ...(op.effects.softEdge !== undefined ? { softEdgeRadiusEmu: op.effects.softEdge } : {}),
+        },
+        fitWidthPx,
+      )
+      if (rendered) {
+        await refreshContext()
+        publishHistory()
+      }
+      return rendered
+    },
+    setTextBodyProps: async (op) => {
+      if (!presentation) return null
+      const vertical = op.props.vert
+        ? (
+            {
+              horz: 'horizontal',
+              eaVert: 'eastAsianVertical',
+              vert: 'vertical',
+              vert270: 'vert270',
+              wordArtVert: 'wordArtVertical',
+            } as const
+          )[op.props.vert]
+        : undefined
+      const rendered = await presentation.setTextBodyProperties(
+        {
+          slideIndex: op.slideIndex,
+          objectId: op.sourceId,
+          ...(vertical ? { vertical } : {}),
+          ...(op.props.autofit !== undefined ? { autofit: op.props.autofit } : {}),
+          ...(op.props.wrap !== undefined ? { wrap: op.props.wrap } : {}),
+          ...(op.props.insets?.l !== undefined ? { insetLeftEmu: op.props.insets.l } : {}),
+          ...(op.props.insets?.t !== undefined ? { insetTopEmu: op.props.insets.t } : {}),
+          ...(op.props.insets?.r !== undefined ? { insetRightEmu: op.props.insets.r } : {}),
+          ...(op.props.insets?.b !== undefined ? { insetBottomEmu: op.props.insets.b } : {}),
+        },
         fitWidthPx,
       )
       if (rendered) {
@@ -1298,6 +1469,7 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
             : {}),
           ...(op.firstRow !== undefined ? { firstRow: op.firstRow } : {}),
           ...(op.bandRow !== undefined ? { bandedRows: op.bandRow } : {}),
+          ...(op.rtl !== undefined ? { rtl: op.rtl } : {}),
           ...(op.shadingColor !== undefined ? { shadingColor: op.shadingColor } : {}),
           ...(op.borderColor ? { borderColor: op.borderColor } : {}),
           ...(op.borderWidthPt != null ? { borderWidthPt: op.borderWidthPt } : {}),
@@ -1415,7 +1587,7 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
       }
       return added ? { slide: added.slide, sourceId: added.objectId } : null
     },
-    editImageFill: async ({ slideIndex, sourceId }) => {
+    editImageFill: async ({ slideIndex, sourceId, groupId, mode }) => {
       if (!presentation) return null
       const file = await chooseImage()
       if (!file) return null
@@ -1425,6 +1597,8 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
         {
           slideIndex,
           objectId: sourceId,
+          ...(groupId ? { groupId } : {}),
+          mode,
           data: await fileBase64(file),
           extension,
         },
@@ -1867,6 +2041,10 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
       listener(historyState())
       return () => historyListeners.delete(listener)
     },
+    onDeckChanged: (listener) => {
+      deckChangedListeners.add(listener)
+      return () => deckChangedListeners.delete(listener)
+    },
     onMenuCommand: () => () => undefined,
     onOpened: (listener) => {
       openedListeners.add(listener)
@@ -2029,11 +2207,13 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
                 ? (fill.color as string)
                 : {
                     gradient: {
-                      from: fill.from as string,
-                      to: fill.to as string,
-                      ...(fill.radial === true
-                        ? { radial: true }
-                        : { angleDeg: (fill.angleDegrees as number | undefined) ?? 0 }),
+                      from: fill.from ?? fill.stops?.[0]?.color ?? '#000000',
+                      to: fill.to ?? fill.stops?.at(-1)?.color ?? '#FFFFFF',
+                      ...(fill.stops ? { stops: [...fill.stops] } : {}),
+                      ...(fill.path ? { path: fill.path } : {}),
+                      ...(fill.center ? { center: fill.center } : {}),
+                      ...(fill.radial === true ? { radial: true } : {}),
+                      ...(fill.angleDegrees !== undefined ? { angleDeg: fill.angleDegrees } : {}),
                     },
                   }
           const rendered = await presentation.setFill(
@@ -2057,8 +2237,31 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
         },
         setObjectStroke: async ({ slideIndex, objectId, groupId, stroke }) => {
           if (!presentation) return false
+          const mutableStroke = stroke
+            ? {
+                color: stroke.color,
+                widthPt: stroke.widthPt,
+                ...(stroke.dash !== undefined ? { dash: stroke.dash } : {}),
+                ...(stroke.cap !== undefined ? { cap: stroke.cap } : {}),
+                ...(stroke.join !== undefined ? { join: stroke.join } : {}),
+                ...(stroke.compound !== undefined ? { compound: stroke.compound } : {}),
+                ...(stroke.gradient
+                  ? {
+                      gradient: {
+                        stops: stroke.gradient.stops.map((stop) => ({ ...stop })),
+                        angleDeg: stroke.gradient.angleDeg,
+                      },
+                    }
+                  : {}),
+              }
+            : null
           const rendered = await presentation.setStroke(
-            { slideIndex, sourceId: objectId, ...(groupId ? { groupId } : {}), stroke },
+            {
+              slideIndex,
+              sourceId: objectId,
+              ...(groupId ? { groupId } : {}),
+              stroke: mutableStroke,
+            },
             fitWidthPx,
           )
           if (rendered) {
@@ -2069,12 +2272,94 @@ export function createBrowserSlidesHost(): BrowserSlidesHost {
         },
         setSlideBackground: async (input) => {
           if (!presentation) return 0
-          const result = await presentation.setBackground(input, fitWidthPx)
+          const result = await presentation.setBackground({ ...input, kind: 'solid' }, fitWidthPx)
           if (result) {
             await refreshContext()
             publishHistory()
           }
           return result?.changed ?? 0
+        },
+        setSlideBackgroundGradient: async (input) => {
+          if (!presentation) return 0
+          const result = await presentation.setBackground(
+            { ...input, kind: 'gradient' },
+            fitWidthPx,
+          )
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return result?.changed ?? 0
+        },
+        setSlideBackgroundImage: async (input) => {
+          if (!presentation) return 0
+          const result = await presentation.setBackground(
+            {
+              scope: input.scope,
+              ...(input.slideIndex !== undefined ? { slideIndex: input.slideIndex } : {}),
+              kind: 'image',
+              data: input.data,
+              extension: input.extension,
+              mode: input.mode,
+            },
+            fitWidthPx,
+          )
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return result?.changed ?? 0
+        },
+        resetSlideBackground: async ({ slideIndex }) => {
+          if (!presentation) return 0
+          const result = await presentation.setBackground(
+            { scope: 'slide', slideIndex, kind: 'reset' },
+            fitWidthPx,
+          )
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return result?.changed ?? 0
+        },
+        setSlideBackgroundGraphicsHidden: async ({ slideIndex, hidden }) => {
+          if (!presentation) return 0
+          const result = await presentation.setBackground(
+            { scope: 'slide', slideIndex, kind: 'hideGraphics', hidden },
+            fitWidthPx,
+          )
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return result?.changed ?? 0
+        },
+        setObjectEffects: async (input) => {
+          if (!presentation) return false
+          const result = await presentation.setObjectEffects(input, fitWidthPx)
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return Boolean(result)
+        },
+        setObjectGeometry: async (input) => {
+          if (!presentation) return false
+          const result = await presentation.setObjectGeometry(input, fitWidthPx)
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return Boolean(result)
+        },
+        setTextBodyProperties: async (input) => {
+          if (!presentation) return false
+          const result = await presentation.setTextBodyProperties(input, fitWidthPx)
+          if (result) {
+            await refreshContext()
+            publishHistory()
+          }
+          return Boolean(result)
         },
         groupObjects: async ({ slideIndex, objectIds }) => {
           if (!presentation) return ''

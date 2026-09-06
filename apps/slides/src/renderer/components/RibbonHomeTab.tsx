@@ -940,6 +940,31 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
                     </button>
                   ))}
                   <span className="rb-mini-sep" />
+                  <button
+                    className="rb-icon"
+                    disabled={!hasSelection}
+                    data-tip="Left-to-right paragraph"
+                    aria-label="Left-to-right paragraph"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      if (hasSelection) onParagraphFormat({ rtl: false })
+                    }}
+                  >
+                    LTR
+                  </button>
+                  <button
+                    className="rb-icon"
+                    disabled={!hasSelection}
+                    data-tip="Right-to-left paragraph"
+                    aria-label="Right-to-left paragraph"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      if (hasSelection) onParagraphFormat({ rtl: true })
+                    }}
+                  >
+                    RTL
+                  </button>
+                  <span className="rb-mini-sep" />
                   <div className="rb-drop-wrap">
                     <button
                       className={`rb-icon ${lineSpacingOpen ? 'active' : ''}`}

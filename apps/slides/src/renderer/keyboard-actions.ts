@@ -18,7 +18,11 @@ function inTextField(): boolean {
 
 // Shortcuts: ⌘/Ctrl+Z undo, ⇧⌘Z / Ctrl+Y redo, ⌘/Ctrl+=/-/0 zoom,
 // Delete/Backspace delete selection, arrow keys nudge selection
-export function handleGlobalKeydown(ctx: ActionCtx, e: KeyboardEvent): void {
+export function handleGlobalKeydown(
+  ctx: ActionCtx,
+  e: KeyboardEvent,
+  platform = navigator.platform,
+): void {
   if (ctx.slideShow || ctx.presenter) return // In show/presenter view: navigation keys are handled by those views
   const mod = e.metaKey || e.ctrlKey
   const inField = inTextField()
@@ -27,6 +31,19 @@ export function handleGlobalKeydown(ctx: ActionCtx, e: KeyboardEvent): void {
   if (e.key === 'F5' && !mod) {
     e.preventDefault()
     showActions.startSlideShow(ctx, !e.shiftKey)
+    return
+  }
+  if (
+    /mac/i.test(platform) &&
+    e.metaKey &&
+    !e.ctrlKey &&
+    !e.altKey &&
+    !e.shiftKey &&
+    e.key === 'Enter'
+  ) {
+    if (e.defaultPrevented || editing || inField || ctx.cropTarget) return
+    e.preventDefault()
+    showActions.startSlideShow(ctx, false)
     return
   }
   // Undo/redo (menu accelerators normally intercept; fallback for shell/menuless scenarios)

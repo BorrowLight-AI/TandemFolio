@@ -14,6 +14,25 @@ export type { SlideComment, SectionInfo } from '@genoffice/pptx-engine'
 
 export type UiTheme = 'light' | 'dark' | 'system'
 
+/** Native OOXML effects patch; null clears one effect and undefined preserves it. */
+export interface SetEffectsPatch {
+  shadow?: {
+    color: string
+    blurRad: number
+    dist: number
+    dirDeg: number
+    inner?: boolean
+    sx?: number
+    sy?: number
+    kxDeg?: number
+    kyDeg?: number
+    algn?: string
+  } | null
+  glow?: { color: string; radius: number } | null
+  reflection?: { blurRad: number; startA: number; endPos: number; dist: number } | null
+  softEdge?: number | null
+}
+
 export interface OpenResult {
   path: string
   slides: RenderSlide[]
@@ -61,6 +80,8 @@ export interface EditParagraph {
   lineSpacingPct?: number
   spaceBeforePt?: number
   spaceAfterPt?: number
+  /** Paragraph base direction (a:pPr rtl). */
+  rtl?: boolean
 }
 
 /**
@@ -119,6 +140,8 @@ export interface SetElementParagraphFormatOp {
   spaceBeforePt?: number
   spaceAfterPt?: number
   align?: 'left' | 'center' | 'right' | 'justify'
+  /** Paragraph base direction (a:pPr rtl). */
+  rtl?: boolean
   /** Indent level increment/decrement (multi-level lists; applies to all paragraphs) */
   indentDelta?: 1 | -1
   /** In-group editing: all sourceIds are direct children of that group */
@@ -242,7 +265,15 @@ export interface FlipElementOp {
 /** Fill edit: solid color value #RRGGBB or 'none'. */
 /** Gradient fill (UI two colors + direction; radial=radial) */
 export interface GradientFillSpec {
-  gradient: { from: string; to: string; angleDeg?: number; radial?: boolean }
+  gradient: {
+    from: string
+    to: string
+    stops?: Array<{ pos: number; color: string }>
+    angleDeg?: number
+    radial?: boolean
+    path?: 'circle' | 'rect' | 'shape'
+    center?: { x: number; y: number }
+  }
 }
 
 export interface EditFillOp {
@@ -254,21 +285,41 @@ export interface EditFillOp {
   groupId?: string
 }
 
+export interface EditFillImageOp {
+  slideIndex: number
+  sourceId: string
+  mode: 'stretch' | 'tile'
+  groupId?: string
+}
+
 /** Stroke edit: null = no stroke; widthPt is the line width (points); dash is an OOXML prstDash preset ('solid' clears it, undefined keeps the file's value). */
 export interface EditStrokeOp {
   slideIndex: number
   sourceId: string
-  stroke: { color: string; widthPt: number; dash?: string } | null
+  stroke: {
+    color: string
+    widthPt: number
+    dash?: string
+    cap?: 'flat' | 'rnd' | 'sq'
+    join?: 'round' | 'bevel' | 'miter'
+    compound?: 'sng' | 'dbl' | 'thickThin' | 'thinThick' | 'tri'
+    gradient?: { stops: Array<{ pos: number; color: string }>; angleDeg: number }
+  } | null
   /** In-group editing: sourceId is a direct child of that group */
   groupId?: string
 }
 
-/** Solid page background; slideIndex=-1 applies to all pages. */
-export interface EditBackgroundOp {
+/** Page background edit; slideIndex=-1 applies to every slide. */
+export type EditBackgroundOp = {
   slideIndex: number
-  color: string
   fitWidthPx: number
-}
+} & (
+  | { kind: 'solid'; color: string }
+  | { kind: 'gradient'; from: string; to: string; angleDeg?: number; radial?: boolean }
+  | { kind: 'image'; mode: 'stretch' | 'tile'; pick?: boolean; sourceSlideIndex?: number }
+  | { kind: 'reset' }
+  | { kind: 'hideGraphics'; hidden: boolean }
+)
 
 /** Copy the selected elements to the in-app clipboard (any type, including tables/charts/groups). */
 export interface CopyElementsOp {
@@ -689,9 +740,11 @@ export interface AddChartOp {
     | 'barStacked'
     | 'barPercentStacked'
     | 'barH'
+    | 'bar3D'
     | 'line'
     | 'area'
     | 'pie'
+    | 'pie3D'
     | 'doughnut'
     | 'scatter'
     | 'radar'
@@ -783,6 +836,8 @@ export interface EditTableStyleOp {
   firstRow?: boolean
   /** Banded rows toggle */
   bandRow?: boolean
+  /** Mirror the table grid and cell order for right-to-left layout. */
+  rtl?: boolean
   /** Shading color #RRGGBB or 'none' (null = unchanged) */
   shadingColor?: string | null
   /** Border color #RRGGBB (null = unchanged) */
@@ -805,9 +860,11 @@ export interface EditChartOp {
     | 'barStacked'
     | 'barPercentStacked'
     | 'barH'
+    | 'bar3D'
     | 'line'
     | 'area'
     | 'pie'
+    | 'pie3D'
     | 'doughnut'
     | 'scatter'
     | 'radar'
@@ -968,13 +1025,45 @@ export interface SlidesApi {
   editPictureSrcRect: (op: EditPictureSrcRectOp) => Promise<RenderSlide | null>
   /** Whole-picture opacity */
   editPictureOpacity: (op: EditPictureOpacityOp) => Promise<RenderSlide | null>
-  /** Shape picture fill (the main process shows the image picker dialog; cancel returns null) */
-  editImageFill: (op: { slideIndex: number; sourceId: string }) => Promise<RenderSlide | null>
+  /** Shape picture/texture fill (the browser shows the image picker; cancel returns null). */
+  editImageFill: (op: EditFillImageOp) => Promise<RenderSlide | null>
+  /** Change a shape's preset geometry while retaining its formatting and text. */
+  changeShape: (op: {
+    slideIndex: number
+    sourceId: string
+    prst: string
+    groupId?: string
+  }) => Promise<RenderSlide | null>
+  /** Update preset-geometry adjustment values; preview calls share one undo step. */
+  setShapeAdjust: (op: {
+    slideIndex: number
+    sourceId: string
+    adjust: Record<string, number>
+    groupId?: string
+    preview?: boolean
+  }) => Promise<RenderSlide | null>
   /** Text box vertical alignment */
   setTextAnchor: (op: {
     slideIndex: number
     sourceId: string
     anchor: 'top' | 'middle' | 'bottom'
+  }) => Promise<RenderSlide | null>
+  /** Set native shape or picture effects. */
+  setEffects: (op: {
+    slideIndex: number
+    sourceId: string
+    effects: SetEffectsPatch
+  }) => Promise<RenderSlide | null>
+  /** Set native text direction, autofit, margins, and wrapping. */
+  setTextBodyProps: (op: {
+    slideIndex: number
+    sourceId: string
+    props: {
+      vert?: 'horz' | 'eaVert' | 'vert' | 'vert270' | 'wordArtVert'
+      autofit?: 'none' | 'shrink' | 'resize'
+      insets?: Partial<{ l: number; t: number; r: number; b: number }>
+      wrap?: boolean
+    }
   }) => Promise<RenderSlide | null>
   /** External clipboard content probe (internal/slide = last copy came from this app) */
   clipboardExternal: () => Promise<
@@ -1187,6 +1276,10 @@ export interface SlidesApi {
   onCloseSaveRequest: (handler: () => void) => () => void
   /** Undo/redo stack occupancy pushed by the main process (drives the QAT button gray states) */
   onHistoryChanged: (handler: (state: { canUndo: boolean; canRedo: boolean }) => void) => () => void
+  /** Another presenter window changed the shared deck. */
+  onDeckChanged: (
+    handler: (state: { slides: RenderSlide[]; size: { cx: number; cy: number } }) => void,
+  ) => () => void
   reportCloseSaveResult: (ok: boolean) => void
   /** Mirror the autosave toggle state to the main process: files with it on save silently on close, no dialog */
   setAutoSavePref: (on: boolean) => void

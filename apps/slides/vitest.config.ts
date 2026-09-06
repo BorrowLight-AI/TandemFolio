@@ -13,6 +13,10 @@ export default defineConfig({
         here,
         '../../packages/pptx-engine/src/table-grid.ts',
       ),
+      '@genoffice/pptx-engine/identity': resolve(
+        here,
+        '../../packages/pptx-engine/src/identity.ts',
+      ),
       '@genoffice/pptx-engine/background-promote': resolve(
         here,
         '../../packages/pptx-engine/src/background-promote.ts',
@@ -27,7 +31,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
-    environment: 'node',
+    environment: 'jsdom',
     testTimeout: 20000,
   },
 })

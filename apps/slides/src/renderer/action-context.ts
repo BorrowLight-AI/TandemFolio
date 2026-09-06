@@ -191,4 +191,6 @@ export interface ActionCtx {
     preview?: boolean,
     groupId?: string,
   ) => Promise<void>
+  /** Open the native format-background pane for the current slide. */
+  openBgFormat: () => void
 }

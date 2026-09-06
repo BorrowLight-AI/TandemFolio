@@ -58,6 +58,7 @@ import { formatClock, type CustomShow } from './slideshow-utils'
 import { ContextMenu } from './components/ContextMenu'
 import { PasteOptionsFloater } from './components/PasteOptionsFloater'
 import { FormatPane } from './components/FormatPane'
+import { FormatBackgroundPane } from './components/FormatBackgroundPane'
 import { CommentsPane } from './components/CommentsPane'
 import { AnimationPane } from './components/AnimationPane'
 import { AnimPreviewOverlay } from './components/AnimatedSlide'
@@ -82,7 +83,9 @@ import type {
   LinkDialogState,
   SlideShowState,
 } from './action-context'
-import { FIT_WIDTH, PX_PER_INCH } from './app-constants'
+import { FIT_WIDTH } from './app-constants'
+import { StageRuler } from './components/StageRuler'
+import { formatRulerValue, type RulerUnit } from './ruler-ticks'
 import * as fileActions from './file-actions'
 import * as clipboardActions from './clipboard-actions'
 import * as insertActions from './insert-actions'
@@ -95,6 +98,7 @@ import * as tableActions from './table-actions'
 import * as styleActions from './style-actions'
 import { handleGlobalKeydown } from './keyboard-actions'
 import { buildCtxItems } from './context-menu-items'
+import { createWheelPager } from './wheel-page-flip'
 
 const _IS_MAC = navigator.platform.toLowerCase().includes('mac')
 
@@ -142,46 +146,6 @@ function outlineOf(s: RenderSlide): { title: string; lines: string[] } {
     .sort((a, b) => a.y - b.y)
     .map((t) => t.text)
   return { title: title.text, lines }
-}
-
-/** Ruler (inch ticks): placed inside .stage-scale so it scales with the canvas, naturally aligned with the slide. */
-function Ruler({
-  length,
-  vertical,
-  onAddGuide,
-}: {
-  length: number
-  vertical?: boolean
-  /** Click the ruler to add a guide (pos = 0..1); a simplified take on PowerPoint's drag-a-guide-from-the-ruler */
-  onAddGuide?: (pos: number) => void
-}) {
-  const marks: number[] = []
-  for (let i = 0; i * PX_PER_INCH <= length - 12; i++) marks.push(i)
-  return (
-    <div
-      className={`ruler ${vertical ? 'ruler-v' : 'ruler-h'}${onAddGuide ? ' ruler-clickable' : ''}`}
-      style={vertical ? { height: length } : { width: length }}
-      onClick={
-        onAddGuide
-          ? (e) => {
-              const r = e.currentTarget.getBoundingClientRect()
-              const p = vertical ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width
-              onAddGuide(Math.min(1, Math.max(0, p)))
-            }
-          : undefined
-      }
-    >
-      {marks.map((i) => (
-        <span
-          key={i}
-          className="ruler-tick"
-          style={vertical ? { top: i * PX_PER_INCH } : { left: i * PX_PER_INCH }}
-        >
-          {i}
-        </span>
-      ))}
-    </div>
-  )
 }
 
 /** Collect fonts/sizes (pt) of all text runs in a node (including group children, table cells) for ribbon display.
@@ -297,6 +261,7 @@ export function App() {
   /** unscaled layout size of .stage-scale — its transform-scaled visual size is
    * scaleBox * zoom, which the wrapper zoom-box adopts so scrolling can reach it all */
   const stageScaleRef = useRef<HTMLDivElement | null>(null)
+  const stageRelRef = useRef<HTMLDivElement | null>(null)
   const zoomBoxRef = useRef<HTMLDivElement | null>(null)
   const [scaleBox, setScaleBox] = useState<{ w: number; h: number } | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -356,6 +321,7 @@ export function App() {
     window.slidesApi.setAutoSavePref?.(autoSave)
   }, [autoSave])
   const [showFormat, setShowFormat] = useState(false)
+  const [showBgFormat, setShowBgFormat] = useState(false)
   const [_recent, setRecent] = useState<string[]>([])
   const consumePendingRef = useRef<ReturnType<typeof window.slidesApi.consumePendingOpen> | null>(
     null,
@@ -386,6 +352,7 @@ export function App() {
   const [collapsedSecs, setCollapsedSecs] = useState<Set<string>>(new Set())
   const [renamingSec, setRenamingSec] = useState<{ id: string; value: string } | null>(null)
   const stageWrapRef = useRef<HTMLDivElement | null>(null)
+  const wheelPagerRef = useRef(createWheelPager())
   const [stageViewportSize, setStageViewportSize] = useState({ w: 0, h: 0 })
   // ── View tab: view mode + display toggles ─────────────────────────────
   const [viewMode, setViewMode] = useState<SlidesViewMode>('normal')
@@ -506,7 +473,7 @@ export function App() {
   }, [slide, fitZoom])
 
   // measure the stage content's unscaled layout size (offsetWidth ignores the
-  // transform); ruler/slide-size changes are the only things that alter it
+  // transform); slide-size changes are the only thing that alters it
   useLayoutEffect(() => {
     const el = stageScaleRef.current
     if (!el) {
@@ -514,7 +481,47 @@ export function App() {
       return
     }
     setScaleBox({ w: el.offsetWidth, h: el.offsetHeight })
-  }, [slide?.widthPx, slide?.heightPx, showRuler])
+  }, [slide?.widthPx, slide?.heightPx])
+
+  // ── Stage rulers (PowerPoint-style fixed chrome outside the zoomed canvas) ──
+  const rulerUnit: RulerUnit = lang === 'en' ? 'in' : 'cm'
+  const [rulerOrigin, setRulerOrigin] = useState<{ x: number; y: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!showRuler) return
+    const wrap = stageWrapRef.current
+    const rel = stageRelRef.current
+    if (!wrap || !rel) return
+    let raf = 0
+    const measure = () => {
+      raf = 0
+      const w = wrap.getBoundingClientRect()
+      const r = rel.getBoundingClientRect()
+      const next = { x: r.left - w.left, y: r.top - w.top }
+      setRulerOrigin((previous) =>
+        previous && Math.abs(previous.x - next.x) < 0.5 && Math.abs(previous.y - next.y) < 0.5
+          ? previous
+          : next,
+      )
+    }
+    const queue = () => {
+      if (!raf) raf = requestAnimationFrame(measure)
+    }
+    measure()
+    wrap.addEventListener('scroll', queue, { passive: true })
+    return () => {
+      wrap.removeEventListener('scroll', queue)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [showRuler, zoom, stageViewportSize, scaleBox, viewMode, hasDoc])
+  const [guidePreview, setGuidePreview] = useState<{ axis: 'v' | 'h'; pos: number } | null>(null)
+  const [guideBubble, setGuideBubble] = useState<{ x: number; y: number; text: string } | null>(
+    null,
+  )
+  const guideFracAt = useCallback((axis: 'v' | 'h', client: { x: number; y: number }) => {
+    const rect = stageRelRef.current?.getBoundingClientRect()
+    if (!rect) return 0
+    return axis === 'v' ? (client.x - rect.left) / rect.width : (client.y - rect.top) / rect.height
+  }, [])
 
   // On container size changes (window/sidebar/thumbnail toggles): follow with a
   // re-fit while in fit mode, and clamp any manual zoom back down to fit whenever
@@ -829,14 +836,21 @@ export function App() {
     const el = stageWrapRef.current
     if (!el) return
     const onWheel = (ev: WheelEvent) => {
-      if (!ev.ctrlKey && !ev.metaKey) return
+      if (ev.ctrlKey || ev.metaKey) {
+        ev.preventDefault()
+        const factor = Math.exp(-ev.deltaY * 0.01)
+        previewZoom((z) => z * factor, { x: ev.clientX, y: ev.clientY })
+        return
+      }
+      if (!stageFitsViewport || ev.shiftKey || ev.altKey) return
+      const flip = wheelPagerRef.current.feed(ev.deltaY, ev.timeStamp)
+      if (!flip) return
       ev.preventDefault()
-      const factor = Math.exp(-ev.deltaY * 0.01)
-      previewZoom((z) => z * factor, { x: ev.clientX, y: ev.clientY })
+      setCurrent((index) => Math.max(0, Math.min(slides.length - 1, index + flip)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [hasDoc, viewMode, previewZoom])
+  }, [hasDoc, viewMode, previewZoom, slides.length, stageFitsViewport])
 
   const newBlank = useCallback(async () => {
     const r = await window.slidesApi.newBlank(FIT_WIDTH)
@@ -914,7 +928,11 @@ export function App() {
 
   const onBackground = useCallback(
     (color: string, allSlides: boolean) =>
-      styleActions.onBackground(ctxRef.current, color, allSlides),
+      styleActions.onBackground(ctxRef.current, {
+        kind: 'solid',
+        color,
+        slideIndex: allSlides ? -1 : ctxRef.current.current,
+      }),
     [],
   )
   const applyThemePreset = useCallback(
@@ -2009,7 +2027,13 @@ export function App() {
   const tableStyleFlags = useMemo(
     () =>
       selectedNode?.type === 'table'
-        ? ((selectedNode as TableRenderNode).styleFlags ?? null)
+        ? {
+            ...((selectedNode as TableRenderNode).styleFlags ?? {
+              firstRow: false,
+              bandRow: false,
+            }),
+            rtl: (selectedNode as TableRenderNode).rtl ?? false,
+          }
         : null,
     [selectedNode],
   )
@@ -2230,6 +2254,12 @@ export function App() {
     undo,
     redo,
     onTransform,
+    openBgFormat: () => {
+      setShowBgFormat(true)
+      setShowFormat(false)
+      setShowAnimPane(false)
+      setShowComments(false)
+    },
   }
 
   // Context menu items (context-menu-items.ts); the deps list covers all state the builder reads
@@ -2698,53 +2728,92 @@ export function App() {
                   )
                 )}
                 <div className="stage-col">
-                  <div
-                    className={`stage-wrap${stageFitsViewport ? ' stage-fits-viewport' : ''}${brushMode ? ' format-brush-mode' : ''}`}
-                    ref={stageWrapRef}
-                  >
-                    {/* transform: scale() doesn't grow layout, so the scroll range ignores the
+                  {showRuler && (
+                    <div className="ruler-row">
+                      <div className="ruler-corner" />
+                      <StageRuler
+                        unit={rulerUnit}
+                        zoom={zoom}
+                        slideLen={slide.widthPx}
+                        origin={rulerOrigin?.x ?? 0}
+                        wrapRef={stageWrapRef}
+                        onGuidePreview={(client) => {
+                          const pos = Math.min(1, Math.max(0, guideFracAt('h', client)))
+                          setGuidePreview({ axis: 'h', pos })
+                          setGuideBubble({
+                            x: client.x,
+                            y: client.y,
+                            text: formatRulerValue(pos, slide.heightPx, rulerUnit),
+                          })
+                        }}
+                        onGuideCommit={(client) => {
+                          setGuidePreview(null)
+                          setGuideBubble(null)
+                          const raw = guideFracAt('h', client)
+                          if (raw < -0.02 || raw > 1.02) return
+                          setGuides((items) => [
+                            ...items,
+                            { axis: 'h', pos: Math.min(1, Math.max(0, raw)) },
+                          ])
+                          setShowGuides(true)
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="ruler-track">
+                    {showRuler && (
+                      <StageRuler
+                        vertical
+                        unit={rulerUnit}
+                        zoom={zoom}
+                        slideLen={slide.heightPx}
+                        origin={rulerOrigin?.y ?? 0}
+                        wrapRef={stageWrapRef}
+                        onGuidePreview={(client) => {
+                          const pos = Math.min(1, Math.max(0, guideFracAt('v', client)))
+                          setGuidePreview({ axis: 'v', pos })
+                          setGuideBubble({
+                            x: client.x,
+                            y: client.y,
+                            text: formatRulerValue(pos, slide.widthPx, rulerUnit),
+                          })
+                        }}
+                        onGuideCommit={(client) => {
+                          setGuidePreview(null)
+                          setGuideBubble(null)
+                          const raw = guideFracAt('v', client)
+                          if (raw < -0.02 || raw > 1.02) return
+                          setGuides((items) => [
+                            ...items,
+                            { axis: 'v', pos: Math.min(1, Math.max(0, raw)) },
+                          ])
+                          setShowGuides(true)
+                        }}
+                      />
+                    )}
+                    <div
+                      className={`stage-wrap${stageFitsViewport ? ' stage-fits-viewport' : ''}${brushMode ? ' format-brush-mode' : ''}`}
+                      ref={stageWrapRef}
+                    >
+                      {/* transform: scale() doesn't grow layout, so the scroll range ignores the
                     zoomed size and the left/top overflow becomes unreachable; the zoom-box
                     is sized to the scaled dimensions to give the scroller the real extent */}
-                    <div
-                      ref={zoomBoxRef}
-                      className="stage-zoom-box"
-                      style={
-                        scaleBox
-                          ? { width: scaleBox.w * zoom, height: scaleBox.h * zoom }
-                          : undefined
-                      }
-                    >
                       <div
-                        ref={stageScaleRef}
-                        className="stage-scale"
-                        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                        ref={zoomBoxRef}
+                        className="stage-zoom-box"
+                        style={
+                          scaleBox
+                            ? { width: scaleBox.w * zoom, height: scaleBox.h * zoom }
+                            : undefined
+                        }
                       >
-                        {showRuler && (
-                          <div className="ruler-row">
-                            <div className="ruler-corner" />
-                            <Ruler
-                              length={slide.widthPx}
-                              onAddGuide={
-                                showGuides
-                                  ? (p) => setGuides((g) => [...g, { axis: 'v', pos: p }])
-                                  : undefined
-                              }
-                            />
-                          </div>
-                        )}
-                        <div className="ruler-body">
-                          {showRuler && (
-                            <Ruler
-                              length={slide.heightPx}
-                              vertical
-                              onAddGuide={
-                                showGuides
-                                  ? (p) => setGuides((g) => [...g, { axis: 'h', pos: p }])
-                                  : undefined
-                              }
-                            />
-                          )}
+                        <div
+                          ref={stageScaleRef}
+                          className="stage-scale"
+                          style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                        >
                           <div
+                            ref={stageRelRef}
                             className="stage-rel"
                             style={{
                               position: 'relative',
@@ -2789,6 +2858,16 @@ export function App() {
                               onSelect={handleCanvasSelect}
                               onEditText={startEdit}
                               onTransform={onTransform}
+                              onAdjust={(id, adjust, preview) =>
+                                void window.slidesApi
+                                  .setShapeAdjust({
+                                    slideIndex: current,
+                                    sourceId: id,
+                                    adjust,
+                                    preview,
+                                  })
+                                  .then((r) => r && applySlide(current, r))
+                              }
                               onEditTableCell={startEditCell}
                               onTableColResize={onTableColResize}
                               onTableRowResize={(id, row, hPx) =>
@@ -2847,10 +2926,20 @@ export function App() {
                                           i === gi ? { ...x, pos: Math.min(1, Math.max(0, p)) } : x,
                                         ),
                                       )
+                                      setGuideBubble({
+                                        x: ev.clientX,
+                                        y: ev.clientY,
+                                        text: formatRulerValue(
+                                          p,
+                                          g.axis === 'v' ? slide.widthPx : slide.heightPx,
+                                          rulerUnit,
+                                        ),
+                                      })
                                     }
                                     const up = (ev: PointerEvent) => {
                                       window.removeEventListener('pointermove', move)
                                       window.removeEventListener('pointerup', up)
+                                      setGuideBubble(null)
                                       // Dragging off the canvas = delete the guide
                                       const outside =
                                         ev.clientX < rect.left - 24 ||
@@ -2868,6 +2957,16 @@ export function App() {
                                   }
                                 />
                               ))}
+                            {guidePreview && (
+                              <div
+                                className={`guide-line guide-${guidePreview.axis}`}
+                                style={
+                                  guidePreview.axis === 'v'
+                                    ? { left: `${guidePreview.pos * 100}%` }
+                                    : { top: `${guidePreview.pos * 100}%` }
+                                }
+                              />
+                            )}
                             {editing && editNode && (
                               <TextEditOverlay
                                 node={editNode}
@@ -2995,6 +3094,14 @@ export function App() {
                       </div>
                     </div>
                   </div>
+                  {guideBubble && (
+                    <div
+                      className="ruler-bubble"
+                      style={{ left: guideBubble.x + 14, top: guideBubble.y + 16 }}
+                    >
+                      {guideBubble.text}
+                    </div>
+                  )}
                   {showNotes && (
                     <div className="notes-pane" style={{ height: notesHeight }}>
                       <div
@@ -3030,19 +3137,53 @@ export function App() {
                     </div>
                   )}
                 </div>
-                {showFormat ? (
+                {showBgFormat ? (
+                  <FormatBackgroundPane
+                    key={current}
+                    slide={slide}
+                    onApply={(op, all) =>
+                      void styleActions.onBackground(ctxRef.current, {
+                        ...op,
+                        slideIndex: all ? -1 : current,
+                      })
+                    }
+                    onCollapse={() => setShowBgFormat(false)}
+                  />
+                ) : showFormat ? (
                   <FormatPane
                     node={selectedNode}
+                    viewScale={slide.scale}
+                    slideSizePx={{ w: slide.widthPx, h: slide.heightPx }}
                     onTransform={onTransform}
                     onFill={(id, fill) => void onFill(id, fill)}
-                    onImageFill={(id) =>
+                    onImageFill={(id, mode) =>
                       void window.slidesApi
-                        .editImageFill({ slideIndex: current, sourceId: id })
+                        .editImageFill({ slideIndex: current, sourceId: id, mode })
                         .then((r) => r && applySlide(current, r))
                     }
                     onTextAnchor={(id, anchor) =>
                       void window.slidesApi
                         .setTextAnchor({ slideIndex: current, sourceId: id, anchor })
+                        .then((r) => r && applySlide(current, r))
+                    }
+                    onTextBodyProps={(id, props) =>
+                      void window.slidesApi
+                        .setTextBodyProps({ slideIndex: current, sourceId: id, props })
+                        .then((r) => r && applySlide(current, r))
+                    }
+                    onEffects={(id, effects) =>
+                      void window.slidesApi
+                        .setEffects({ slideIndex: current, sourceId: id, effects })
+                        .then((r) => r && applySlide(current, r))
+                    }
+                    onChangeShape={(id, preset) =>
+                      void window.slidesApi
+                        .changeShape({
+                          slideIndex: current,
+                          sourceId: id,
+                          prst: preset,
+                          ...(groupIdOf(id) ? { groupId: groupIdOf(id)! } : {}),
+                        })
                         .then((r) => r && applySlide(current, r))
                     }
                     onStroke={(id, stroke) => void onStroke(id, stroke)}

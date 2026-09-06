@@ -99,7 +99,6 @@ export function LinkDialog({
     </div>
   )
 }
-
 // ── Header & footer ───────────────────────────────────────────────────────
 
 interface HeaderFooterDialogProps {

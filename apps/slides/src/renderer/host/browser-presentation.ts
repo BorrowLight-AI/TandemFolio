@@ -23,6 +23,11 @@ import {
   collectParagraphFormatPatches,
   levelsChanged,
 } from '../../main/edit-text'
+import {
+  registerBrowserBundledFallbackFontFaces,
+  registerBrowserEmbeddedFontFaces,
+} from '../doc-fonts'
+import { readLiveEditorBundledFontAsset } from '@tandemfolio/host-bridge'
 
 ;(globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer ??= Buffer
 
@@ -102,7 +107,10 @@ export class BrowserPresentation {
   }
 
   static async open(name: string, data: ArrayBuffer): Promise<BrowserPresentation> {
-    const opened = await (await engine()).openPptx(new Uint8Array(data))
+    const pptx = await engine()
+    const opened = await pptx.openPptx(new Uint8Array(data))
+    await registerBrowserBundledFallbackFontFaces(readLiveEditorBundledFontAsset)
+    await registerBrowserEmbeddedFontFaces(pptx.listEmbeddedFonts(opened.archive))
     return new BrowserPresentation(name, opened)
   }
 
@@ -472,6 +480,7 @@ export class BrowserPresentation {
       spaceBeforePt: op.spaceBeforePt,
       spaceAfterPt: op.spaceAfterPt,
       align: op.align,
+      rtl: op.rtl,
       indentDelta: op.indentDelta,
     }
     let changed = 0
@@ -497,7 +506,7 @@ export class BrowserPresentation {
     const slide = this.#opened.deck.slides[op.slideIndex]
     if (!slide?.elements.some((candidate) => candidate.id === op.sourceId)) return null
     await this.#recordHistory()
-    if (!(await engine()).deleteElement(slide, op.sourceId)) {
+    if (!(await engine()).deleteElement(this.#opened, slide, op.sourceId)) {
       this.#history.pop()
       return null
     }
@@ -679,43 +688,39 @@ export class BrowserPresentation {
     if (!slide) return null
     const pptx = await engine()
     await this.#recordHistory()
-    const gradient =
+    const fill =
       typeof op.fill === 'string'
-        ? undefined
-        : {
-            stops: [
-              { pos: 0, color: op.fill.gradient.from },
-              { pos: 1, color: op.fill.gradient.to },
-            ],
-            ...(op.fill.gradient.radial
-              ? { radial: true as const }
-              : { angle: Math.round((op.fill.gradient.angleDeg ?? 0) * 60_000) }),
-          }
-    const fill = typeof op.fill === 'string' ? op.fill : gradient!
-    if (op.groupId) {
-      if (!pptx.editGroupChildFill(slide, op.groupId, op.sourceId, fill)) {
-        this.#history.pop()
-        return null
-      }
-    } else {
-      const element = slide.elements.find(
-        (item) => item.id === op.sourceId && (item.type === 'text' || item.type === 'shape'),
-      ) as TextElement | undefined
-      if (!element) {
-        this.#history.pop()
-        return null
-      }
-      element.fill =
-        typeof op.fill === 'string'
-          ? op.fill === 'none'
-            ? { type: 'none' }
-            : { type: 'solid', color: op.fill }
-          : {
-              type: 'gradient',
-              stops: gradient!.stops,
-              ...('radial' in gradient! ? { path: 'circle' as const } : { angle: gradient!.angle }),
+        ? op.fill
+        : (() => {
+            const gradient = op.fill.gradient
+            const path = gradient.path ?? (gradient.radial ? ('circle' as const) : undefined)
+            return {
+              stops: gradient.stops?.length
+                ? gradient.stops
+                : [
+                    { pos: 0, color: gradient.from },
+                    { pos: 1, color: gradient.to },
+                  ],
+              ...(path
+                ? {
+                    path,
+                    ...(gradient.center
+                      ? {
+                          fillTo: {
+                            l: gradient.center.x,
+                            t: gradient.center.y,
+                            r: 1 - gradient.center.x,
+                            b: 1 - gradient.center.y,
+                          },
+                        }
+                      : {}),
+                  }
+                : { angle: Math.round((gradient.angleDeg ?? 0) * 60_000) }),
             }
-      element.dirtyFill = true
+          })()
+    if (!pptx.setElementFill(this.#opened, slide, op.sourceId, fill, { groupId: op.groupId })) {
+      this.#history.pop()
+      return null
     }
     this.#dirty = true
     return this.render(op.slideIndex, width)
@@ -725,27 +730,29 @@ export class BrowserPresentation {
     input: {
       readonly slideIndex: number
       readonly objectId: string
+      readonly groupId?: string
+      readonly mode?: 'stretch' | 'tile'
       readonly data: string
       readonly extension: 'png' | 'jpg' | 'jpeg' | 'gif' | 'bmp' | 'webp' | 'tif' | 'tiff'
     },
     width = 960,
   ): Promise<RenderSlide | null> {
     const slide = this.#opened.deck.slides[input.slideIndex]
-    if (
-      !slide?.elements.some(
-        (element) =>
-          element.id === input.objectId && (element.type === 'text' || element.type === 'shape'),
-      )
-    )
-      return null
+    if (!slide) return null
     await this.#recordHistory()
     if (
       !(await engine()).setElementImageFill(
         this.#opened,
         slide,
         input.objectId,
-        new Uint8Array(Buffer.from(input.data, 'base64')),
-        input.extension,
+        {
+          bytes: new Uint8Array(Buffer.from(input.data, 'base64')),
+          ext: input.extension,
+        },
+        {
+          ...(input.mode === 'tile' ? { tile: true } : {}),
+          ...(input.groupId ? { groupId: input.groupId } : {}),
+        },
       )
     ) {
       this.#history.pop()
@@ -768,6 +775,17 @@ export class BrowserPresentation {
           color: op.stroke.color,
           widthEmu: Math.round(op.stroke.widthPt * 12_700),
           ...(op.stroke.dash ? { dash: op.stroke.dash } : {}),
+          ...(op.stroke.cap ? { cap: op.stroke.cap } : {}),
+          ...(op.stroke.join ? { join: op.stroke.join } : {}),
+          ...(op.stroke.compound ? { compound: op.stroke.compound } : {}),
+          ...(op.stroke.gradient
+            ? {
+                gradient: {
+                  stops: op.stroke.gradient.stops,
+                  angle: Math.round(op.stroke.gradient.angleDeg * 60_000),
+                },
+              }
+            : {}),
         }
       : null
     if (op.groupId) {
@@ -787,9 +805,27 @@ export class BrowserPresentation {
       }
       element.stroke = op.stroke
         ? {
-            fill: { type: 'solid', color: op.stroke.color },
+            fill: op.stroke.gradient
+              ? {
+                  type: 'gradient',
+                  stops: op.stroke.gradient.stops,
+                  angle: Math.round(op.stroke.gradient.angleDeg * 60_000),
+                }
+              : { type: 'solid', color: op.stroke.color },
             width: Math.round(op.stroke.widthPt * 12_700),
             ...(op.stroke.dash ? { dash: op.stroke.dash } : {}),
+            ...(op.stroke.cap
+              ? {
+                  cap:
+                    op.stroke.cap === 'rnd'
+                      ? ('round' as const)
+                      : op.stroke.cap === 'sq'
+                        ? ('square' as const)
+                        : ('flat' as const),
+                }
+              : {}),
+            ...(op.stroke.join ? { join: op.stroke.join } : {}),
+            ...(op.stroke.compound ? { compound: op.stroke.compound } : {}),
           }
         : undefined
       element.dirtyStroke = true
@@ -802,8 +838,25 @@ export class BrowserPresentation {
     input: {
       readonly scope: 'slide' | 'all'
       readonly slideIndex?: number
-      readonly color: string
-    },
+    } & (
+      | { readonly kind: 'solid'; readonly color: string }
+      | {
+          readonly kind: 'gradient'
+          readonly from: string
+          readonly to: string
+          readonly angleDeg?: number
+          readonly radial?: boolean
+        }
+      | {
+          readonly kind: 'image'
+          readonly mode: 'stretch' | 'tile'
+          readonly data?: string
+          readonly extension?: string
+          readonly sourceSlideIndex?: number
+        }
+      | { readonly kind: 'reset' }
+      | { readonly kind: 'hideGraphics'; readonly hidden: boolean }
+    ),
     width = 960,
   ): Promise<{ readonly slides: RenderSlide[]; readonly changed: number } | null> {
     const targets =
@@ -815,8 +868,51 @@ export class BrowserPresentation {
     if (!targets.length) return null
     const pptx = await engine()
     await this.#recordHistory()
+    let reusedMedia =
+      input.kind === 'image' && input.sourceSlideIndex !== undefined
+        ? (() => {
+            const fill = this.#opened.deck.slides[input.sourceSlideIndex!]?.background
+            return fill?.type === 'image' ? fill.mediaRef : undefined
+          })()
+        : undefined
     for (const slide of targets) {
-      pptx.setSlideBackground(slide, input.color)
+      if (input.kind === 'solid') {
+        pptx.setSlideBackground(this.#opened, slide, input.color)
+      } else if (input.kind === 'gradient') {
+        pptx.setSlideBackground(this.#opened, slide, {
+          stops: [
+            { pos: 0, color: input.from },
+            { pos: 1, color: input.to },
+          ],
+          angle: input.angleDeg ?? 0,
+          radial: input.radial,
+        })
+      } else if (input.kind === 'image') {
+        const source = reusedMedia
+          ? { mediaPath: reusedMedia }
+          : input.data && input.extension
+            ? {
+                bytes: new Uint8Array(Buffer.from(input.data, 'base64')),
+                ext: input.extension,
+              }
+            : null
+        if (!source) {
+          this.#history.pop()
+          return null
+        }
+        reusedMedia =
+          pptx.setSlideBackgroundImage(this.#opened, slide, source, input.mode === 'tile') ??
+          undefined
+        if (!reusedMedia) {
+          this.#history.pop()
+          return null
+        }
+      } else if (input.kind === 'reset') {
+        pptx.resetSlideBackground(this.#opened, slide)
+      } else {
+        pptx.setSlideBgGraphicsHidden(this.#opened, slide, input.hidden)
+      }
+      if (input.kind !== 'solid') continue
       for (const element of slide.elements) {
         if (element.type !== 'shape' && element.type !== 'text') continue
         const shaped = element as TextElement
@@ -838,6 +934,186 @@ export class BrowserPresentation {
     }
     this.#dirty = true
     return { slides: this.renderAll(width), changed: targets.length }
+  }
+
+  async setObjectEffects(
+    input: {
+      readonly slideIndex: number
+      readonly objectId: string
+      readonly shadow?: {
+        readonly color: string
+        readonly blurRadiusEmu: number
+        readonly distanceEmu: number
+        readonly directionDeg: number
+        readonly inner?: boolean
+        readonly sx?: number
+        readonly sy?: number
+        readonly kxDeg?: number
+        readonly kyDeg?: number
+        readonly algn?: string
+      } | null
+      readonly glow?: { readonly color: string; readonly radiusEmu: number } | null
+      readonly reflection?: {
+        readonly blurRadiusEmu: number
+        readonly startAlpha: number
+        readonly endPosition: number
+        readonly distanceEmu: number
+      } | null
+      readonly softEdgeRadiusEmu?: number | null
+    },
+    width = 960,
+  ): Promise<RenderSlide | null> {
+    const slide = this.#opened.deck.slides[input.slideIndex]
+    if (!slide) return null
+    const pptx = await engine()
+    await this.#recordHistory()
+    const updated = pptx.setElementEffects(slide, input.objectId, {
+      ...(input.shadow !== undefined
+        ? {
+            shadow:
+              input.shadow === null
+                ? null
+                : {
+                    color: input.shadow.color,
+                    blurRad: input.shadow.blurRadiusEmu,
+                    dist: input.shadow.distanceEmu,
+                    dirDeg: input.shadow.directionDeg,
+                    ...(input.shadow.inner !== undefined ? { inner: input.shadow.inner } : {}),
+                    ...(input.shadow.sx !== undefined ? { sx: input.shadow.sx } : {}),
+                    ...(input.shadow.sy !== undefined ? { sy: input.shadow.sy } : {}),
+                    ...(input.shadow.kxDeg !== undefined ? { kxDeg: input.shadow.kxDeg } : {}),
+                    ...(input.shadow.kyDeg !== undefined ? { kyDeg: input.shadow.kyDeg } : {}),
+                    ...(input.shadow.algn !== undefined ? { algn: input.shadow.algn } : {}),
+                  },
+          }
+        : {}),
+      ...(input.glow !== undefined
+        ? {
+            glow:
+              input.glow === null
+                ? null
+                : { color: input.glow.color, radius: input.glow.radiusEmu },
+          }
+        : {}),
+      ...(input.reflection !== undefined
+        ? {
+            reflection:
+              input.reflection === null
+                ? null
+                : {
+                    blurRad: input.reflection.blurRadiusEmu,
+                    startA: input.reflection.startAlpha,
+                    endPos: input.reflection.endPosition,
+                    dist: input.reflection.distanceEmu,
+                  },
+          }
+        : {}),
+      ...(input.softEdgeRadiusEmu !== undefined ? { softEdge: input.softEdgeRadiusEmu } : {}),
+    })
+    if (!updated) {
+      this.#history.pop()
+      return null
+    }
+    this.#dirty = true
+    return this.render(input.slideIndex, width)
+  }
+
+  async setObjectGeometry(
+    input: {
+      readonly slideIndex: number
+      readonly objectId: string
+      readonly groupId?: string
+      readonly preset?: string
+      readonly adjustments?: Readonly<Record<string, number>>
+      readonly preview?: boolean
+    },
+    width = 960,
+  ): Promise<RenderSlide | null> {
+    const slide = this.#opened.deck.slides[input.slideIndex]
+    if (!slide || (input.preset === undefined && input.adjustments === undefined)) return null
+    const pptx = await engine()
+    if (input.preview) {
+      if (!this.#transformPreview) {
+        await this.#recordHistory()
+        this.#transformPreview = true
+      }
+    } else if (this.#transformPreview) {
+      this.#transformPreview = false
+    } else {
+      await this.#recordHistory()
+    }
+    const before = this.#history.at(-1)!
+    const setPreset = input.groupId
+      ? (preset: string) =>
+          pptx.setGroupChildShapePresetGeometry(slide, input.groupId!, input.objectId, preset)
+      : (preset: string) => pptx.setShapePresetGeometry(slide, input.objectId, preset)
+    const setAdjustments = input.groupId
+      ? (adjustments: Readonly<Record<string, number>>) =>
+          pptx.setGroupChildShapeAdjustValues(slide, input.groupId!, input.objectId, {
+            ...adjustments,
+          })
+      : (adjustments: Readonly<Record<string, number>>) =>
+          pptx.setShapeAdjustValues(slide, input.objectId, { ...adjustments })
+    const updatedPreset = input.preset === undefined || setPreset(input.preset)
+    const updatedAdjustments = input.adjustments === undefined || setAdjustments(input.adjustments)
+    if (!updatedPreset || !updatedAdjustments) {
+      this.#history.pop()
+      this.#transformPreview = false
+      await this.#restoreHistory(before)
+      return null
+    }
+    this.#dirty = true
+    return this.render(input.slideIndex, width)
+  }
+
+  async setTextBodyProperties(
+    input: {
+      readonly slideIndex: number
+      readonly objectId: string
+      readonly vertical?:
+        'horizontal' | 'eastAsianVertical' | 'vertical' | 'vert270' | 'wordArtVertical'
+      readonly autofit?: 'none' | 'shrink' | 'resize'
+      readonly wrap?: boolean
+      readonly insetLeftEmu?: number
+      readonly insetTopEmu?: number
+      readonly insetRightEmu?: number
+      readonly insetBottomEmu?: number
+    },
+    width = 960,
+  ): Promise<RenderSlide | null> {
+    const slide = this.#opened.deck.slides[input.slideIndex]
+    if (!slide) return null
+    const vertical = input.vertical
+      ? (
+          {
+            horizontal: 'horz',
+            eastAsianVertical: 'eaVert',
+            vertical: 'vert',
+            vert270: 'vert270',
+            wordArtVertical: 'wordArtVert',
+          } as const
+        )[input.vertical]
+      : undefined
+    const insets = {
+      ...(input.insetLeftEmu !== undefined ? { l: input.insetLeftEmu } : {}),
+      ...(input.insetTopEmu !== undefined ? { t: input.insetTopEmu } : {}),
+      ...(input.insetRightEmu !== undefined ? { r: input.insetRightEmu } : {}),
+      ...(input.insetBottomEmu !== undefined ? { b: input.insetBottomEmu } : {}),
+    }
+    await this.#recordHistory()
+    if (
+      !(await engine()).setElementTextBodyProps(slide, input.objectId, {
+        ...(vertical ? { vert: vertical } : {}),
+        ...(input.autofit !== undefined ? { autofit: input.autofit } : {}),
+        ...(input.wrap !== undefined ? { wrap: input.wrap } : {}),
+        ...(Object.keys(insets).length ? { insets } : {}),
+      })
+    ) {
+      this.#history.pop()
+      return null
+    }
+    this.#dirty = true
+    return this.render(input.slideIndex, width)
   }
 
   async setSlideLayout(slideIndex: number, layoutPath: string | null, width = 960) {
@@ -1617,6 +1893,7 @@ export class BrowserPresentation {
         | 'fullBorder'
       readonly firstRow?: boolean
       readonly bandedRows?: boolean
+      readonly rtl?: boolean
       readonly shadingColor?: string | null
       readonly borderColor?: string
       readonly borderWidthPt?: number
@@ -1652,6 +1929,7 @@ export class BrowserPresentation {
       edit = {
         ...(input.firstRow !== undefined ? { firstRow: input.firstRow } : {}),
         ...(input.bandedRows !== undefined ? { bandRow: input.bandedRows } : {}),
+        ...(input.rtl !== undefined ? { rtl: input.rtl } : {}),
         ...(input.shadingColor !== undefined ? { shadingColor: input.shadingColor } : {}),
         ...(input.borderColor !== undefined ? { borderColor: input.borderColor } : {}),
         ...(input.borderWidthPt !== undefined
@@ -1691,9 +1969,11 @@ export class BrowserPresentation {
         | 'barStacked'
         | 'barPercentStacked'
         | 'barH'
+        | 'bar3D'
         | 'line'
         | 'area'
         | 'pie'
+        | 'pie3D'
         | 'doughnut'
         | 'scatter'
         | 'radar'
@@ -2193,7 +2473,8 @@ export class BrowserPresentation {
       const background = spec.colors.lt1
       if (background) {
         for (const slide of this.#opened.deck.slides) {
-          if (!slide.background) pptx.setSlideBackground(slide, `#${background.replace(/^#/, '')}`)
+          if (!slide.background)
+            pptx.setSlideBackground(this.#opened, slide, `#${background.replace(/^#/, '')}`)
         }
       }
       this.#selectedIds = []
@@ -2241,9 +2522,11 @@ export class BrowserPresentation {
         | 'barStacked'
         | 'barPercentStacked'
         | 'barH'
+        | 'bar3D'
         | 'line'
         | 'area'
         | 'pie'
+        | 'pie3D'
         | 'doughnut'
         | 'scatter'
         | 'radar'
@@ -2515,7 +2798,7 @@ export class BrowserPresentation {
       pptx.parseMasterPart(this.#opened.archive, input.partPath)
     if (!slide || !slide.elements.some((element) => element.id === input.objectId)) return null
     await this.#recordHistory()
-    if (!pptx.deleteElement(slide, input.objectId)) {
+    if (!pptx.deleteElement(this.#opened, slide, input.objectId)) {
       this.#history.pop()
       return null
     }

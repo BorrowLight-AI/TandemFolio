@@ -105,6 +105,15 @@ export function AudienceView() {
     }
   }, [])
 
+  useEffect(
+    () =>
+      window.slidesApi.onDeckChanged(({ slides: all }) => {
+        if (all.length === 0) return
+        setSlides(all)
+      }),
+    [],
+  )
+
   useEffect(() => {
     if (!slides) return
     let cancelled = false
