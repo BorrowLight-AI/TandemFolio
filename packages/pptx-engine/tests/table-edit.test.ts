@@ -28,6 +28,37 @@ describe('patchTableStyleXml', () => {
     expect(result).toContain('{2D5ABB26-0587-4C30-8999-92F81FD0307C}')
   })
 
+  it('style preset keeps an existing rtl flag (direction is orthogonal to style)', () => {
+    const rtlTable = patchTableStyleXml(MINIMAL_TABLE_XML, { rtl: true })
+    const preset = TABLE_STYLE_PRESETS['zebraBlue']!
+    const styled = patchTableStyleXml(rtlTable, { tblPrXml: preset.tblPrXml })
+    expect(styled).toContain('rtl="1"')
+    expect(styled).toContain(preset.styleId)
+    // A table without rtl does not gain one from the preset
+    const plain = patchTableStyleXml(MINIMAL_TABLE_XML, { tblPrXml: preset.tblPrXml })
+    expect(plain).not.toContain('rtl=')
+  })
+
+  it('rtl=true adds the tblPr rtl flag, rtl=false removes it; siblings untouched', () => {
+    const on = patchTableStyleXml(MINIMAL_TABLE_XML, { rtl: true })
+    expect(on).toContain('rtl="1"')
+    expect(on).toContain('firstRow="1"')
+    expect(on).toContain('{2D5ABB26-0587-4C30-8999-92F81FD0307C}')
+    const off = patchTableStyleXml(on, { rtl: false })
+    expect(off).not.toContain('rtl=')
+    expect(off).toContain('bandRow="1"')
+  })
+
+  it('rtl toggle expands a self-closing tblPr with attributes (trailing slash stripped)', () => {
+    const selfClosing = MINIMAL_TABLE_XML.replace(
+      /<a:tblPr[^>]*>.*?<\/a:tblPr>/,
+      '<a:tblPr firstRow="1"/>',
+    )
+    const result = patchTableStyleXml(selfClosing, { rtl: true })
+    expect(result).toContain('<a:tblPr firstRow="1" rtl="1"></a:tblPr>')
+    expect(result).not.toContain('/ rtl')
+  })
+
   it('set shading color → solidFill inserted in every tcPr, replacing existing fills', () => {
     const result = patchTableStyleXml(MINIMAL_TABLE_XML, { shadingColor: '#AABBCC' })
     expect(result).toContain('<a:srgbClr val="AABBCC"/>')
@@ -205,5 +236,100 @@ describe('ensureTableStyleXml', () => {
     expect(def?.band1H?.fill).toEqual({ type: 'solid', color: '#E9EDF5' })
     expect(def?.wholeTbl?.fill).toEqual({ type: 'solid', color: '#FFFFFF' })
     expect(def?.insideH?.fill).toEqual({ type: 'solid', color: '#D9D9D9' })
+  })
+})
+
+describe('custom table style outer borders (tcBdr left/right/top/bottom)', () => {
+  const XML = `<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{X}">
+    <a:tblStyle styleId="{X}" styleName="T"><a:wholeTbl><a:tcStyle><a:tcBdr>
+      <a:left><a:ln w="9525"><a:solidFill><a:srgbClr val="9E9E9E"/></a:solidFill></a:ln></a:left>
+      <a:right><a:ln w="9525"><a:solidFill><a:srgbClr val="9E9E9E"/></a:solidFill></a:ln></a:right>
+      <a:top><a:ln w="9525"><a:solidFill><a:srgbClr val="9E9E9E"/></a:solidFill></a:ln></a:top>
+      <a:bottom><a:ln w="9525"><a:solidFill><a:srgbClr val="9E9E9E"/></a:solidFill></a:ln></a:bottom>
+      <a:insideH><a:ln w="9525"><a:solidFill><a:srgbClr val="9E9E9E"/></a:solidFill></a:ln></a:insideH>
+      <a:insideV><a:ln w="9525"><a:solidFill><a:srgbClr val="9E9E9E"/></a:solidFill></a:ln></a:insideV>
+    </a:tcBdr></a:tcStyle></a:wholeTbl></a:tblStyle></a:tblStyleLst>`
+  it('reads the whole-table outer edges alongside inside lines', () => {
+    const def = resolveTableStyle('{X}', XML, undefined)!
+    for (const k of ['l', 'r', 't', 'b'] as const) {
+      expect(def.outer?.[k]?.fill).toEqual({ type: 'solid', color: '#9E9E9E' })
+      expect(def.outer?.[k]?.width).toBe(9525)
+    }
+    expect(def.insideH?.fill).toEqual({ type: 'solid', color: '#9E9E9E' })
+  })
+})
+
+describe('tcPr child order (CT_TableCellProperties is a sequence: ln* before fill)', () => {
+  it('borders added to a filled cell land before the cell fill node', () => {
+    const result = patchTableStyleXml(MINIMAL_TABLE_XML, {
+      borderPreset: 'all',
+      borderColor: '#000000',
+    })
+    const tcPr = result.slice(result.indexOf('<a:tcPr'), result.indexOf('</a:tcPr>'))
+    expect(tcPr.indexOf('<a:lnB')).toBeGreaterThan(-1)
+    expect(tcPr.indexOf('<a:lnB')).toBeLessThan(tcPr.indexOf('FF0000'))
+  })
+
+  it('clear-borders on a filled cell also lands before the cell fill node', () => {
+    const result = patchTableStyleXml(MINIMAL_TABLE_XML, { borderPreset: 'none' })
+    const tcPr = result.slice(result.indexOf('<a:tcPr'), result.indexOf('</a:tcPr>'))
+    expect(tcPr.indexOf('<a:lnL')).toBeLessThan(tcPr.indexOf('FF0000'))
+  })
+
+  it('shading added to a bordered cell lands after the ln* nodes and keeps border colors', () => {
+    const bordered = patchTableStyleXml(MINIMAL_TABLE_XML, {
+      borderPreset: 'all',
+      borderColor: '#00FF00',
+    })
+    const result = patchTableStyleXml(bordered, { shadingColor: '#AABBCC' })
+    const tcPr = result.slice(result.indexOf('<a:tcPr'), result.indexOf('</a:tcPr>'))
+    expect(tcPr.indexOf('AABBCC')).toBeGreaterThan(tcPr.lastIndexOf('<a:lnB'))
+    // Border fills are the ln elements' own children — shading must not eat them
+    expect((tcPr.match(/00FF00/g) ?? []).length).toBe(4)
+  })
+
+  it('a self-closing ln element is replaced, not duplicated', () => {
+    const selfClosing = MINIMAL_TABLE_XML.replace('<a:tcPr>', '<a:tcPr><a:lnB w="0"/>')
+    const result = patchTableStyleXml(selfClosing, {
+      borderPreset: 'all',
+      borderColor: '#000000',
+    })
+    const tcPr = result.slice(result.indexOf('<a:tcPr'), result.indexOf('</a:tcPr>'))
+    expect((tcPr.match(/<a:lnB[\s>]/g) ?? []).length).toBe(1)
+    expect(tcPr).not.toContain('<a:lnB w="0"/>')
+  })
+
+  it('shading replaces a gradient fill instead of stacking a second fill node', () => {
+    const grad = MINIMAL_TABLE_XML.replace(
+      '<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>',
+      '<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs></a:gsLst></a:gradFill>',
+    )
+    const result = patchTableStyleXml(grad, { shadingColor: '#AABBCC' })
+    expect(result).not.toContain('gradFill')
+    expect(result).toContain('AABBCC')
+  })
+})
+
+describe('fill strip matches attributed fill tags (Bugbot: gradFill almost always carries rotWithShape)', () => {
+  it('shading replaces an attributed gradFill instead of stacking a second fill', () => {
+    const grad = MINIMAL_TABLE_XML.replace(
+      '<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>',
+      '<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs></a:gsLst></a:gradFill>',
+    )
+    const result = patchTableStyleXml(grad, { shadingColor: '#AABBCC' })
+    expect(result).not.toContain('gradFill')
+    expect(result).toContain('AABBCC')
+  })
+
+  it('clearDirectFormatting also strips an attributed pattFill', () => {
+    const patt = MINIMAL_TABLE_XML.replace(
+      '<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>',
+      '<a:pattFill prst="pct5"><a:fgClr><a:srgbClr val="FF0000"/></a:fgClr></a:pattFill>',
+    )
+    const result = patchTableStyleXml(patt, {
+      tblPrXml: TABLE_STYLE_PRESETS['zebraGray']!.tblPrXml,
+      clearDirectFormatting: true,
+    })
+    expect(result).not.toContain('pattFill')
   })
 })

@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./node-file": "./src/node-file.ts",
     "./table-grid": "./src/table-grid.ts",
+    "./identity": "./src/identity.ts",
     "./background-promote": "./src/background-promote.ts",
     "./custgeom": "./src/custgeom.ts"
   },
