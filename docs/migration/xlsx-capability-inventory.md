@@ -11,7 +11,7 @@ is complete; the shared ADR 0003/ADR 0005 release evidence must be recaptured ag
 
 ## 2026-09-05 candidate-native migration
 
-The reviewed candidate is `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`.
+The reviewed candidate is `genspark-ai/genoffice@f2c3d0879df29622d5a447935d2b4aeac033544d`.
 The final source-diff audit found no remaining browser-safe, non-AI XLSX-native capability outside
 this inventory. Candidate-only bulk-fill undo belongs to the removed AI batch planner; desktop
 recovery and large-save staging belong to Electron/IPC. The split locale catalogs and shared font
@@ -28,6 +28,9 @@ structural mutations continue through the mounted Univer state and native Undo. 
 color-scheme, and font-scheme choices share `xlsx.document.set_theme`, one renderer-owned Undo item,
 and theme1.xml save/reopen state; package changes
 continue through the browser workbook adapter and save/reopen path.
+The final 2026-09-06 source-current fixes reject A1 references beyond row 1,048,576 or column XFD,
+preserve quoted trailing newlines in copied TSV fields, and make whole-cell replacement ignore only
+surrounding spaces in both the mounted Univer mutation and deterministic workbook planner.
 Review's workbook-protection control and `xlsx.document.set_protection` share a password-aware
 file journal, one native Undo item, and workbook.xml save/reopen state.
 Review's Allow Edit Ranges dialog and `xlsx.sheet.set_protected_ranges` share complete sheet-level

@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const es = {
-  ribbonAiCreditNote: 'Usa IA y consume créditos',
-  ribbonAiRewriteConfirm:
-    'Esta acción llama a la IA: consume créditos y puede reescribir todo el contenido. ¿Continuar? (No se volverá a preguntar.)',
-  // tabs
   ribbonTabFile: 'Archivo',
   ribbonTabHome: 'Inicio',
   ribbonTabInsert: 'Insertar',
@@ -177,8 +173,6 @@ export const es = {
   ribbonFlipH: 'Voltear horizontalmente',
   ribbonFlipV: 'Voltear verticalmente',
   ribbonDistributeHint: '{title} (seleccione 3 o más elementos)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'Mostrar u ocultar el panel del asistente de IA',
   ribbonGroupTable: 'Tabla',
   ribbonInsertTableTip: 'Insertar una tabla (estilo predeterminado; elija filas y columnas)',
   ribbonTablePickerHint: 'Elegir filas y columnas',

@@ -39,7 +39,7 @@ It removes:
 | Renderer dispatch   | PPTX has no direct operation-id branches and its 74-operation registry covers every retained mutation producer. | Future browser handlers must land with an exact registry tracer rather than reintroducing composition-root dispatch. |
 | DOCX transport      | Resolved: DOCX now uses the shared Host Bridge for polling, acknowledgement, display mode, and bundled fonts.   | The former format-local MCP session state machine is deleted, removing the dual-implementation drift risk.           |
 | PPTX context        | The browser presentation Adapter and React App retain separate active-selection state.                          | UI and Agent targets do not yet converge on one native command seam.                                                 |
-| PDF context         | The mounted controller publishes selection and routes 25 typed operations; its producer baseline has no gap.    | R6-01 supplies shared release evidence; no format-local state-changing producer is unexplained.                      |
+| PDF context         | The mounted controller publishes selection and routes 32 typed operations; its producer baseline has no gap.    | Candidate-native mutation parity is complete; source-current release recapture remains fail-closed.                 |
 | Capability evidence | Per-format inventories are primarily prose tables.                                                              | Baseline scope, executable status, source routes, and test evidence cannot be checked as one graph.                  |
 
 All five pinned non-AI renderer sources are now mounted and the former replacement renderer directories are removed. This plan therefore changes command integration structure only; it does not create another renderer or migrate document authority.
@@ -1180,9 +1180,10 @@ Completed PDF retained-command evidence:
 - `pdfRetainedProducerBaseline` classifies all retained producer families and has no missing or
   unknown operation mapping. Save As/export/extract/print are non-document host effects; navigation,
   search, zoom, sidebars, view modes, and form focus are view-only;
-- 23 PDF test files / 280 assertions and eleven real-host scenarios prove staged/user open, shared
-  delete/undo, text/image lifecycle, CJK/Korean/Arabic plus mixed colors, generated-stamp clear,
-  save/reopen, and four host-width states.
+- 35 PDF test files / 332 assertions plus the existing real-host scenarios prove staged/user open,
+  threaded comments, shared pending and whole-document Undo/Redo, native text/image lifecycle,
+  CJK/Korean/Arabic plus selection styles, page transforms, generated-stamp clear, save/reopen,
+  and four host-width states.
 
 PPTX-P1 through PPTX-P2 evidence:
 
@@ -2010,7 +2011,7 @@ after target resolution on the same physical-cell attrs kernel and native Undo r
 Manifest contains 158 operations, including thirty-four DOCX operations (thirty-three Agent-visible
 and one internal).
 
-R2-155 adds `docx.table.set_cell_borders` with exact rectangle identity, four finite edge policies,
+R2-155 adds `docx.table.set_cell_borders` with exact rectangle identity, ten finite edge policies,
 and a bounded nullable border final state. Agent targets and retained Ribbon selections share the
 same span-aware edge/write kernel and native Undo route. The generated Manifest contains 159
 operations, including thirty-five DOCX operations (thirty-four Agent-visible and one internal).

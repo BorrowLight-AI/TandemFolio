@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const id = {
-  ribbonAiCreditNote: 'Menggunakan AI dan menghabiskan kredit',
-  ribbonAiRewriteConfirm:
-    'Tindakan ini memanggil AI: menghabiskan kredit dan dapat menulis ulang seluruh konten. Lanjutkan? (Tidak akan ditanya lagi.)',
-  // tabs
   ribbonTabFile: 'File',
   ribbonTabHome: 'Beranda',
   ribbonTabInsert: 'Sisipkan',
@@ -174,8 +170,6 @@ export const id = {
   ribbonFlipH: 'Balik horizontal',
   ribbonFlipV: 'Balik vertikal',
   ribbonDistributeHint: '{title} (pilih minimal 3 elemen)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'Tampilkan/sembunyikan panel Asisten AI',
   ribbonGroupTable: 'Tabel',
   ribbonInsertTableTip: 'Sisipkan tabel (gaya default; baris dan kolom dapat dipilih)',
   ribbonTablePickerHint: 'Pilih baris dan kolom',

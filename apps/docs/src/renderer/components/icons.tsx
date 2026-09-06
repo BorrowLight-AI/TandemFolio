@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: retain source-current native table border glyphs.
 /** Small monochrome SVG icons approximating Word's ribbon glyphs. */
 
 import type { ReactNode } from 'react'
@@ -769,6 +770,75 @@ export function IconBorderNone(props: IconProps) {
         strokeDasharray="1.5 1.7"
         opacity="0.55"
       />
+    </Svg>
+  )
+}
+
+function IconBorderDashedFrame() {
+  return (
+    <rect
+      x="3.02"
+      y="3.02"
+      width="9.96"
+      height="9.96"
+      rx="0.42"
+      strokeWidth="1"
+      strokeDasharray="1.5 1.7"
+      opacity="0.55"
+    />
+  )
+}
+
+export function IconBorderTop(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <IconBorderDashedFrame />
+      <path d="M 3.02 3.02 h 9.96" />
+    </Svg>
+  )
+}
+
+export function IconBorderBottom(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <IconBorderDashedFrame />
+      <path d="M 3.02 12.98 h 9.96" />
+    </Svg>
+  )
+}
+
+export function IconBorderLeft(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <IconBorderDashedFrame />
+      <path d="M 3.02 3.02 v 9.96" />
+    </Svg>
+  )
+}
+
+export function IconBorderRight(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <IconBorderDashedFrame />
+      <path d="M 12.98 3.02 v 9.96" />
+    </Svg>
+  )
+}
+
+export function IconBorderInsideH(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <IconBorderDashedFrame />
+      <path d="M 3.02 8 h 9.96" />
+    </Svg>
+  )
+}
+
+export function IconBorderInsideV(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <IconBorderDashedFrame />
+      <path d="M 8 3.02 v 9.96" />
     </Svg>
   )
 }

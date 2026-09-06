@@ -2312,7 +2312,15 @@ describe('DOCX operation registry', () => {
             maxItems: 7,
             items: {
               type: 'string',
-              enum: ['fillHex', 'borderHex', 'textBold', 'textItalic', 'textUnderline', 'textColor', 'textAlign'],
+              enum: [
+                'fillHex',
+                'borderHex',
+                'textBold',
+                'textItalic',
+                'textUnderline',
+                'textColor',
+                'textAlign',
+              ],
             },
           },
         },
@@ -8799,7 +8807,21 @@ describe('DOCX operation registry', () => {
           leftColumn: { type: 'integer', minimum: 0, maximum: 62 },
           bottomRow: { type: 'integer', minimum: 1, maximum: 100 },
           rightColumn: { type: 'integer', minimum: 1, maximum: 63 },
-          mode: { type: 'string', enum: ['all', 'outer', 'inner', 'none'] },
+          mode: {
+            type: 'string',
+            enum: [
+              'all',
+              'outer',
+              'inner',
+              'none',
+              'top',
+              'bottom',
+              'left',
+              'right',
+              'insideH',
+              'insideV',
+            ],
+          },
           border: {
             type: ['object', 'null'],
             properties: {
@@ -8890,6 +8912,57 @@ describe('DOCX operation registry', () => {
     })
     expect(editor.commands.undo()).toBe(true)
     expect(editor.state.doc.child(0).child(0).child(0).attrs.borders).toBeNull()
+  })
+
+  it('sets a table-level inside-horizontal border and undoes once', async () => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'docTable',
+            content: ['AB', 'CD'].map((row) => ({
+              type: 'docTableRow',
+              content: [...row].map((text) => ({
+                type: 'docTableCell',
+                content: [{ type: 'docParagraph', content: [{ type: 'text', text }] }],
+              })),
+            })),
+          },
+        ],
+      },
+    })
+    editors.push(editor)
+
+    await expect(
+      executeDocxOperation(
+        editor,
+        {
+          operation: 'docx.table.set_cell_borders',
+          arguments: {
+            tableBlockIndex: 0,
+            topRow: 0,
+            leftColumn: 0,
+            bottomRow: 2,
+            rightColumn: 2,
+            mode: 'insideH',
+            border: { color: 'FF0000', sizeEighths: 4 },
+          },
+        },
+        services,
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      ok: true,
+      output: { matchedCells: 4, changedCells: 4 },
+    })
+    expect(editor.state.doc.child(0).attrs.borders).toEqual({
+      insideH: { style: 'single', color: 'FF0000', szEighths: 4 },
+    })
+    expect(editor.commands.undo()).toBe(true)
+    expect(editor.state.doc.child(0).attrs.borders).toBeNull()
   })
 
   it('rejects an incoherent DOCX cell-border final state before mutation', async () => {

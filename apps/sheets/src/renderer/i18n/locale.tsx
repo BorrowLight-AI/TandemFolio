@@ -1,7 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createI18n, type Lang, type Params } from '@genoffice/i18n'
-import { strings } from './strings'
+
+// Translation copy is sizeable but does not define editor behavior. Keep it in
+// a deferred module so the XLSX engine can compile its critical entry first.
+const { strings } = await import('./strings')
 
 const translate = createI18n(strings)
 

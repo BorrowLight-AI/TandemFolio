@@ -1,10 +1,20 @@
-import { PDFArray, PDFDict, PDFDocument, PDFName, PDFNumber, PDFRef } from 'pdf-lib'
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFHexString,
+  PDFName,
+  PDFNumber,
+  PDFRef,
+  PDFString,
+} from 'pdf-lib'
 import type { AnnotDeleteInput, MarkupType } from '../shared/ipc'
 
-const SUBTYPE: Record<MarkupType, string> = {
+const SUBTYPE: Record<AnnotDeleteInput['subtype'], string> = {
   highlight: 'Highlight',
   underline: 'Underline',
   strikeout: 'StrikeOut',
+  note: 'Text',
 }
 const RECT_TOLERANCE = 2
 
@@ -27,7 +37,7 @@ function annotationIdentity(
   document: PDFDocument,
   annotations: PDFArray,
   index: number,
-): { objectNumber: number | null; subtype: string; rect: number[] } | null {
+): { objectNumber: number | null; subtype: string; rect: number[]; contents: string } | null {
   const raw = annotations.get(index)
   const annotation = annotations.lookupMaybe(index, PDFDict)
   if (!annotation) return null
@@ -38,7 +48,29 @@ function annotationIdentity(
     objectNumber: raw instanceof PDFRef ? raw.objectNumber : null,
     subtype,
     rect: rect.asArray().map((entry) => document.context.lookup(entry, PDFNumber).asNumber()),
+    contents: (() => {
+      const value = annotation.lookup(PDFName.of('Contents'))
+      return value instanceof PDFString || value instanceof PDFHexString ? value.decodeText() : ''
+    })(),
   }
+}
+
+function identityMatches(
+  identity: NonNullable<ReturnType<typeof annotationIdentity>>,
+  deletion: AnnotDeleteInput,
+): boolean {
+  const rectMatches =
+    deletion.subtype === 'note'
+      ? Math.abs(Math.min(identity.rect[0]!, identity.rect[2]!) - Math.min(deletion.rect[0], deletion.rect[2])) <=
+          RECT_TOLERANCE &&
+        Math.abs(Math.max(identity.rect[1]!, identity.rect[3]!) - Math.max(deletion.rect[1], deletion.rect[3])) <=
+          RECT_TOLERANCE
+      : rectsClose(identity.rect, deletion.rect)
+  return (
+    identity.subtype === SUBTYPE[deletion.subtype] &&
+    rectMatches &&
+    (deletion.contents === undefined || identity.contents === deletion.contents)
+  )
 }
 
 function matchingIndex(
@@ -53,15 +85,13 @@ function matchingIndex(
   }))
   const guardedObject = identities.find(
     ({ identity }) =>
-      identity?.objectNumber === deletion.objNum &&
-      identity.subtype === expectedSubtype &&
-      rectsClose(identity.rect, deletion.rect),
+      identity?.objectNumber === deletion.objNum && identityMatches(identity, deletion),
   )
   if (guardedObject) return guardedObject.index
   return (
     identities.find(
       ({ identity }) =>
-        identity?.subtype === expectedSubtype && rectsClose(identity.rect, deletion.rect),
+        identity !== null && identityMatches(identity, deletion),
     )?.index ?? null
   )
 }

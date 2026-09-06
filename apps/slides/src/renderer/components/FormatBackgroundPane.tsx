@@ -83,11 +83,11 @@ export function FormatBackgroundPane({ slide, onApply, onCollapse }: Props) {
 
   return (
     <aside className="format-pane">
-      <div className="ai-panel-header">
-        <span className="ai-panel-title">{t('paneBgTitle')}</span>
-        <div className="ai-panel-header-actions">
+      <div className="format-panel-header">
+        <span className="format-panel-title">{t('paneBgTitle')}</span>
+        <div className="format-panel-header-actions">
           <button
-            className="ai-header-btn"
+            className="format-header-btn"
             onClick={onCollapse}
             data-tip={t('paneFormatClose')}
             aria-label={t('paneFormatClose')}

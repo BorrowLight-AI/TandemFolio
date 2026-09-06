@@ -150,6 +150,32 @@ function matchedTextObjects(objects: readonly PageTextObject[], edit: TextEditIn
     : []
 }
 
+interface PlannedTextMatch {
+  readonly matches: PageTextObject[]
+  readonly newText: string
+  readonly whole: boolean
+}
+
+/** Resolve a whole bounded run first, then a literal fragment inside one touched object. */
+function plannedTextMatch(
+  objects: readonly PageTextObject[],
+  edit: TextEditInput,
+): PlannedTextMatch | null {
+  const matches = matchedTextObjects(objects, edit)
+  if (matches.length > 0) return { matches, newText: edit.newText, whole: true }
+  const candidates = objects.filter((object) => overlapArea(object.bounds, edit.rect) > 0)
+  for (const object of candidates) {
+    const start = object.text.indexOf(edit.oldText)
+    if (start < 0) continue
+    return {
+      matches: [object],
+      newText: object.text.slice(0, start) + edit.newText + object.text.slice(start + edit.oldText.length),
+      whole: false,
+    }
+  }
+  return null
+}
+
 function standardFontName(
   family: string | undefined,
   bold: boolean | undefined,
@@ -430,6 +456,30 @@ export function browserFontCoversText(font: Uint8Array, text: string): boolean {
   }
 }
 
+/** Check the exact bundled font assets used by the browser save path before placement. */
+export async function canBrowserDrawText(
+  text: string,
+  font?: string,
+  bold?: boolean,
+  italic?: boolean,
+): Promise<boolean> {
+  const groups = new Map<string, { spec: BrowserFontSpec; text: string }>()
+  for (const character of Array.from(text)) {
+    if (/\s/u.test(character)) continue
+    const spec = fontSpecForCharacter(character, { font, bold, italic })
+    const group = groups.get(spec.key)
+    groups.set(spec.key, { spec, text: `${group?.text ?? ''}${character}` })
+  }
+  for (const { spec, text: segment } of groups.values()) {
+    if (spec.standardFamily !== undefined || !spec.fileName) {
+      if (Array.from(segment).some((character) => character.codePointAt(0)! > 0x7e)) return false
+      continue
+    }
+    if (!browserFontCoversText(await readFontBytes(spec.fileName), segment)) return false
+  }
+  return true
+}
+
 /** PDFium authors CID-keyed CFF text by GID; normalize the decompressed subset charset. */
 function identityCffCharset(font: Uint8Array): Uint8Array {
   if (font.byteLength < 12) return font
@@ -535,6 +585,7 @@ interface TextSegment {
   readonly text: string
   readonly color: readonly [number, number, number]
   readonly font: BrowserFontSpec
+  readonly fontSize: number
 }
 
 function textSegments(
@@ -546,19 +597,45 @@ function textSegments(
     readonly font?: string
     readonly bold?: boolean
     readonly italic?: boolean
+    readonly fontSize: number
+    readonly styleRuns?: readonly {
+      start: number
+      end: number
+      color?: [number, number, number]
+      font?: string
+      size?: number
+      bold?: boolean
+      italic?: boolean
+    }[]
   },
 ): TextSegment[] {
   const output: TextSegment[] = []
   let cursor = offset
   for (const character of text) {
-    const run = input.colorRuns?.find((candidate) => cursor >= candidate.start && cursor < candidate.end)
-    const color = run?.color ?? input.color
+    const style = input.styleRuns?.find(
+      (candidate) => cursor >= candidate.start && cursor < candidate.end,
+    )
+    const legacyColor = input.colorRuns?.find(
+      (candidate) => cursor >= candidate.start && cursor < candidate.end,
+    )?.color
+    const color = style?.color ?? legacyColor ?? input.color
+    const fontInput = {
+      font: style?.font ?? input.font,
+      bold: style?.bold ?? input.bold,
+      italic: style?.italic ?? input.italic,
+    }
+    const fontSize = style?.size ?? input.fontSize
     const prior = output.at(-1)
-    const font = /^\s$/u.test(character) && prior ? prior.font : fontSpecForCharacter(character, input)
-    if (prior && prior.font.key === font.key && prior.color.join(',') === color.join(',')) {
+    const font = /^\s$/u.test(character) && prior ? prior.font : fontSpecForCharacter(character, fontInput)
+    if (
+      prior &&
+      prior.font.key === font.key &&
+      prior.fontSize === fontSize &&
+      prior.color.join(',') === color.join(',')
+    ) {
       output[output.length - 1] = { ...prior, text: prior.text + character }
     } else {
-      output.push({ text: character, color, font })
+      output.push({ text: character, color, font, fontSize })
     }
     cursor += character.length
   }
@@ -597,6 +674,15 @@ async function createTextObjects(
       end: number
       color: [number, number, number]
     }[]
+    readonly styleRuns?: readonly {
+      start: number
+      end: number
+      color?: [number, number, number]
+      font?: string
+      size?: number
+      bold?: boolean
+      italic?: boolean
+    }[]
   },
 ): Promise<number[]> {
   const matrixPointer = pdfium._malloc(24)
@@ -617,7 +703,7 @@ async function createTextObjects(
           font = await loadBrowserFont(pdfium, document, segment.font)
           loadedFonts.set(segment.font.key, font)
         }
-        const object = pdfium._FPDFPageObj_CreateTextObj(document, font, input.fontSize)
+        const object = pdfium._FPDFPageObj_CreateTextObj(document, font, segment.fontSize)
         const textPointer = utf16Pointer(pdfium, segment.text)
         const set = pdfium._FPDFText_SetText(object, textPointer)
         pdfium._free(textPointer)
@@ -639,7 +725,7 @@ async function createTextObjects(
         pdfium._FPDFPageObj_SetMatrix(object, matrixPointer)
         pdfium._FPDFPageObj_SetFillColor(object, ...segment.color, 255)
         created.push(object)
-        advance += measureSegment(segment.text, input.fontSize, segment.font.cssFamily)
+        advance += measureSegment(segment.text, segment.fontSize, segment.font.cssFamily)
       }
       textOffset += line.length + 1
     }
@@ -680,8 +766,8 @@ export function applyBrowserTextEdits(
         if (!page) throw new Error(`PDFium could not load page ${edit.pageIndex + 1}.`)
         const textPage = pdfium._FPDFText_LoadPage(page)
         try {
-          const matches = matchedTextObjects(collectTextObjects(pdfium, page, textPage), edit)
-          if (matches.length === 0) {
+          const plan = plannedTextMatch(collectTextObjects(pdfium, page, textPage), edit)
+          if (!plan) {
             skipped.push({
               pageIndex: edit.pageIndex,
               oldText: edit.oldText,
@@ -689,60 +775,91 @@ export function applyBrowserTextEdits(
             })
             continue
           }
-          const canReuse =
+          const { matches } = plan
+          if (edit.translate) {
+            if (!plan.whole || normalizePdfText(edit.oldText) !== normalizePdfText(edit.newText)) {
+              skipped.push({
+                pageIndex: edit.pageIndex,
+                oldText: edit.oldText,
+                reason: 'a text move must preserve the matched text exactly',
+              })
+              continue
+            }
+            for (const match of matches) {
+              pdfium._FPDFPageObj_Transform(
+                match.object,
+                1,
+                0,
+                0,
+                1,
+                edit.translate[0],
+                edit.translate[1],
+              )
+            }
+          } else if (plan.newText === '') {
+            for (const match of matches) {
+              if (pdfium._FPDFPage_RemoveObject(page, match.object)) {
+                pdfium._FPDFPageObj_Destroy(match.object)
+              }
+            }
+          } else {
+            const canReuse =
             matches.length === 1 &&
             !edit.newFont &&
             !edit.newBold &&
             !edit.newItalic &&
             edit.newFontSize === undefined &&
             edit.lineXOffsets === undefined &&
-            !edit.newText.includes('\n') &&
-            /^[\x20-\x7e]*$/.test(edit.newText) &&
-            (!edit.colorRuns || edit.colorRuns.length === 0)
-          if (canReuse) {
-            const pointer = utf16Pointer(pdfium, edit.newText)
-            const set = pdfium._FPDFText_SetText(matches[0]!.object, pointer)
-            pdfium._free(pointer)
-            if (!set) {
-              skipped.push({
-                pageIndex: edit.pageIndex,
-                oldText: edit.oldText,
-                reason: 'the original PDF font cannot encode the replacement text',
-              })
-              continue
-            }
-            if (edit.newColor) {
-              pdfium._FPDFPageObj_SetFillColor(matches[0]!.object, ...edit.newColor, 255)
-            }
-          } else {
-            let created: number[]
-            try {
-              created = await createTextObjects(pdfium, document, {
-                text: edit.newText,
-                fontSize: edit.newFontSize ?? edit.fontSize,
-                color: edit.newColor ?? matches[0]!.color,
-                font: edit.newFont,
-                bold: edit.newBold,
-                italic: edit.newItalic,
-                origin: edit.origin ?? [edit.rect[0], edit.rect[1]],
-                lineLeading: edit.lineLeading,
-                lineXOffsets: edit.lineXOffsets,
-                colorRuns: edit.colorRuns,
-              })
-            } catch (error) {
-              skipped.push({
-                pageIndex: edit.pageIndex,
-                oldText: edit.oldText,
-                reason: error instanceof Error ? error.message : String(error),
-              })
-              continue
-            }
-            for (const match of matches) {
-              if (pdfium._FPDFPage_RemoveObject(page, match.object)) {
-                pdfium._FPDFPageObj_Destroy(match.object)
+            !plan.newText.includes('\n') &&
+            /^[\x20-\x7e]*$/.test(plan.newText) &&
+            (!edit.colorRuns || edit.colorRuns.length === 0) &&
+            (!edit.styleRuns || edit.styleRuns.length === 0)
+            if (canReuse) {
+              const pointer = utf16Pointer(pdfium, plan.newText)
+              const set = pdfium._FPDFText_SetText(matches[0]!.object, pointer)
+              pdfium._free(pointer)
+              if (!set) {
+                skipped.push({
+                  pageIndex: edit.pageIndex,
+                  oldText: edit.oldText,
+                  reason: 'the original PDF font cannot encode the replacement text',
+                })
+                continue
               }
+              if (edit.newColor) {
+                pdfium._FPDFPageObj_SetFillColor(matches[0]!.object, ...edit.newColor, 255)
+              }
+            } else {
+              let created: number[]
+              try {
+                created = await createTextObjects(pdfium, document, {
+                  text: plan.newText,
+                  fontSize: edit.newFontSize ?? edit.fontSize,
+                  color: edit.newColor ?? matches[0]!.color,
+                  font: edit.newFont,
+                  bold: edit.newBold,
+                  italic: edit.newItalic,
+                  origin: edit.origin ?? [edit.rect[0], edit.rect[1]],
+                  lineLeading: edit.lineLeading,
+                  lineXOffsets: edit.lineXOffsets,
+                  colorRuns: edit.colorRuns,
+                  styleRuns: edit.styleRuns,
+                })
+              } catch (error) {
+                skipped.push({
+                  pageIndex: edit.pageIndex,
+                  oldText: edit.oldText,
+                  reason: error instanceof Error ? error.message : String(error),
+                })
+                continue
+              }
+              for (const match of matches) {
+                if (pdfium._FPDFPage_RemoveObject(page, match.object)) {
+                  pdfium._FPDFPageObj_Destroy(match.object)
+                }
+              }
+              for (const object of created) pdfium._FPDFPage_InsertObject(page, object)
             }
-            for (const object of created) pdfium._FPDFPage_InsertObject(page, object)
           }
           if (!pdfium._FPDFPage_GenerateContent(page)) {
             throw new Error(`PDFium could not regenerate page ${edit.pageIndex + 1}.`)
@@ -829,11 +946,12 @@ export function validateBrowserTextEdits(
         }
         const textPage = pdfium._FPDFText_LoadPage(page)
         try {
-          const matches = matchedTextObjects(collectTextObjects(pdfium, page, textPage), edit)
-          if (matches.length === 0) {
+          const plan = plannedTextMatch(collectTextObjects(pdfium, page, textPage), edit)
+          if (!plan) {
             results.push({ reason: 'the addressed text could not be matched' })
             continue
           }
+          const { matches } = plan
           results.push({
             reason: null,
             bounds: [
@@ -843,6 +961,20 @@ export function validateBrowserTextEdits(
               Math.max(...matches.map((object) => object.bounds[3])),
             ],
             baseColor: matches[0]!.color,
+            ...(matches.length > 1
+              ? {
+                  colorRuns: matches.reduce<
+                    { start: number; end: number; color: [number, number, number] }[]
+                  >((runs, object) => {
+                    const start = runs.at(-1)?.end ?? 0
+                    const end = start + object.text.length
+                    const prior = runs.at(-1)
+                    if (prior && prior.color.join(',') === object.color.join(',')) prior.end = end
+                    else runs.push({ start, end, color: object.color })
+                    return runs
+                  }, []),
+                }
+              : {}),
           })
         } finally {
           if (textPage) pdfium._FPDFText_ClosePage(textPage)

@@ -9,6 +9,8 @@ import type {
   ImageEditInput,
   MarkupInput,
   MetadataInput,
+  NoteEditInput,
+  NoteReplyTarget,
   StaticFormFillRecord,
   TextEditInput,
   TextInsertInput,
@@ -30,6 +32,10 @@ export interface PdfOperationCommand {
 }
 
 export interface PdfOperationServices {
+  readonly createBlank?: (input: { readonly confirmReplace: boolean }) => Promise<{
+    readonly fileName: string
+    readonly pageCount: number
+  }>
   readonly addDrawing?: (drawing: DrawingInput) => string | Promise<string>
   readonly addImageEdit?: (
     edit: ImageEditInput,
@@ -38,6 +44,7 @@ export interface PdfOperationServices {
   readonly addMarkup?: (markup: MarkupInput) => string | Promise<string>
   readonly addTextInsert?: (text: TextInsertInput) => string | Promise<string>
   readonly deleteSavedAnnotation?: (deletion: AnnotDeleteInput) => void | Promise<void>
+  readonly updateSavedNote?: (edit: NoteEditInput) => void | Promise<void>
   readonly deletePage?: (pageIndex: number) => void | Promise<void>
   readonly deletePending?: (
     kind: 'markup' | 'drawing' | 'textEdit' | 'textInsert' | 'imageEdit',
@@ -52,12 +59,23 @@ export interface PdfOperationServices {
     readonly data: ArrayBuffer
     readonly afterPageIndex: number
   }) => number | Promise<number>
+  readonly insertBlankPage?: (afterPageIndex: number) => void | Promise<void>
+  readonly replacePagesStaged?: (input: {
+    readonly name: string
+    readonly data: ArrayBuffer
+    readonly pages: number[]
+  }) => { removed: number; inserted: number } | Promise<{ removed: number; inserted: number }>
+  readonly cropPages?: (
+    pages: number[],
+    rect: { l: number; t: number; r: number; b: number },
+  ) => void | Promise<void>
   readonly save?: () => boolean | Promise<boolean>
   readonly redo?: () => void | Promise<void>
   readonly replaceText?: (text: TextEditInput) => string | Promise<string>
   readonly setFormValue?: (value: FormValueInput) => void | Promise<void>
   readonly setMetadata?: (metadata: MetadataInput) => void | Promise<void>
   readonly setPageOrder?: (pageOrder: number[]) => void | Promise<void>
+  readonly setPageSize?: (width: number, height: number) => void | Promise<void>
   readonly setPageRotation?: (pageIndex: number, rotation: 0 | 90 | 180 | 270) => void | Promise<void>
   readonly setStamps?: (
     watermark: WatermarkConfig | null,
@@ -171,6 +189,15 @@ function drawingInput(value: Record<string, unknown>): DrawingInput | null {
       color,
       at: value.at as [number, number],
       contents: value.contents,
+      ...(typeof value.author === 'string' ? { author: value.author } : {}),
+      ...(typeof value.createdMs === 'number' ? { createdMs: value.createdMs } : {}),
+      ...(typeof value.localId === 'string' ? { localId: value.localId } : {}),
+      ...(value.replyToSaved
+        ? { replyToSaved: value.replyToSaved as NoteReplyTarget }
+        : {}),
+      ...(typeof value.replyToLocalId === 'string'
+        ? { replyToLocalId: value.replyToLocalId }
+        : {}),
     }
   }
   return null
@@ -181,6 +208,17 @@ export type PdfOperationExecution =
   | ({ readonly handled: true; readonly operationId: PdfOperationId } & PdfOperationHandlerResult)
 
 const handlers = {
+  'pdf.document.create_blank': async (arguments_, services) => {
+    if (!services.createBlank) return unavailable('The PDF blank-document factory is not ready.')
+    try {
+      const created = await services.createBlank({
+        confirmReplace: arguments_.confirmReplace === true,
+      })
+      return { ok: true, output: { opened: true, ...created } }
+    } catch (error) {
+      return unavailable(error instanceof Error ? error.message : 'The blank PDF could not be created.')
+    }
+  },
   'pdf.annotation.delete_saved': async (arguments_, services) => {
     if (!services.deleteSavedAnnotation) {
       return {
@@ -194,6 +232,7 @@ const handlers = {
       objNum: arguments_.objNum as number,
       subtype: arguments_.subtype as AnnotDeleteInput['subtype'],
       rect: arguments_.rect as [number, number, number, number],
+      contents: arguments_.contents as string | undefined,
     }
     try {
       await services.deleteSavedAnnotation(deletion)
@@ -205,6 +244,15 @@ const handlers = {
         message: 'The saved PDF annotation could not be deleted.',
       }
     }
+  },
+  'pdf.note.update_saved': (arguments_, services) => {
+    const edit = arguments_ as unknown as NoteEditInput
+    return executeMutation(
+      services.updateSavedNote ? () => services.updateSavedNote!(edit) : undefined,
+      { updated: edit.objNum },
+      'The mounted PDF comment controller is not ready.',
+      'The saved PDF comment could not be updated.',
+    )
   },
   'pdf.document.set_metadata': (arguments_, services) =>
     executeMutation(
@@ -391,6 +439,69 @@ const handlers = {
       'The PDF page could not be deleted.',
     )
   },
+  'pdf.page.replace': () =>
+    unavailable('pdf.page.replace requires Broker staging before renderer execution.'),
+  'pdf.page.replace_staged': async (arguments_, services) => {
+    const data = arguments_.data
+    const pages = arguments_.pages as number[]
+    if (
+      typeof arguments_.name !== 'string' ||
+      !arguments_.name.toLowerCase().endsWith('.pdf') ||
+      !Number.isInteger(arguments_.size) ||
+      !isArrayBuffer(data) ||
+      data.byteLength !== arguments_.size ||
+      !hasPdfMagic(data) ||
+      new Set(pages).size !== pages.length
+    ) {
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'pdf.page.replace_staged requires matching PDF bytes and unique pages.',
+      }
+    }
+    if (!services.replacePagesStaged) {
+      return unavailable('The mounted PDF page-replace controller is not ready.')
+    }
+    try {
+      const result = await services.replacePagesStaged({
+        name: arguments_.name,
+        data,
+        pages,
+      })
+      if (result.removed < 1 || result.inserted < 1) {
+        return unavailable('The staged PDF did not contain replaceable pages.')
+      }
+      return { ok: true, output: result }
+    } catch {
+      return unavailable('The staged PDF pages could not replace the selected pages.')
+    }
+  },
+  'pdf.page.insert_blank': (arguments_, services) => {
+    const afterPageIndex = arguments_.afterPageIndex as number
+    return executeMutation(
+      services.insertBlankPage ? () => services.insertBlankPage!(afterPageIndex) : undefined,
+      { insertedAfterPage: afterPageIndex },
+      'The mounted PDF blank-page controller is not ready.',
+      'The blank PDF page could not be inserted.',
+    )
+  },
+  'pdf.page.crop': (arguments_, services) => {
+    const pages = arguments_.pages as number[]
+    const rect = arguments_.rect as { l: number; t: number; r: number; b: number }
+    if (new Set(pages).size !== pages.length || rect.l >= rect.r || rect.t >= rect.b) {
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: 'pdf.page.crop requires unique pages and a non-empty fractional rectangle.',
+      }
+    }
+    return executeMutation(
+      services.cropPages ? () => services.cropPages!(pages, rect) : undefined,
+      { croppedPages: pages.length },
+      'The mounted PDF crop controller is not ready.',
+      'The PDF pages could not be cropped.',
+    )
+  },
   'pdf.page.reorder': (arguments_, services) => {
     const pageOrder = arguments_.pageOrder as number[]
     if (new Set(pageOrder).size !== pageOrder.length) {
@@ -405,6 +516,16 @@ const handlers = {
       { pageCount: pageOrder.length },
       'The mounted PDF page controller is not ready.',
       'The PDF pages could not be reordered.',
+    )
+  },
+  'pdf.page.set_size': (arguments_, services) => {
+    const width = arguments_.width as number
+    const height = arguments_.height as number
+    return executeMutation(
+      services.setPageSize ? () => services.setPageSize!(width, height) : undefined,
+      { width, height },
+      'The mounted PDF page-size controller is not ready.',
+      'The PDF page size could not be changed.',
     )
   },
   'pdf.page.set_rotation': (arguments_, services) => {

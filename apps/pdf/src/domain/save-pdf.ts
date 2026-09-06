@@ -6,10 +6,14 @@ import {
   PDFDropdown,
   PDFHexString,
   PDFName,
+  PDFNumber,
   PDFOptionList,
+  PDFRef,
+  PDFString,
   degrees,
+  rgb,
 } from 'pdf-lib'
-import type { PDFPage, PDFRef } from 'pdf-lib'
+import type { PDFPage } from 'pdf-lib'
 import { VISUAL_SIGNATURE_CONTENT_PREFIX } from '../shared/ipc'
 import { applyAnnotDeletes } from './annot-delete'
 import { applyBrowserImageEdits } from './browser-image-edit'
@@ -25,11 +29,72 @@ import type {
   StaticFormFillRecord,
   TextEditFailure,
   TextInsertFailure,
+  NoteReplyTarget,
 } from '../shared/ipc'
 
 const num = (v: number) => Math.round(v * 100) / 100
 const STATIC_FORM_FILLS_KEY = PDFName.of('GenOfficeStaticFormFills')
 const GENERATED_STAMP_KEY = PDFName.of('GenOfficeGeneratedStamp')
+
+function pdfDateString(ms: number): string {
+  const date = new Date(ms)
+  const padded = (value: number) => String(value).padStart(2, '0')
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const absoluteOffset = Math.abs(offset)
+  return (
+    `D:${date.getFullYear()}${padded(date.getMonth() + 1)}${padded(date.getDate())}` +
+    `${padded(date.getHours())}${padded(date.getMinutes())}${padded(date.getSeconds())}` +
+    `${sign}${padded(Math.floor(absoluteOffset / 60))}'${padded(absoluteOffset % 60)}'`
+  )
+}
+
+const NOTE_RECT_TOLERANCE = 2
+
+function noteRectsClose(left: readonly number[], right: readonly number[]): boolean {
+  return (
+    Math.abs(Math.min(left[0]!, left[2]!) - Math.min(right[0]!, right[2]!)) <=
+      NOTE_RECT_TOLERANCE &&
+    Math.abs(Math.max(left[1]!, left[3]!) - Math.max(right[1]!, right[3]!)) <=
+      NOTE_RECT_TOLERANCE
+  )
+}
+
+function findNoteAnnotationRef(
+  document: PDFDocument,
+  page: PDFPage,
+  target: NoteReplyTarget,
+): PDFRef | null {
+  const annotations = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+  if (!annotations) return null
+  const matches: PDFRef[] = []
+  for (let index = 0; index < annotations.size(); index += 1) {
+    const reference = annotations.get(index)
+    if (!(reference instanceof PDFRef)) continue
+    const annotation = document.context.lookupMaybe(reference, PDFDict)
+    if (
+      !annotation ||
+      annotation.lookupMaybe(PDFName.of('Subtype'), PDFName) !== PDFName.of('Text')
+    ) {
+      continue
+    }
+    const rectangle = annotation.lookupMaybe(PDFName.of('Rect'), PDFArray)
+    if (!rectangle || rectangle.size() !== 4) continue
+    const rect = Array.from({ length: 4 }, (_, item) =>
+      rectangle.lookup(item, PDFNumber).asNumber(),
+    )
+    if (!noteRectsClose(rect, target.rect)) continue
+    const contents = annotation.lookup(PDFName.of('Contents'))
+    const text =
+      contents instanceof PDFString || contents instanceof PDFHexString
+        ? contents.decodeText()
+        : ''
+    if (text !== target.contents) continue
+    if (reference.objectNumber === target.objNum) return reference
+    matches.push(reference)
+  }
+  return matches[0] ?? null
+}
 
 function validStaticFormFill(value: unknown): value is StaticFormFillRecord {
   if (!value || typeof value !== 'object') return false
@@ -285,7 +350,12 @@ function removeGeneratedStamps(pdfDoc: PDFDocument): void {
 }
 
 /** Drawing annots: hand-written AP for Ink/Square/Circle/Line; notes are standard Text annots (viewer draws the icon) */
-function addDrawing(pdfDoc: PDFDocument, page: PDFPage, d: DrawingInput): void {
+function addDrawing(
+  pdfDoc: PDFDocument,
+  page: PDFPage,
+  d: DrawingInput,
+  noteRefs?: Map<string, PDFRef>,
+): void {
   if (d.kind === 'image') return // handled by addImageStamp (needs async embed)
   const [r, g, b] = d.color
 
@@ -301,8 +371,22 @@ function addDrawing(pdfDoc: PDFDocument, page: PDFPage, d: DrawingInput): void {
       P: page.ref,
     })
     annot.set(PDFName.of('Contents'), PDFHexString.fromText(d.contents))
-    annot.set(PDFName.of('T'), PDFHexString.fromText('GenOffice'))
-    appendAnnot(pdfDoc, page, pdfDoc.context.register(annot))
+    annot.set(PDFName.of('T'), PDFHexString.fromText(d.author || 'GenOffice'))
+    const when = pdfDateString(d.createdMs ?? Date.now())
+    annot.set(PDFName.of('CreationDate'), PDFString.of(when))
+    annot.set(PDFName.of('M'), PDFString.of(when))
+    const parentRef = d.replyToLocalId
+      ? (noteRefs?.get(d.replyToLocalId) ?? null)
+      : d.replyToSaved
+        ? findNoteAnnotationRef(pdfDoc, page, d.replyToSaved)
+        : null
+    if (parentRef) {
+      annot.set(PDFName.of('IRT'), parentRef)
+      annot.set(PDFName.of('RT'), PDFName.of('R'))
+    }
+    const reference = pdfDoc.context.register(annot)
+    if (d.localId) noteRefs?.set(d.localId, reference)
+    appendAnnot(pdfDoc, page, reference)
     return
   }
 
@@ -424,6 +508,289 @@ export async function insertPdfBytes(
   return { merged: await dst.save({ useObjectStreams: false }), count: copied.length }
 }
 
+/** Insert one blank page after the given page, matching its size and rotation. */
+export async function insertBlankPageBytes(
+  bytes: Uint8Array,
+  afterPageIndex: number,
+): Promise<Uint8Array> {
+  const document = await PDFDocument.load(bytes, { updateMetadata: false })
+  const insertAt = Math.min(Math.max(afterPageIndex + 1, 0), document.getPageCount())
+  const neighbor = document.getPage(
+    Math.min(Math.max(afterPageIndex, 0), document.getPageCount() - 1),
+  )
+  const page = document.insertPage(insertAt, [neighbor.getWidth(), neighbor.getHeight()])
+  page.setRotation(neighbor.getRotation())
+  return document.save({ useObjectStreams: false })
+}
+
+/** Split into consecutive page chunks while preserving source page order. */
+export async function splitPdfBytes(
+  bytes: Uint8Array,
+  chunkSize: number,
+): Promise<Uint8Array[]> {
+  const source = await PDFDocument.load(bytes, { updateMetadata: false })
+  const size = Math.max(1, Math.floor(chunkSize))
+  const parts: Uint8Array[] = []
+  for (let start = 0; start < source.getPageCount(); start += size) {
+    const output = await PDFDocument.create()
+    const count = Math.min(size, source.getPageCount() - start)
+    const pages = await output.copyPages(
+      source,
+      Array.from({ length: count }, (_, offset) => start + offset),
+    )
+    for (const page of pages) output.addPage(page)
+    parts.push(await output.save({ useObjectStreams: false }))
+  }
+  return parts
+}
+
+export interface MergePagesOptions {
+  perSheet: number
+  direction: 'horizontal' | 'vertical'
+  separator: boolean
+}
+
+export function mergeGrid(perSheet: number): { cols: number; rows: number } {
+  const count = Math.min(Math.max(Math.floor(perSheet), 2), 16)
+  if (count === 2) return { cols: 2, rows: 1 }
+  const cols = Math.ceil(Math.sqrt(count))
+  return { cols, rows: Math.ceil(count / cols) }
+}
+
+/** Impose consecutive pages on sheets while retaining their vector content. */
+export async function mergePagesBytes(
+  bytes: Uint8Array,
+  options: MergePagesOptions,
+): Promise<Uint8Array> {
+  const perSheet = Math.min(Math.max(Math.floor(options.perSheet), 2), 16)
+  const source = await PDFDocument.load(bytes, { updateMetadata: false })
+  const output = await PDFDocument.create()
+  const first = source.getPage(0)
+  const { cols, rows } = mergeGrid(perSheet)
+  const sheetWidth = perSheet === 2 ? first.getHeight() : first.getWidth()
+  const sheetHeight = perSheet === 2 ? first.getWidth() : first.getHeight()
+  for (const page of source.getPages()) {
+    if (!page.node.Contents()) {
+      page.node.set(PDFName.of('Contents'), source.context.register(source.context.stream('')))
+    }
+  }
+  const embedded = await output.embedPages(source.getPages())
+  const cellWidth = sheetWidth / cols
+  const cellHeight = sheetHeight / rows
+  for (let start = 0; start < embedded.length; start += perSheet) {
+    const sheet = output.addPage([sheetWidth, sheetHeight])
+    for (let item = 0; item < perSheet && start + item < embedded.length; item += 1) {
+      const page = embedded[start + item]!
+      const scale = Math.min(cellWidth / page.width, cellHeight / page.height)
+      const width = page.width * scale
+      const height = page.height * scale
+      const col = options.direction === 'vertical' ? Math.floor(item / rows) : item % cols
+      const row = options.direction === 'vertical' ? item % rows : Math.floor(item / cols)
+      sheet.drawPage(page, {
+        x: col * cellWidth + (cellWidth - width) / 2,
+        y: sheetHeight - (row + 1) * cellHeight + (cellHeight - height) / 2,
+        width,
+        height,
+      })
+    }
+    if (options.separator) {
+      const line = { thickness: 0.75, color: rgb(0.62, 0.62, 0.62) }
+      for (let col = 1; col < cols; col += 1) {
+        sheet.drawLine({
+          start: { x: col * cellWidth, y: 0 },
+          end: { x: col * cellWidth, y: sheetHeight },
+          ...line,
+        })
+      }
+      for (let row = 1; row < rows; row += 1) {
+        sheet.drawLine({
+          start: { x: 0, y: row * cellHeight },
+          end: { x: sheetWidth, y: row * cellHeight },
+          ...line,
+        })
+      }
+    }
+  }
+  return output.save({ useObjectStreams: false })
+}
+
+/** Resize all pages to one paper size, scaling content and annotations together. */
+export async function setPageSizeBytes(
+  bytes: Uint8Array,
+  targetWidth: number,
+  targetHeight: number,
+): Promise<Uint8Array> {
+  const document = await PDFDocument.load(bytes, { updateMetadata: false })
+  for (const page of document.getPages()) {
+    const rotation = ((page.getRotation().angle % 360) + 360) % 360
+    const width = rotation === 90 || rotation === 270 ? targetHeight : targetWidth
+    const height = rotation === 90 || rotation === 270 ? targetWidth : targetHeight
+    const media = page.getMediaBox()
+    if (media.width === width && media.height === height) continue
+    const scale = Math.min(width / media.width, height / media.height)
+    page.scaleContent(scale, scale)
+    page.scaleAnnotations(scale, scale)
+    const x = media.x * scale - (width - media.width * scale) / 2
+    const y = media.y * scale - (height - media.height * scale) / 2
+    page.setMediaBox(x, y, width, height)
+    page.setCropBox(x, y, width, height)
+  }
+  return document.save({ useObjectStreams: false })
+}
+
+function displayFractionToUserRect(
+  rotation: number,
+  box: { x: number; y: number; width: number; height: number },
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+): { x: number; y: number; width: number; height: number } {
+  const { x, y, width, height } = box
+  if (rotation === 90) {
+    return {
+      x: x + top * width,
+      y: y + left * height,
+      width: (bottom - top) * width,
+      height: (right - left) * height,
+    }
+  }
+  if (rotation === 180) {
+    return {
+      x: x + (1 - right) * width,
+      y: y + top * height,
+      width: (right - left) * width,
+      height: (bottom - top) * height,
+    }
+  }
+  if (rotation === 270) {
+    return {
+      x: x + (1 - bottom) * width,
+      y: y + (1 - right) * height,
+      width: (bottom - top) * width,
+      height: (right - left) * height,
+    }
+  }
+  return {
+    x: x + left * width,
+    y: y + (1 - bottom) * height,
+    width: (right - left) * width,
+    height: (bottom - top) * height,
+  }
+}
+
+export interface CropFractionsRect {
+  l: number
+  t: number
+  r: number
+  b: number
+}
+
+/** Apply a displayed-page crop rectangle to selected pages without rewriting their content. */
+export async function cropPagesBytes(
+  bytes: Uint8Array,
+  pages: number[],
+  fraction: CropFractionsRect,
+): Promise<Uint8Array> {
+  const document = await PDFDocument.load(bytes, { updateMetadata: false })
+  const left = Math.min(Math.max(fraction.l, 0), 1)
+  const top = Math.min(Math.max(fraction.t, 0), 1)
+  const right = Math.min(Math.max(fraction.r, left), 1)
+  const bottom = Math.min(Math.max(fraction.b, top), 1)
+  if (right - left <= 0 || bottom - top <= 0) throw new Error('cropPages: empty crop rect')
+  for (const pageIndex of pages) {
+    if (pageIndex < 0 || pageIndex >= document.getPageCount()) continue
+    const page = document.getPage(pageIndex)
+    const rotation = ((page.getRotation().angle % 360) + 360) % 360
+    const rect = displayFractionToUserRect(
+      rotation,
+      page.getCropBox(),
+      left,
+      top,
+      right,
+      bottom,
+    )
+    page.setCropBox(rect.x, rect.y, rect.width, rect.height)
+  }
+  return document.save({ useObjectStreams: false })
+}
+
+/** Split every source page into a displayed grid, preserving vector page content. */
+export async function splitPagesBytes(
+  bytes: Uint8Array,
+  perPage: 2 | 4 | 9,
+): Promise<Uint8Array> {
+  const source = await PDFDocument.load(bytes, { updateMetadata: false })
+  const output = await PDFDocument.create()
+  const { cols, rows } = mergeGrid(perPage)
+  for (let sourceIndex = 0; sourceIndex < source.getPageCount(); sourceIndex += 1) {
+    const copies = await output.copyPages(
+      source,
+      Array.from({ length: perPage }, () => sourceIndex),
+    )
+    for (let cell = 0; cell < perPage; cell += 1) {
+      const page = copies[cell]!
+      const rotation = ((page.getRotation().angle % 360) + 360) % 360
+      const col = cell % cols
+      const row = Math.floor(cell / cols)
+      const rect = displayFractionToUserRect(
+        rotation,
+        page.getCropBox(),
+        col / cols,
+        row / rows,
+        (col + 1) / cols,
+        (row + 1) / rows,
+      )
+      page.setMediaBox(rect.x, rect.y, rect.width, rect.height)
+      page.setCropBox(rect.x, rect.y, rect.width, rect.height)
+      output.addPage(page)
+    }
+  }
+  return output.save({ useObjectStreams: false })
+}
+
+/** Replace selected pages with all pages from another PDF at the first selected position. */
+export async function replacePagesBytes(
+  bytes: Uint8Array,
+  otherBytes: Uint8Array,
+  pages: number[],
+): Promise<{ merged: Uint8Array; removed: number; inserted: number }> {
+  const destination = await PDFDocument.load(bytes, { updateMetadata: false })
+  const source = await PDFDocument.load(otherBytes, { updateMetadata: false })
+  const valid = [...new Set(pages.filter((page) => page >= 0 && page < destination.getPageCount()))]
+    .sort((left, right) => left - right)
+  if (valid.length === 0) throw new Error('replacePages: no valid pages to replace')
+  const insertAt = valid[0]!
+  for (const page of [...valid].reverse()) destination.removePage(page)
+  const copied = await destination.copyPages(source, source.getPageIndices())
+  let index = Math.min(insertAt, destination.getPageCount())
+  for (const page of copied) destination.insertPage(index++, page)
+  return {
+    merged: await destination.save({ useObjectStreams: false }),
+    removed: valid.length,
+    inserted: copied.length,
+  }
+}
+
+/** Append all pages from the supplied PDFs in source order. */
+export async function mergePdfBytes(
+  first: Uint8Array,
+  others: Uint8Array[],
+): Promise<{ merged: Uint8Array; appended: number }> {
+  const destination = await PDFDocument.load(first, { updateMetadata: false })
+  let appended = 0
+  for (const bytes of others) {
+    const source = await PDFDocument.load(bytes, { updateMetadata: false })
+    const pages = await destination.copyPages(source, source.getPageIndices())
+    for (const page of pages) destination.addPage(page)
+    appended += pages.length
+  }
+  return {
+    merged: await destination.save({ useObjectStreams: false }),
+    appended,
+  }
+}
+
 function applyMetadata(pdfDoc: PDFDocument, meta: MetadataInput): void {
   if (meta.title !== undefined) pdfDoc.setTitle(meta.title)
   if (meta.author !== undefined) pdfDoc.setAuthor(meta.author)
@@ -503,11 +870,25 @@ export async function applySaveRequest(
     const page = pages[m.pageIndex]
     if (page) addMarkup(pdfDoc, page, m)
   }
+  const noteRefs = new Map<string, PDFRef>()
   for (const d of request.drawings ?? []) {
     const page = pages[d.pageIndex]
     if (!page) continue
     if (d.kind === 'image') await addImageStamp(pdfDoc, page, d)
-    else addDrawing(pdfDoc, page, d)
+    else addDrawing(pdfDoc, page, d, noteRefs)
+  }
+  for (const edit of request.noteEdits ?? []) {
+    const page = pages[edit.pageIndex]
+    if (!page) continue
+    const reference = findNoteAnnotationRef(pdfDoc, page, {
+      objNum: edit.objNum,
+      rect: edit.rect,
+      contents: edit.oldContents,
+    })
+    const annotation = reference ? pdfDoc.context.lookupMaybe(reference, PDFDict) : null
+    if (!annotation) continue
+    annotation.set(PDFName.of('Contents'), PDFHexString.fromText(edit.contents))
+    annotation.set(PDFName.of('M'), PDFString.of(pdfDateString(Date.now())))
   }
   for (const s of request.stamps ?? []) {
     const page = pages[s.pageIndex]

@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const ru = {
-  ribbonAiCreditNote: 'Использует ИИ и расходует кредиты',
-  ribbonAiRewriteConfirm:
-    'Это действие вызывает ИИ: расходуются кредиты, и всё содержимое может быть переписано. Продолжить? (Вопрос больше не появится.)',
-  // tabs
   ribbonTabFile: 'Файл',
   ribbonTabHome: 'Главная',
   ribbonTabInsert: 'Вставка',
@@ -174,8 +170,6 @@ export const ru = {
   ribbonFlipH: 'Отразить по горизонтали',
   ribbonFlipV: 'Отразить по вертикали',
   ribbonDistributeHint: '{title} (выделите не менее 3 элементов)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'Показать или скрыть панель ИИ-помощника',
   ribbonGroupTable: 'Таблица',
   ribbonInsertTableTip: 'Вставить таблицу (стиль по умолчанию; число строк и столбцов на выбор)',
   ribbonTablePickerHint: 'Выберите строки и столбцы',

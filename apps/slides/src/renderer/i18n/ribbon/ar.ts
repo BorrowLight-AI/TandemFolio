@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const ar = {
-  ribbonAiCreditNote: 'يستدعي الذكاء الاصطناعي ويستهلك الرصيد',
-  ribbonAiRewriteConfirm:
-    'هذا الإجراء يستدعي الذكاء الاصطناعي: يستهلك الرصيد وقد يعيد كتابة المحتوى بالكامل. هل تريد المتابعة؟ (لن يتم السؤال مرة أخرى.)',
-  // tabs
   ribbonTabFile: 'ملف',
   ribbonTabHome: 'الصفحة الرئيسية',
   ribbonTabInsert: 'إدراج',
@@ -170,8 +166,6 @@ export const ar = {
   ribbonFlipH: 'انعكاس أفقي',
   ribbonFlipV: 'انعكاس رأسي',
   ribbonDistributeHint: '{title} (حدد 3 عناصر على الأقل)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'إظهار أو إخفاء لوحة مساعد الذكاء الاصطناعي',
   ribbonGroupTable: 'جدول',
   ribbonInsertTableTip: 'إدراج جدول (نمط افتراضي؛ اختر الصفوف والأعمدة)',
   ribbonTablePickerHint: 'اختر الصفوف والأعمدة',

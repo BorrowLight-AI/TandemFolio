@@ -35,6 +35,7 @@ function controller(overrides: Partial<PdfCommunityController> = {}): PdfCommuni
     setStaticForm: async () => undefined,
     undo: async () => undefined,
     updateDrawing: async () => undefined,
+    updateSavedNote: async () => undefined,
     updateTextInsert: async () => undefined,
     ...overrides,
   }
@@ -53,16 +54,167 @@ describe('PDF operation registry', () => {
     )
   })
 
-  it('owns the complete retained PDF mutation surface as 23 public and two internal operations', () => {
-    expect(pdfOperationCatalog.operations).toHaveLength(25)
+  it('routes saved comment edits through the mounted PDF controller', async () => {
+    const updateSavedNote = vi.fn(async () => undefined)
+    const edit = {
+      pageIndex: 0,
+      objNum: 42,
+      rect: [10, 20, 30, 40],
+      oldContents: 'Before',
+      contents: 'After',
+    }
+
+    await expect(
+      executePdfOperation(
+        { operation: 'pdf.note.update_saved', arguments: edit },
+        { updateSavedNote },
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      operationId: 'pdf.note.update_saved',
+      ok: true,
+      output: { updated: 42 },
+    })
+    expect(updateSavedNote).toHaveBeenCalledWith(edit)
+  })
+
+  it('routes a saved-comment reply through the regular drawing command seam', async () => {
+    const addDrawing = vi.fn(async () => 'reply-id')
+    const reply = {
+      kind: 'note',
+      pageIndex: 0,
+      color: [1, 0.78, 0.13],
+      at: [200, 500],
+      contents: 'Reply',
+      author: 'hong',
+      createdMs: 1_786_511_400_000,
+      localId: 'reply-local',
+      replyToSaved: {
+        objNum: 42,
+        rect: [200, 482, 220, 500],
+        contents: 'Root',
+      },
+    }
+
+    await expect(
+      executePdfOperation({ operation: 'pdf.drawing.add', arguments: reply }, { addDrawing }),
+    ).resolves.toMatchObject({ ok: true, output: { id: 'reply-id' } })
+    expect(addDrawing).toHaveBeenCalledWith(reply)
+  })
+
+  it('routes blank-page insertion through the mounted PDF page controller', async () => {
+    const insertBlankPage = vi.fn(async () => undefined)
+
+    await expect(
+      executePdfOperation(
+        { operation: 'pdf.page.insert_blank', arguments: { afterPageIndex: 3 } },
+        { insertBlankPage },
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      operationId: 'pdf.page.insert_blank',
+      ok: true,
+      output: { insertedAfterPage: 3 },
+    })
+    expect(insertBlankPage).toHaveBeenCalledWith(3)
+  })
+
+  it('routes bounded page cropping through the mounted PDF page controller', async () => {
+    const cropPages = vi.fn(async () => undefined)
+    const rect = { l: 0.1, t: 0.2, r: 0.9, b: 0.8 }
+
+    await expect(
+      executePdfOperation(
+        { operation: 'pdf.page.crop', arguments: { pages: [0, 2], rect } },
+        { cropPages },
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      operationId: 'pdf.page.crop',
+      ok: true,
+      output: { croppedPages: 2 },
+    })
+    expect(cropPages).toHaveBeenCalledWith([0, 2], rect)
+  })
+
+  it('routes page-size changes through the mounted PDF page controller', async () => {
+    const setPageSize = vi.fn(async () => undefined)
+
+    await expect(
+      executePdfOperation(
+        { operation: 'pdf.page.set_size', arguments: { width: 595, height: 842 } },
+        { setPageSize },
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      operationId: 'pdf.page.set_size',
+      ok: true,
+      output: { width: 595, height: 842 },
+    })
+    expect(setPageSize).toHaveBeenCalledWith(595, 842)
+  })
+
+  it('creates a blank PDF only through the mounted document factory', async () => {
+    const createBlank = vi.fn(async () => ({ fileName: 'Untitled.pdf', pageCount: 1 }))
+
+    await expect(
+      executePdfOperation(
+        { operation: 'pdf.document.create_blank', arguments: { confirmReplace: true } },
+        { createBlank },
+      ),
+    ).resolves.toMatchObject({
+      handled: true,
+      operationId: 'pdf.document.create_blank',
+      ok: true,
+      output: { opened: true, fileName: 'Untitled.pdf', pageCount: 1 },
+    })
+    expect(createBlank).toHaveBeenCalledWith({ confirmReplace: true })
+  })
+
+  it('routes selection styles and exact movement through pdf.text.replace', async () => {
+    const replaceText = vi.fn(async () => 'styled-text')
+    const input = {
+      pageIndex: 0,
+      rect: [1, 2, 30, 20],
+      oldText: 'Styled',
+      newText: 'Styled',
+      fontSize: 12,
+      styleRuns: [{ start: 0, end: 3, color: [255, 0, 0], bold: true }],
+      translate: [10, -5],
+    }
+
+    await expect(
+      executePdfOperation({ operation: 'pdf.text.replace', arguments: input }, { replaceText }),
+    ).resolves.toMatchObject({ ok: true, output: { id: 'styled-text' } })
+    expect(replaceText).toHaveBeenCalledWith(input)
+  })
+
+  it('routes an empty replacement as native text deletion', async () => {
+    const replaceText = vi.fn(async () => 'deleted-text')
+    const input = {
+      pageIndex: 0,
+      rect: [1, 2, 30, 20],
+      oldText: 'Remove me',
+      newText: '',
+      fontSize: 12,
+    }
+
+    await expect(
+      executePdfOperation({ operation: 'pdf.text.replace', arguments: input }, { replaceText }),
+    ).resolves.toMatchObject({ ok: true, output: { id: 'deleted-text' } })
+    expect(replaceText).toHaveBeenCalledWith(input)
+  })
+
+  it('owns the complete retained PDF mutation surface as 29 public and three internal operations', () => {
+    expect(pdfOperationCatalog.operations).toHaveLength(32)
     expect(
       pdfOperationCatalog.operations.filter((operation) => operation.visibility === 'agent'),
-    ).toHaveLength(23)
+    ).toHaveLength(29)
     expect(
       pdfOperationCatalog.operations
         .filter((operation) => operation.visibility === 'internal')
         .map((operation) => operation.id),
-    ).toEqual(['pdf.page.insert_staged', 'pdf.document.load_staged'])
+    ).toEqual(['pdf.page.insert_staged', 'pdf.page.replace_staged', 'pdf.document.load_staged'])
   })
 
   it('routes retained final-state families through the mounted controller', async () => {
@@ -277,6 +429,33 @@ describe('PDF operation registry', () => {
       ),
     ).resolves.toMatchObject({ ok: false, error: 'invalid_arguments' })
     expect(insertPagesStaged).toHaveBeenCalledTimes(1)
+  })
+
+  it('hydrates and replaces exact pages from a bounded staged PDF', async () => {
+    const replacePagesStaged = vi.fn(async () => ({ removed: 2, inserted: 1 }))
+    const data = new TextEncoder().encode('%PDF-1.7\nreplacement').buffer
+
+    await expect(
+      executePdfOperation(
+        {
+          operation: 'pdf.page.replace_staged',
+          arguments: {
+            blobId: 'replace-blob',
+            name: 'replacement.pdf',
+            size: data.byteLength,
+            data,
+            pages: [1, 2],
+          },
+        },
+        { replacePagesStaged },
+      ),
+    ).resolves.toEqual({
+      handled: true,
+      operationId: 'pdf.page.replace_staged',
+      ok: true,
+      output: { removed: 2, inserted: 1 },
+    })
+    expect(replacePagesStaged).toHaveBeenCalledWith({ name: 'replacement.pdf', data, pages: [1, 2] })
   })
 
   it('declares the exact PDF save contract without inventing a file name', () => {

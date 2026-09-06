@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const ko = {
-  ribbonAiCreditNote: 'AI를 호출하며 크레딧이 소모됩니다',
-  ribbonAiRewriteConfirm:
-    '이 작업은 AI를 호출합니다. 크레딧이 소모되며 전체 내용이 다시 작성될 수 있습니다. 계속하시겠습니까? (확인 후 다시 묻지 않습니다)',
-  // tabs
   ribbonTabFile: '파일',
   ribbonTabHome: '홈',
   ribbonTabInsert: '삽입',
@@ -175,9 +171,6 @@ export const ko = {
   ribbonFlipH: '좌우 대칭',
   ribbonFlipV: '상하 대칭',
   ribbonDistributeHint: '{title}(요소를 3개 이상 선택해야 함)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'AI 도우미 패널 표시/숨기기',
-  // Insert
   ribbonGroupTable: '표',
   ribbonInsertTableTip: '표 삽입(기본 스타일, 행과 열 선택 가능)',
   ribbonTablePickerHint: '행과 열 선택',

@@ -39889,7 +39889,13 @@ var operation_manifest_default = {
               "all",
               "outer",
               "inner",
-              "none"
+              "none",
+              "top",
+              "bottom",
+              "left",
+              "right",
+              "insideH",
+              "insideV"
             ],
             type: "string"
           },
@@ -42881,6 +42887,10 @@ var operation_manifest_default = {
       inputSchema: {
         additionalProperties: false,
         properties: {
+          contents: {
+            maxLength: 1e5,
+            type: "string"
+          },
           objNum: {
             minimum: 1,
             type: "integer"
@@ -42901,7 +42911,8 @@ var operation_manifest_default = {
             enum: [
               "highlight",
               "underline",
-              "strikeout"
+              "strikeout",
+              "note"
             ],
             type: "string"
           }
@@ -42931,6 +42942,59 @@ var operation_manifest_default = {
       risk: "medium",
       summary: "Delete one exact saved PDF text-markup annotation.",
       undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [],
+      effects: [
+        "document",
+        "selection"
+      ],
+      family: "document",
+      format: "pdf",
+      id: "pdf.document.create_blank",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          confirmReplace: {
+            type: "boolean"
+          }
+        },
+        required: [],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          fileName: {
+            type: "string"
+          },
+          opened: {
+            enum: [
+              true
+            ],
+            type: "boolean"
+          },
+          pageCount: {
+            enum: [
+              1
+            ],
+            type: "integer"
+          }
+        },
+        required: [
+          "opened",
+          "fileName",
+          "pageCount"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Create a one-page blank PDF. Replacing an opened or edited document requires confirmReplace: true.",
+      undoable: false,
       visibility: "agent"
     },
     {
@@ -43119,6 +43183,10 @@ var operation_manifest_default = {
             minItems: 2,
             type: "array"
           },
+          author: {
+            maxLength: 1e3,
+            type: "string"
+          },
           color: {
             items: {
               maximum: 1,
@@ -43133,6 +43201,10 @@ var operation_manifest_default = {
             maxLength: 1e5,
             minLength: 1,
             type: "string"
+          },
+          createdMs: {
+            minimum: 0,
+            type: "number"
           },
           formFieldName: {
             maxLength: 512,
@@ -43166,6 +43238,11 @@ var operation_manifest_default = {
             ],
             type: "string"
           },
+          localId: {
+            maxLength: 128,
+            minLength: 1,
+            type: "string"
+          },
           pageIndex: {
             maximum: 999999,
             minimum: 0,
@@ -43195,6 +43272,40 @@ var operation_manifest_default = {
             maxItems: 4,
             minItems: 4,
             type: "array"
+          },
+          replyToLocalId: {
+            maxLength: 128,
+            minLength: 1,
+            type: "string"
+          },
+          replyToSaved: {
+            additionalProperties: false,
+            properties: {
+              contents: {
+                maxLength: 1e5,
+                type: "string"
+              },
+              objNum: {
+                minimum: 1,
+                type: "integer"
+              },
+              rect: {
+                items: {
+                  maximum: 1e7,
+                  minimum: -1e7,
+                  type: "number"
+                },
+                maxItems: 4,
+                minItems: 4,
+                type: "array"
+              }
+            },
+            required: [
+              "objNum",
+              "rect",
+              "contents"
+            ],
+            type: "object"
           },
           to: {
             items: {
@@ -43267,6 +43378,10 @@ var operation_manifest_default = {
                 minItems: 2,
                 type: "array"
               },
+              author: {
+                maxLength: 1e3,
+                type: "string"
+              },
               color: {
                 items: {
                   maximum: 1,
@@ -43281,6 +43396,10 @@ var operation_manifest_default = {
                 maxLength: 1e5,
                 minLength: 1,
                 type: "string"
+              },
+              createdMs: {
+                minimum: 0,
+                type: "number"
               },
               formFieldName: {
                 maxLength: 512,
@@ -43314,6 +43433,11 @@ var operation_manifest_default = {
                 ],
                 type: "string"
               },
+              localId: {
+                maxLength: 128,
+                minLength: 1,
+                type: "string"
+              },
               pageIndex: {
                 maximum: 999999,
                 minimum: 0,
@@ -43343,6 +43467,40 @@ var operation_manifest_default = {
                 maxItems: 4,
                 minItems: 4,
                 type: "array"
+              },
+              replyToLocalId: {
+                maxLength: 128,
+                minLength: 1,
+                type: "string"
+              },
+              replyToSaved: {
+                additionalProperties: false,
+                properties: {
+                  contents: {
+                    maxLength: 1e5,
+                    type: "string"
+                  },
+                  objNum: {
+                    minimum: 1,
+                    type: "integer"
+                  },
+                  rect: {
+                    items: {
+                      maximum: 1e7,
+                      minimum: -1e7,
+                      type: "number"
+                    },
+                    maxItems: 4,
+                    minItems: 4,
+                    type: "array"
+                  }
+                },
+                required: [
+                  "objNum",
+                  "rect",
+                  "contents"
+                ],
+                type: "object"
               },
               to: {
                 items: {
@@ -43943,6 +44101,163 @@ var operation_manifest_default = {
         "document"
       ],
       effects: [
+        "document"
+      ],
+      family: "annotation",
+      format: "pdf",
+      id: "pdf.note.update_saved",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          contents: {
+            maxLength: 1e5,
+            type: "string"
+          },
+          objNum: {
+            minimum: 1,
+            type: "integer"
+          },
+          oldContents: {
+            maxLength: 1e5,
+            type: "string"
+          },
+          pageIndex: {
+            maximum: 999999,
+            minimum: 0,
+            type: "integer"
+          },
+          rect: {
+            items: {
+              maximum: 1e7,
+              minimum: -1e7,
+              type: "number"
+            },
+            maxItems: 4,
+            minItems: 4,
+            type: "array"
+          }
+        },
+        required: [
+          "pageIndex",
+          "objNum",
+          "rect",
+          "oldContents",
+          "contents"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          updated: {
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "updated"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Replace the contents of one exact saved PDF comment without changing its identity.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      family: "page",
+      format: "pdf",
+      id: "pdf.page.crop",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          pages: {
+            items: {
+              maximum: 999999,
+              minimum: 0,
+              type: "integer"
+            },
+            maxItems: 1e6,
+            minItems: 1,
+            type: "array"
+          },
+          rect: {
+            additionalProperties: false,
+            properties: {
+              b: {
+                maximum: 1,
+                minimum: 0,
+                type: "number"
+              },
+              l: {
+                maximum: 1,
+                minimum: 0,
+                type: "number"
+              },
+              r: {
+                maximum: 1,
+                minimum: 0,
+                type: "number"
+              },
+              t: {
+                maximum: 1,
+                minimum: 0,
+                type: "number"
+              }
+            },
+            required: [
+              "l",
+              "t",
+              "r",
+              "b"
+            ],
+            type: "object"
+          }
+        },
+        required: [
+          "pages",
+          "rect"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          croppedPages: {
+            maximum: 1e6,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "croppedPages"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Crop exact original pages to a displayed-page fractional rectangle.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
         "document",
         "selection"
       ],
@@ -44034,7 +44349,55 @@ var operation_manifest_default = {
       },
       risk: "high",
       summary: "Insert every page from one local PDF after an exact original page.",
-      undoable: false,
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      family: "page",
+      format: "pdf",
+      id: "pdf.page.insert_blank",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          afterPageIndex: {
+            maximum: 999999,
+            minimum: -1,
+            type: "integer"
+          }
+        },
+        required: [
+          "afterPageIndex"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          insertedAfterPage: {
+            maximum: 999999,
+            minimum: -1,
+            type: "integer"
+          }
+        },
+        required: [
+          "insertedAfterPage"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Insert one blank page after an exact original page, matching its size and rotation.",
+      undoable: true,
       visibility: "agent"
     },
     {
@@ -44108,7 +44471,7 @@ var operation_manifest_default = {
       },
       risk: "high",
       summary: "Insert Broker-hydrated PDF bytes after an exact original page.",
-      undoable: false,
+      undoable: true,
       visibility: "internal"
     },
     {
@@ -44170,6 +44533,156 @@ var operation_manifest_default = {
         "document"
       ],
       effects: [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      family: "page",
+      format: "pdf",
+      id: "pdf.page.replace",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          pages: {
+            items: {
+              maximum: 999999,
+              minimum: 0,
+              type: "integer"
+            },
+            maxItems: 1e6,
+            minItems: 1,
+            type: "array"
+          },
+          path: {
+            maxLength: 32768,
+            minLength: 1,
+            type: "string"
+          }
+        },
+        required: [
+          "path",
+          "pages"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          inserted: {
+            maximum: 1e6,
+            minimum: 1,
+            type: "integer"
+          },
+          removed: {
+            maximum: 1e6,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "removed",
+          "inserted"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Replace exact original pages with every page from one local PDF.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      family: "page",
+      format: "pdf",
+      id: "pdf.page.replace_staged",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          blobId: {
+            maxLength: 512,
+            minLength: 1,
+            type: "string"
+          },
+          data: {
+            additionalProperties: false,
+            description: "Hydrated ArrayBuffer supplied by the live-session host bridge.",
+            properties: {},
+            required: [],
+            type: "object"
+          },
+          name: {
+            maxLength: 512,
+            minLength: 1,
+            type: "string"
+          },
+          pages: {
+            items: {
+              maximum: 999999,
+              minimum: 0,
+              type: "integer"
+            },
+            maxItems: 1e6,
+            minItems: 1,
+            type: "array"
+          },
+          size: {
+            maximum: 1e8,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "blobId",
+          "name",
+          "size",
+          "data",
+          "pages"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          inserted: {
+            maximum: 1e6,
+            minimum: 1,
+            type: "integer"
+          },
+          removed: {
+            maximum: 1e6,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "removed",
+          "inserted"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Replace exact original pages with Broker-hydrated PDF bytes.",
+      undoable: true,
+      visibility: "internal"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
         "document"
       ],
       family: "page",
@@ -44220,6 +44733,64 @@ var operation_manifest_default = {
       },
       risk: "medium",
       summary: "Set one original page to an explicit final clockwise rotation.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      family: "page",
+      format: "pdf",
+      id: "pdf.page.set_size",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          height: {
+            maximum: 1e5,
+            minimum: 1,
+            type: "number"
+          },
+          width: {
+            maximum: 1e5,
+            minimum: 1,
+            type: "number"
+          }
+        },
+        required: [
+          "width",
+          "height"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          height: {
+            minimum: 1,
+            type: "number"
+          },
+          width: {
+            minimum: 1,
+            type: "number"
+          }
+        },
+        required: [
+          "width",
+          "height"
+        ],
+        type: "object"
+      },
+      risk: "high",
+      summary: "Resize every PDF page to an explicit paper size in points.",
       undoable: true,
       visibility: "agent"
     },
@@ -44767,7 +45338,6 @@ var operation_manifest_default = {
           },
           newText: {
             maxLength: 1e6,
-            minLength: 1,
             type: "string"
           },
           oldText: {
@@ -44798,6 +45368,66 @@ var operation_manifest_default = {
             },
             maxItems: 4,
             minItems: 4,
+            type: "array"
+          },
+          styleRuns: {
+            items: {
+              additionalProperties: false,
+              properties: {
+                bold: {
+                  type: "boolean"
+                },
+                color: {
+                  items: {
+                    maximum: 255,
+                    minimum: 0,
+                    type: "integer"
+                  },
+                  maxItems: 3,
+                  minItems: 3,
+                  type: "array"
+                },
+                end: {
+                  maximum: 1e6,
+                  minimum: 0,
+                  type: "integer"
+                },
+                font: {
+                  maxLength: 128,
+                  minLength: 1,
+                  type: "string"
+                },
+                italic: {
+                  type: "boolean"
+                },
+                size: {
+                  maximum: 1e3,
+                  minimum: 1,
+                  type: "number"
+                },
+                start: {
+                  maximum: 1e6,
+                  minimum: 0,
+                  type: "integer"
+                }
+              },
+              required: [
+                "start",
+                "end"
+              ],
+              type: "object"
+            },
+            maxItems: 1e5,
+            type: "array"
+          },
+          translate: {
+            items: {
+              maximum: 1e7,
+              minimum: -1e7,
+              type: "number"
+            },
+            maxItems: 2,
+            minItems: 2,
             type: "array"
           }
         },
@@ -45125,9 +45755,11 @@ var operation_manifest_default = {
               "barStacked",
               "barPercentStacked",
               "barH",
+              "bar3D",
               "line",
               "area",
               "pie",
+              "pie3D",
               "doughnut",
               "scatter",
               "radar",
@@ -45283,9 +45915,11 @@ var operation_manifest_default = {
               "barStacked",
               "barPercentStacked",
               "barH",
+              "bar3D",
               "line",
               "area",
               "pie",
+              "pie3D",
               "doughnut",
               "scatter",
               "radar",
@@ -46405,7 +47039,7 @@ var operation_manifest_default = {
                 type: "number"
               },
               color: {
-                pattern: "^#[0-9A-Fa-f]{6}$",
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 type: "string"
               },
               from: {
@@ -46501,7 +47135,7 @@ var operation_manifest_default = {
             additionalProperties: false,
             properties: {
               color: {
-                pattern: "^#[0-9A-Fa-f]{6}$",
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 type: "string"
               },
               widthEmu: {
@@ -46686,6 +47320,9 @@ var operation_manifest_default = {
                   maximum: 1e3,
                   minimum: 1,
                   type: "number"
+                },
+                rtl: {
+                  type: "boolean"
                 },
                 runs: {
                   items: {
@@ -47276,6 +47913,9 @@ var operation_manifest_default = {
                   maximum: 1e3,
                   minimum: 1,
                   type: "number"
+                },
+                rtl: {
+                  type: "boolean"
                 },
                 runs: {
                   items: {
@@ -47904,6 +48544,195 @@ var operation_manifest_default = {
       ],
       family: "object",
       format: "pptx",
+      id: "pptx.object.set_effects",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          glow: {
+            additionalProperties: false,
+            properties: {
+              color: {
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                type: "string"
+              },
+              radiusEmu: {
+                maximum: 2e7,
+                minimum: 0,
+                type: "number"
+              }
+            },
+            required: [
+              "color",
+              "radiusEmu"
+            ],
+            type: [
+              "object",
+              "null"
+            ]
+          },
+          objectId: {
+            maxLength: 256,
+            minLength: 1,
+            type: "string"
+          },
+          reflection: {
+            additionalProperties: false,
+            properties: {
+              blurRadiusEmu: {
+                maximum: 2e7,
+                minimum: 0,
+                type: "number"
+              },
+              distanceEmu: {
+                maximum: 2e7,
+                minimum: 0,
+                type: "number"
+              },
+              endPosition: {
+                maximum: 1,
+                minimum: 0,
+                type: "number"
+              },
+              startAlpha: {
+                maximum: 1,
+                minimum: 0,
+                type: "number"
+              }
+            },
+            required: [
+              "blurRadiusEmu",
+              "startAlpha",
+              "endPosition",
+              "distanceEmu"
+            ],
+            type: [
+              "object",
+              "null"
+            ]
+          },
+          shadow: {
+            additionalProperties: false,
+            properties: {
+              algn: {
+                enum: [
+                  "tl",
+                  "t",
+                  "tr",
+                  "l",
+                  "ctr",
+                  "r",
+                  "bl",
+                  "b",
+                  "br"
+                ],
+                type: "string"
+              },
+              blurRadiusEmu: {
+                maximum: 2e7,
+                minimum: 0,
+                type: "number"
+              },
+              color: {
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                type: "string"
+              },
+              directionDeg: {
+                maximum: 360,
+                minimum: -360,
+                type: "number"
+              },
+              distanceEmu: {
+                maximum: 2e7,
+                minimum: 0,
+                type: "number"
+              },
+              inner: {
+                type: "boolean"
+              },
+              kxDeg: {
+                maximum: 90,
+                minimum: -90,
+                type: "number"
+              },
+              kyDeg: {
+                maximum: 90,
+                minimum: -90,
+                type: "number"
+              },
+              sx: {
+                maximum: 10,
+                minimum: -10,
+                type: "number"
+              },
+              sy: {
+                maximum: 10,
+                minimum: -10,
+                type: "number"
+              }
+            },
+            required: [
+              "color",
+              "blurRadiusEmu",
+              "distanceEmu",
+              "directionDeg"
+            ],
+            type: [
+              "object",
+              "null"
+            ]
+          },
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          },
+          softEdgeRadiusEmu: {
+            maximum: 2e7,
+            minimum: 0,
+            type: [
+              "number",
+              "null"
+            ]
+          }
+        },
+        required: [
+          "slideIndex",
+          "objectId"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          updated: {
+            enum: [
+              true
+            ],
+            type: "boolean"
+          }
+        },
+        required: [
+          "updated"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Set or clear native shadow, glow, reflection, and soft-edge effects.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "object",
+      format: "pptx",
       id: "pptx.object.set_fill",
       inputSchema: {
         additionalProperties: false,
@@ -47916,12 +48745,32 @@ var operation_manifest_default = {
                 minimum: -3600,
                 type: "number"
               },
+              center: {
+                additionalProperties: false,
+                properties: {
+                  x: {
+                    maximum: 1,
+                    minimum: 0,
+                    type: "number"
+                  },
+                  y: {
+                    maximum: 1,
+                    minimum: 0,
+                    type: "number"
+                  }
+                },
+                required: [
+                  "x",
+                  "y"
+                ],
+                type: "object"
+              },
               color: {
-                pattern: "^#[0-9A-Fa-f]{6}$",
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 type: "string"
               },
               from: {
-                pattern: "^#[0-9A-Fa-f]{6}$",
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 type: "string"
               },
               kind: {
@@ -47932,11 +48781,43 @@ var operation_manifest_default = {
                 ],
                 type: "string"
               },
+              path: {
+                enum: [
+                  "circle",
+                  "rect",
+                  "shape"
+                ],
+                type: "string"
+              },
               radial: {
                 type: "boolean"
               },
+              stops: {
+                items: {
+                  additionalProperties: false,
+                  properties: {
+                    color: {
+                      pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                      type: "string"
+                    },
+                    pos: {
+                      maximum: 1,
+                      minimum: 0,
+                      type: "number"
+                    }
+                  },
+                  required: [
+                    "pos",
+                    "color"
+                  ],
+                  type: "object"
+                },
+                maxItems: 32,
+                minItems: 2,
+                type: "array"
+              },
               to: {
-                pattern: "^#[0-9A-Fa-f]{6}$",
+                pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
                 type: "string"
               }
             },
@@ -47994,7 +48875,7 @@ var operation_manifest_default = {
         type: "object"
       },
       risk: "medium",
-      summary: "Set an explicit none, solid, or two-stop gradient object fill.",
+      summary: "Set an explicit none, solid, or multi-stop native gradient object fill.",
       undoable: true,
       visibility: "agent"
     },
@@ -48077,6 +48958,78 @@ var operation_manifest_default = {
       ],
       family: "object",
       format: "pptx",
+      id: "pptx.object.set_geometry",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          adjustments: {
+            additionalProperties: {
+              maximum: 1e8,
+              minimum: -1e8,
+              type: "number"
+            },
+            type: "object"
+          },
+          groupId: {
+            maxLength: 256,
+            minLength: 1,
+            type: "string"
+          },
+          objectId: {
+            maxLength: 256,
+            minLength: 1,
+            type: "string"
+          },
+          preset: {
+            maxLength: 128,
+            minLength: 1,
+            pattern: "^[A-Za-z0-9]+$",
+            type: "string"
+          },
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          }
+        },
+        required: [
+          "slideIndex",
+          "objectId"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          updated: {
+            enum: [
+              true
+            ],
+            type: "boolean"
+          }
+        },
+        required: [
+          "updated"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Change a native preset shape and its adjustment values.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "object",
+      format: "pptx",
       id: "pptx.object.set_image_fill",
       inputSchema: {
         additionalProperties: false,
@@ -48097,6 +49050,18 @@ var operation_manifest_default = {
               "webp",
               "tif",
               "tiff"
+            ],
+            type: "string"
+          },
+          groupId: {
+            maxLength: 256,
+            minLength: 1,
+            type: "string"
+          },
+          mode: {
+            enum: [
+              "stretch",
+              "tile"
             ],
             type: "string"
           },
@@ -48185,8 +49150,26 @@ var operation_manifest_default = {
           stroke: {
             additionalProperties: false,
             properties: {
+              cap: {
+                enum: [
+                  "flat",
+                  "rnd",
+                  "sq"
+                ],
+                type: "string"
+              },
               color: {
                 pattern: "^#[0-9A-Fa-f]{6}$",
+                type: "string"
+              },
+              compound: {
+                enum: [
+                  "sng",
+                  "dbl",
+                  "thickThin",
+                  "thinThick",
+                  "tri"
+                ],
                 type: "string"
               },
               dash: {
@@ -48202,6 +49185,53 @@ var operation_manifest_default = {
                   "sysDash",
                   "sysDashDot",
                   "sysDashDotDot"
+                ],
+                type: "string"
+              },
+              gradient: {
+                additionalProperties: false,
+                properties: {
+                  angleDeg: {
+                    maximum: 360,
+                    minimum: -360,
+                    type: "number"
+                  },
+                  stops: {
+                    items: {
+                      additionalProperties: false,
+                      properties: {
+                        color: {
+                          pattern: "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$",
+                          type: "string"
+                        },
+                        pos: {
+                          maximum: 1,
+                          minimum: 0,
+                          type: "number"
+                        }
+                      },
+                      required: [
+                        "pos",
+                        "color"
+                      ],
+                      type: "object"
+                    },
+                    maxItems: 32,
+                    minItems: 2,
+                    type: "array"
+                  }
+                },
+                required: [
+                  "stops",
+                  "angleDeg"
+                ],
+                type: "object"
+              },
+              join: {
+                enum: [
+                  "round",
+                  "bevel",
+                  "miter"
                 ],
                 type: "string"
               },
@@ -48582,6 +49612,9 @@ var operation_manifest_default = {
             maxItems: 100,
             minItems: 1,
             type: "array"
+          },
+          rtl: {
+            type: "boolean"
           },
           slideIndex: {
             maximum: 1e5,
@@ -49507,6 +50540,53 @@ var operation_manifest_default = {
       ],
       family: "slide",
       format: "pptx",
+      id: "pptx.slide.reset_background",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          }
+        },
+        required: [
+          "slideIndex"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          changed: {
+            enum: [
+              1
+            ],
+            type: "integer"
+          }
+        },
+        required: [
+          "changed"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Reset one slide to its inherited layout or master background.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "slide",
+      format: "pptx",
       id: "pptx.slide.set_advance_times",
       inputSchema: {
         additionalProperties: false,
@@ -49620,6 +50700,210 @@ var operation_manifest_default = {
       },
       risk: "medium",
       summary: "Set a solid background on one slide or every slide.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "slide",
+      format: "pptx",
+      id: "pptx.slide.set_background_gradient",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          angleDeg: {
+            maximum: 360,
+            minimum: -360,
+            type: "number"
+          },
+          from: {
+            pattern: "^#[0-9A-Fa-f]{6}$",
+            type: "string"
+          },
+          radial: {
+            type: "boolean"
+          },
+          scope: {
+            enum: [
+              "slide",
+              "all"
+            ],
+            type: "string"
+          },
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          },
+          to: {
+            pattern: "^#[0-9A-Fa-f]{6}$",
+            type: "string"
+          }
+        },
+        required: [
+          "scope",
+          "from",
+          "to"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          changed: {
+            maximum: 100001,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "changed"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Set a two-stop native gradient background on one slide or every slide.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "slide",
+      format: "pptx",
+      id: "pptx.slide.set_background_graphics_hidden",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          hidden: {
+            type: "boolean"
+          },
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          }
+        },
+        required: [
+          "slideIndex",
+          "hidden"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          changed: {
+            enum: [
+              1
+            ],
+            type: "integer"
+          }
+        },
+        required: [
+          "changed"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Show or hide inherited master graphics on one slide.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "slide",
+      format: "pptx",
+      id: "pptx.slide.set_background_image",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          data: {
+            maxLength: 14e7,
+            minLength: 4,
+            pattern: "^[A-Za-z0-9+/]+={0,2}$",
+            type: "string"
+          },
+          extension: {
+            enum: [
+              "png",
+              "jpg",
+              "jpeg",
+              "gif",
+              "bmp",
+              "webp",
+              "tif",
+              "tiff"
+            ],
+            type: "string"
+          },
+          mode: {
+            enum: [
+              "stretch",
+              "tile"
+            ],
+            type: "string"
+          },
+          scope: {
+            enum: [
+              "slide",
+              "all"
+            ],
+            type: "string"
+          },
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          }
+        },
+        required: [
+          "scope",
+          "data",
+          "extension",
+          "mode"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          changed: {
+            maximum: 100001,
+            minimum: 1,
+            type: "integer"
+          }
+        },
+        required: [
+          "changed"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Set a native stretched or tiled image background on one slide or every slide.",
       undoable: true,
       visibility: "agent"
     },
@@ -50299,6 +51583,9 @@ var operation_manifest_default = {
                   minimum: 1,
                   type: "number"
                 },
+                rtl: {
+                  type: "boolean"
+                },
                 runs: {
                   items: {
                     additionalProperties: false,
@@ -50670,6 +51957,9 @@ var operation_manifest_default = {
           firstRow: {
             type: "boolean"
           },
+          rtl: {
+            type: "boolean"
+          },
           shadingColor: {
             pattern: "^(?:#[0-9A-Fa-f]{6}|none)$",
             type: [
@@ -50849,6 +52139,100 @@ var operation_manifest_default = {
       ],
       family: "text",
       format: "pptx",
+      id: "pptx.text.set_body_properties",
+      inputSchema: {
+        additionalProperties: false,
+        properties: {
+          autofit: {
+            enum: [
+              "none",
+              "shrink",
+              "resize"
+            ],
+            type: "string"
+          },
+          insetBottomEmu: {
+            maximum: 2e7,
+            minimum: 0,
+            type: "number"
+          },
+          insetLeftEmu: {
+            maximum: 2e7,
+            minimum: 0,
+            type: "number"
+          },
+          insetRightEmu: {
+            maximum: 2e7,
+            minimum: 0,
+            type: "number"
+          },
+          insetTopEmu: {
+            maximum: 2e7,
+            minimum: 0,
+            type: "number"
+          },
+          objectId: {
+            maxLength: 256,
+            minLength: 1,
+            type: "string"
+          },
+          slideIndex: {
+            maximum: 1e5,
+            minimum: 0,
+            type: "integer"
+          },
+          vertical: {
+            enum: [
+              "horizontal",
+              "eastAsianVertical",
+              "vertical",
+              "vert270",
+              "wordArtVertical"
+            ],
+            type: "string"
+          },
+          wrap: {
+            type: "boolean"
+          }
+        },
+        required: [
+          "slideIndex",
+          "objectId"
+        ],
+        type: "object"
+      },
+      mutates: true,
+      outputSchema: {
+        additionalProperties: false,
+        properties: {
+          updated: {
+            enum: [
+              true
+            ],
+            type: "boolean"
+          }
+        },
+        required: [
+          "updated"
+        ],
+        type: "object"
+      },
+      risk: "medium",
+      summary: "Set native text direction, autofit, wrapping, and text-box insets.",
+      undoable: true,
+      visibility: "agent"
+    },
+    {
+      atomic: true,
+      compatibilityAliases: [],
+      context: [
+        "document"
+      ],
+      effects: [
+        "document"
+      ],
+      family: "text",
+      format: "pptx",
       id: "pptx.text.set_font",
       inputSchema: {
         additionalProperties: false,
@@ -50986,6 +52370,9 @@ var operation_manifest_default = {
                   maximum: 1e3,
                   minimum: 1,
                   type: "number"
+                },
+                rtl: {
+                  type: "boolean"
                 },
                 runs: {
                   items: {
@@ -60973,6 +62360,9 @@ function stagedWorkbookMergeOperation() {
 function stagedPdfPageInsertOperation() {
   return resolveRegisteredOperation("pdf", "pdf.page.insert_staged", "internal")?.id ?? "pdf.page.insert_staged";
 }
+function stagedPdfPageReplaceOperation() {
+  return resolveRegisteredOperation("pdf", "pdf.page.replace_staged", "internal")?.id ?? "pdf.page.replace_staged";
+}
 async function editorHtml(format = "docx") {
   const candidates = format === "docx" ? [
     new URL("../assets/editor/index.html", import.meta.url),
@@ -61503,6 +62893,21 @@ server.registerTool(
           const command2 = enqueue(stagedPdfPageInsertOperation(), {
             ...staged,
             afterPageIndex: args.afterPageIndex
+          });
+          return await waitForExecution(command2, descriptor.id);
+        } finally {
+          if (blobId) localFiles.release(blobId);
+        }
+      }
+      if (session.format === "pdf" && descriptor.id === "pdf.page.replace") {
+        let blobId;
+        try {
+          const staged = await localFiles.stage(sessionId, "pdf", args.path);
+          blobId = staged.blobId;
+          blobId = deferStagedFileRelease(activeTransaction, blobId);
+          const command2 = enqueue(stagedPdfPageReplaceOperation(), {
+            ...staged,
+            pages: args.pages
           });
           return await waitForExecution(command2, descriptor.id);
         } finally {

@@ -21,6 +21,11 @@ export interface PdfRetainedProducer {
  */
 export const pdfRetainedProducerBaseline = [
   {
+    producer: 'blank document creation',
+    disposition: 'registry',
+    operationIds: ['pdf.document.create_blank'],
+  },
+  {
     producer: 'document open',
     disposition: 'registry',
     operationIds: ['pdf.document.load_staged'],
@@ -49,6 +54,11 @@ export const pdfRetainedProducerBaseline = [
     producer: 'drawing and note add',
     disposition: 'registry',
     operationIds: ['pdf.drawing.add'],
+  },
+  {
+    producer: 'saved note comment edit',
+    disposition: 'registry',
+    operationIds: ['pdf.note.update_saved'],
   },
   {
     producer: 'drawing move/resize',
@@ -134,6 +144,26 @@ export const pdfRetainedProducerBaseline = [
     producer: 'page insert from PDF',
     disposition: 'registry',
     operationIds: ['pdf.page.insert', 'pdf.page.insert_staged'],
+  },
+  {
+    producer: 'page replacement from PDF',
+    disposition: 'registry',
+    operationIds: ['pdf.page.replace', 'pdf.page.replace_staged'],
+  },
+  {
+    producer: 'blank page insertion',
+    disposition: 'registry',
+    operationIds: ['pdf.page.insert_blank'],
+  },
+  {
+    producer: 'page crop',
+    disposition: 'registry',
+    operationIds: ['pdf.page.crop'],
+  },
+  {
+    producer: 'page size',
+    disposition: 'registry',
+    operationIds: ['pdf.page.set_size'],
   },
   {
     producer: 'save as/export images/extract/print',

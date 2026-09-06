@@ -1,9 +1,6 @@
 import type { zh } from './zh'
 
 export const ms = {
-  ribbonAiCreditNote: 'Menggunakan AI dan menggunakan kredit',
-  ribbonAiRewriteConfirm:
-    'Tindakan ini memanggil AI: menggunakan kredit dan mungkin menulis semula keseluruhan kandungan. Teruskan? (Tidak akan ditanya lagi.)',
   ribbonTabFile: 'Fail',
   ribbonTabHome: 'Laman Utama',
   ribbonTabInsert: 'Sisip',
@@ -172,8 +169,6 @@ export const ms = {
   ribbonFlipH: 'Balik mengufuk',
   ribbonFlipV: 'Balik menegak',
   ribbonDistributeHint: '{title} (pilih 3 elemen atau lebih)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'Tunjukkan atau sembunyikan panel Pembantu AI',
   ribbonGroupTable: 'Jadual',
   ribbonInsertTableTip: 'Sisipkan jadual (gaya lalai; pilih baris dan lajur)',
   ribbonTablePickerHint: 'Pilih baris dan lajur',

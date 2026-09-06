@@ -28,6 +28,22 @@ export const PDF_CHANNELS = {
 
 export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'GenOffice visual signature field: '
 
+export interface SignatureStrokes {
+  paths: number[][]
+  width: number
+  height: number
+}
+
+export type SignatureData =
+  | ({ kind: 'strokes' } & SignatureStrokes)
+  | { kind: 'image'; image: string; width: number; height: number }
+
+export interface SavedSignature {
+  id: string
+  createdAt: number
+  data: SignatureData
+}
+
 export type UiTheme = 'light' | 'dark' | 'system'
 
 export type MarkupType = 'highlight' | 'underline' | 'strikeout'
@@ -47,9 +63,25 @@ export interface AnnotDeleteInput {
   pageIndex: number
   /** PDF object number (pdf.js annotation id "123R" → 123) */
   objNum: number
-  subtype: MarkupType
+  subtype: MarkupType | 'note'
   /** Annotation /Rect in PDF user space, for fallback matching */
   rect: [number, number, number, number]
+  /** Required for exact comment-thread member identity. */
+  contents?: string
+}
+
+export interface NoteReplyTarget {
+  objNum: number
+  rect: [number, number, number, number]
+  contents: string
+}
+
+export interface NoteEditInput {
+  pageIndex: number
+  objNum: number
+  rect: [number, number, number, number]
+  oldContents: string
+  contents: string
 }
 
 /** Drawing annotations (all coords in PDF user space, y up).
@@ -89,6 +121,16 @@ export type DrawingInput =
       color: [number, number, number]
       at: [number, number]
       contents: string
+      /** Annotation author (/T); omitted uses the retained editor identity. */
+      author?: string
+      /** Creation time in epoch milliseconds; omitted uses save time. */
+      createdMs?: number
+      /** Stable request-local identity used when another new comment replies to this one. */
+      localId?: string
+      /** Existing saved comment that receives this reply. */
+      replyToSaved?: NoteReplyTarget
+      /** Request-local parent comment identity. */
+      replyToLocalId?: string
     }
 
 /**
@@ -136,6 +178,16 @@ export interface TextEditInput {
       and non-overlapping. Chars outside every range keep newColor ?? the original run's
       color. The engine splits each rebuilt line into one text object per color. */
   colorRuns?: { start: number; end: number; color: [number, number, number] }[]
+  /** Selection-level final style overrides; ranges are ascending and non-overlapping. */
+  styleRuns?: {
+    start: number
+    end: number
+    color?: [number, number, number]
+    font?: string
+    size?: number
+    bold?: boolean
+    italic?: boolean
+  }[]
   /** User-chosen rebuild font (EDIT_FONTS id); absent = keep the original font (embedded
       subset when it covers the replacement, else the same-named installed font, else
       fallback). An explicit id is honored only when the face's cmap covers the whole
@@ -165,6 +217,8 @@ export interface TextEditInput {
       Degrades silently to the base face when no variant covers the replacement. */
   newBold?: boolean
   newItalic?: boolean
+  /** Translate an exact whole-run match without rebuilding its glyphs. */
+  translate?: [number, number]
 }
 
 /** A new searchable/selectable text object inserted into a page content stream. */
@@ -328,6 +382,8 @@ export interface SavePdfRequest {
   markups: MarkupInput[]
   /** Saved markup annotations to remove (applied before every other stage) */
   annotDeletes?: AnnotDeleteInput[]
+  /** In-place updates for saved comment contents, preserving reply identities. */
+  noteEdits?: NoteEditInput[]
   drawings: DrawingInput[]
   formValues: FormValueInput[]
   stamps: StampInput[]
@@ -399,6 +455,90 @@ export interface InsertPdfRequest {
 export type InsertPdfResult =
   { ok: true; insertedCount: number } | { ok: true; canceled: true } | { ok: false; error: string }
 
+export interface InsertBlankPageRequest {
+  path: string
+  afterPageIndex: number
+}
+
+export type InsertBlankPageResult = { ok: true } | { ok: false; error: string }
+
+export interface SplitPdfRequest {
+  path: string
+  chunkSize: number
+  baseName: string
+}
+
+export type SplitPdfResult =
+  | { ok: true; savedDir: string; count: number }
+  | { ok: true; canceled: true }
+  | { ok: false; error: string }
+
+export interface MergePagesRequest {
+  path: string
+  perSheet: number
+  direction: 'horizontal' | 'vertical'
+  separator: boolean
+  suggestedName: string
+}
+
+export type MergePagesResult =
+  | { ok: true; savedPath: string }
+  | { ok: true; canceled: true }
+  | { ok: false; error: string }
+
+export interface SplitPagesRequest {
+  path: string
+  perPage: 2 | 4 | 9
+  suggestedName: string
+}
+
+export type SplitPagesResult =
+  | { ok: true; savedPath: string }
+  | { ok: false; error: string }
+
+export interface SetPageSizeRequest {
+  path: string
+  width: number
+  height: number
+}
+
+export type SetPageSizeResult = { ok: true } | { ok: false; error: string }
+
+export interface CropPagesRequest {
+  path: string
+  pages: number[]
+  rect: { l: number; t: number; r: number; b: number }
+}
+
+export type CropPagesResult = { ok: true } | { ok: false; error: string }
+
+export interface ReplacePagesRequest {
+  path: string
+  pages: number[]
+}
+
+export type ReplacePagesResult =
+  | { ok: true; removed: number; inserted: number }
+  | { ok: true; canceled: true }
+  | { ok: false; error: string }
+
+export interface MergePdfRequest {
+  path: string
+  suggestedName: string
+}
+
+export type MergePdfResult =
+  | { ok: true; savedPath: string; appendedCount: number }
+  | { ok: true; canceled: true }
+  | { ok: false; error: string }
+
+export interface PdfDocumentHistoryState {
+  canUndo: boolean
+  canRedo: boolean
+}
+
+export type PdfDocumentHistoryResult = { ok: true } | { ok: false; error: string }
+
 /** Export pages as PNG: renderer rasterizes the bitmaps, main process shows a dialog and writes to disk */
 export interface ExportImagesRequest {
   /** base64 PNGs (without the data: prefix), in page order */
@@ -427,6 +567,8 @@ export interface PdfApi {
   validateTextEdits(request: ValidateTextEditsRequest): Promise<TextEditValidation[]>
   /** EDIT_FONTS ids whose font file exists on this machine */
   listEditFonts(): Promise<string[]>
+  /** Whether the retained browser font assets can embed every character. */
+  canDrawText(text: string, font?: string, bold?: boolean, italic?: boolean): Promise<boolean>
   /** Enumerate the content-stream images of every page (for image edit mode) */
   listPageImages(path: string): Promise<PageImageRef[]>
   /** Read GenOffice static-fill metadata stored inside the PDF. */
@@ -445,7 +587,22 @@ export interface PdfApi {
   pagePreviewPng(request: PagePreviewRequest): Promise<string | null>
   extractPages(request: ExtractPagesRequest): Promise<ExtractPagesResult>
   insertPdf(request: InsertPdfRequest): Promise<InsertPdfResult>
+  insertBlankPage(request: InsertBlankPageRequest): Promise<InsertBlankPageResult>
+  splitPdf(request: SplitPdfRequest): Promise<SplitPdfResult>
+  mergePages(request: MergePagesRequest): Promise<MergePagesResult>
+  splitPages(request: SplitPagesRequest): Promise<SplitPagesResult>
+  setPageSize(request: SetPageSizeRequest): Promise<SetPageSizeResult>
+  cropPages(request: CropPagesRequest): Promise<CropPagesResult>
+  replacePages(request: ReplacePagesRequest): Promise<ReplacePagesResult>
+  mergePdf(request: MergePdfRequest): Promise<MergePdfResult>
+  /** Whole-document history for immediately persisted page-structure mutations. */
+  documentHistoryState(path: string): Promise<PdfDocumentHistoryState>
+  undoDocumentMutation(path: string): Promise<PdfDocumentHistoryResult>
+  redoDocumentMutation(path: string): Promise<PdfDocumentHistoryResult>
   exportImages(request: ExportImagesRequest): Promise<ExportImagesResult>
+  listSavedSignatures(): Promise<SavedSignature[]>
+  addSavedSignature(data: SignatureData): Promise<SavedSignature[]>
+  removeSavedSignature(id: string): Promise<SavedSignature[]>
   /** Mirror unsaved-changes state to the main process; drives the save prompt before closing a tab/window */
   setDirty(dirty: boolean): void
   /** Main process picked "Save" in the close prompt → renderer saves and replies via sendCloseSaveResult */
@@ -456,6 +613,7 @@ export interface PdfApi {
   sendSaveAsResult(ok: boolean): void
   /** True while the shell's Save As flow (dialog included) is open — the renderer pauses autosave, since the dialog's window blur would otherwise trigger a save into the original */
   onSaveAsFlow(handler: (inFlight: boolean) => void): () => void
+  onPrintRequest(handler: () => void): () => void
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
   getTheme(): Promise<UiTheme>

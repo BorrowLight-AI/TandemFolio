@@ -1,6 +1,6 @@
 /**
  * Format pane (a trimmed-down PowerPoint Format Pane): position/size/rotation/fill of the
- * selected element. Shares the right dock area with the AI panel, mutually exclusive. Inputs
+ * selected element. Inputs
  * commit on blur/Enter; external changes (dragging etc.) sync default values by remounting
  * inputs via key.
  */
@@ -1474,13 +1474,13 @@ export function FormatPane({
 
   return (
     <aside className="format-pane">
-      <div className="ai-panel-header">
-        <span className="ai-panel-title">
+      <div className="format-panel-header">
+        <span className="format-panel-title">
           {typeName ? t('paneFormatTitleTyped', { type: typeName }) : t('paneFormatTitle')}
         </span>
-        <div className="ai-panel-header-actions">
+        <div className="format-panel-header-actions">
           <button
-            className="ai-header-btn"
+            className="format-header-btn"
             onClick={onCollapse}
             data-tip={t('paneFormatClose')}
             aria-label={t('paneFormatClose')}

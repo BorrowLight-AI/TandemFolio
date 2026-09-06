@@ -1,5 +1,5 @@
 // Modified by TandemFolio contributors: retained native defined-name command copy.
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 export const nativeNameStrings = defineStrings({
   zh: {

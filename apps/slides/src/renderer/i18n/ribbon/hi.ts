@@ -1,9 +1,6 @@
 import type { zh } from './zh'
 
 export const hi = {
-  ribbonAiCreditNote: 'AI का उपयोग करता है और क्रेडिट खर्च होते हैं',
-  ribbonAiRewriteConfirm:
-    'यह क्रिया AI को कॉल करती है: इसमें क्रेडिट खर्च होते हैं और पूरी सामग्री फिर से लिखी जा सकती है। जारी रखें? (दोबारा नहीं पूछा जाएगा।)',
   ribbonTabFile: 'फ़ाइल',
   ribbonTabHome: 'होम',
   ribbonTabInsert: 'सम्मिलित करें',
@@ -170,8 +167,6 @@ export const hi = {
   ribbonFlipH: 'क्षैतिज पलटें',
   ribbonFlipV: 'लंबवत पलटें',
   ribbonDistributeHint: '{title} (3 या अधिक तत्व चुनें)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'AI सहायक पैनल दिखाएँ या छिपाएँ',
   ribbonGroupTable: 'तालिका',
   ribbonInsertTableTip: 'तालिका सम्मिलित करें (डिफ़ॉल्ट शैली; पंक्तियाँ और स्तंभ चुनें)',
   ribbonTablePickerHint: 'पंक्तियाँ और स्तंभ चुनें',

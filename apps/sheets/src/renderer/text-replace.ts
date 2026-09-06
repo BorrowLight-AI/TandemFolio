@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: match upstream whole-cell whitespace handling.
 import { ObjectMatrix, type ICellData } from '@univerjs/core'
 
 import { commitWorkbookRangeCells } from './range-copy'
@@ -42,7 +43,7 @@ export function applyWorkbookTextReplacement(
       const haystack = input.matchCase ? current : current.toLocaleLowerCase()
       const needle = input.matchCase ? input.find : input.find.toLocaleLowerCase()
       const next = input.wholeCell
-        ? haystack === needle
+        ? haystack.replace(/^ +| +$/g, '') === needle.trim()
           ? input.replace
           : current
         : haystack.includes(needle)

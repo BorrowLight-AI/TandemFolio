@@ -1,7 +1,7 @@
 # PPTX community renderer capability inventory
 
 - Extraction baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
-- Selectively reviewed PPTX source: `genspark-ai/genoffice@360ce0625eaf748368e5535984b073f6fb2487b5`
+- Selectively reviewed PPTX source: `genspark-ai/genoffice@f2c3d0879df29622d5a447935d2b4aeac033544d`
 - Governing decisions: [ADR 0003](../adr/0003-complete-community-renderers-and-mcp-parity.md), [ADR 0004](../adr/0004-format-owned-operation-registries.md), and [ADR 0005](../adr/0005-reproducible-release-evidence-gate.md)
 - Evidence date: 2026-09-06
 - Capability status: applicable non-AI PPTX-native work in the reviewed range is integrated; functional checks pass; release readiness remains fail-closed until source-current evidence is recaptured.
@@ -24,7 +24,7 @@ The retained and adapted source-current areas are:
   preset/custom geometry, text layout, vertical/warped text, RTL, and image effects;
 - `apps/slides/src/renderer`: canvas/text/table interaction, format/background panes, shape gallery,
   color history, chart gallery, print HTML, embedded-font registration, keyboard and wheel navigation,
-  and the split 19-locale application/Ribbon/pane catalogs;
+  the shared Save/Save As serialization queue, and the split 19-locale application/Ribbon/pane catalogs;
 - TandemFolio-owned `renderer/host` and `renderer/operations`: browser-safe package ownership,
   typed MCP validation and dispatch, monotonic revision, native history, recovery, and save/reopen.
 
@@ -77,7 +77,7 @@ saved OOXML bytes.
 - Integration coverage opens real fixtures through `BrowserPresentation`, dispatches the new typed
   operations, verifies native Undo/Redo and monotonic revisions, saves, reopens, and checks the
   resulting geometry, effects, text-body, and background state.
-- The generated Manifest contains 354 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 25
+- The generated Manifest contains 361 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 32
   PDF. Registry descriptors, handlers, and retained-producer mappings have no missing entry.
 - AI/Electron dependency scans remain empty for the admitted PPTX product graph.
 

@@ -91,7 +91,8 @@ export type SetTableCellFormatResult =
   | { ok: true; matchedCells: number; changedCells: number }
   | { ok: false; error: 'invalid_arguments' | 'execution_failed'; message: string }
 
-export type TableCellBorderMode = 'all' | 'outer' | 'inner' | 'none'
+export type TableCellBorderMode =
+  'all' | 'outer' | 'inner' | 'none' | 'top' | 'bottom' | 'left' | 'right' | 'insideH' | 'insideV'
 
 export interface TableCellBorder {
   color: string
@@ -193,6 +194,20 @@ function applyCellBordersToRectangle(
   mode: TableCellBorderMode,
   border: TableCellBorder | null,
 ): { matchedCells: number; changedCells: number } | null {
+  const solid = border
+    ? { style: 'single', color: border.color, szEighths: border.sizeEighths }
+    : null
+  if (mode === 'insideH' || mode === 'insideV') {
+    const tablePosition = target.tableStart - 1
+    const table = state.doc.nodeAt(tablePosition)
+    if (!table || table.type.name !== 'docTable' || !solid) return null
+    const current = (table.attrs.borders as Record<string, unknown> | null) ?? {}
+    const next = { ...current, [mode]: solid }
+    const matchedCells = new Set(target.map.map).size
+    if (JSON.stringify(next) === JSON.stringify(current)) return { matchedCells, changedCells: 0 }
+    dispatch?.(state.tr.setNodeMarkup(tablePosition, undefined, { ...table.attrs, borders: next }))
+    return { matchedCells, changedCells: matchedCells }
+  }
   const positions = new Set<number>()
   let tr = state.tr
   let changedCells = 0
@@ -213,14 +228,12 @@ function applyCellBordersToRectangle(
       }
       const current = (cell.attrs.borders as Record<string, unknown> | null) ?? {}
       const next: Record<string, unknown> = { ...current }
-      const solid = border
-        ? { style: 'single', color: border.color, szEighths: border.sizeEighths }
-        : null
       for (const side of ['top', 'bottom', 'left', 'right'] as const) {
         if (mode === 'all' && solid) next[side] = solid
         else if (mode === 'none') next[side] = { style: 'none' }
         else if (mode === 'outer' && edge[side] && solid) next[side] = solid
         else if (mode === 'inner' && !edge[side] && solid) next[side] = solid
+        else if (mode === side && edge[side] && solid) next[side] = solid
       }
       if (JSON.stringify(next) === JSON.stringify(current)) continue
       tr = tr.setNodeMarkup(absolutePosition, undefined, { ...cell.attrs, borders: next })
@@ -1076,7 +1089,20 @@ export function setTableCellBorders(
       message: 'docx.table.set_cell_borders requires one bounded non-empty half-open rectangle.',
     }
   }
-  if (!['all', 'outer', 'inner', 'none'].includes(input.mode)) {
+  if (
+    ![
+      'all',
+      'outer',
+      'inner',
+      'none',
+      'top',
+      'bottom',
+      'left',
+      'right',
+      'insideH',
+      'insideV',
+    ].includes(input.mode)
+  ) {
     return {
       ok: false,
       error: 'invalid_arguments',

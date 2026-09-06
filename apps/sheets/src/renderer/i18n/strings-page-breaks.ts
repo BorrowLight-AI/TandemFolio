@@ -1,5 +1,5 @@
 // Modified by TandemFolio contributors: retained Page Layout copy in the local i18n catalog.
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 /** Native Page Layout break commands and Page Break Preview copy. */
 export const pageBreakStrings = defineStrings({

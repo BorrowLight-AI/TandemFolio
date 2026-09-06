@@ -1,9 +1,6 @@
 import type { zh } from './zh'
 
 export const he = {
-  ribbonAiCreditNote: 'משתמש ב-AI וצורך קרדיטים',
-  ribbonAiRewriteConfirm:
-    'פעולה זו מפעילה AI: היא צורכת קרדיטים ועשויה לשכתב את כל התוכן. להמשיך? (לא תישאל שוב.)',
   ribbonTabFile: 'קובץ',
   ribbonTabHome: 'בית',
   ribbonTabInsert: 'הוספה',
@@ -168,8 +165,6 @@ export const he = {
   ribbonFlipH: 'היפוך אופקי',
   ribbonFlipV: 'היפוך אנכי',
   ribbonDistributeHint: '{title} (בחר 3 רכיבים או יותר)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'הצגה או הסתרה של חלונית עוזר ה-AI',
   ribbonGroupTable: 'טבלה',
   ribbonInsertTableTip: 'הוספת טבלה (סגנון ברירת מחדל; בחר שורות ועמודות)',
   ribbonTablePickerHint: 'בחר שורות ועמודות',

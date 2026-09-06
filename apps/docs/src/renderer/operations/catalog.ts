@@ -2539,7 +2539,18 @@ export const docxOperationCatalog = {
           rightColumn: { type: 'integer', minimum: 1, maximum: 63 },
           mode: {
             type: 'string',
-            enum: ['all', 'outer', 'inner', 'none'],
+            enum: [
+              'all',
+              'outer',
+              'inner',
+              'none',
+              'top',
+              'bottom',
+              'left',
+              'right',
+              'insideH',
+              'insideV',
+            ],
           },
           border: {
             type: ['object', 'null'],
@@ -4400,7 +4411,8 @@ export const docxOperationCatalog = {
       id: 'docx.object.set_style',
       format: 'docx',
       family: 'object',
-      summary: 'Set masked fill, outline, and whole-object text fields on one retained DOCX drawing.',
+      summary:
+        'Set masked fill, outline, and whole-object text fields on one retained DOCX drawing.',
       visibility: 'agent',
       inputSchema: {
         type: 'object',
@@ -4444,7 +4456,15 @@ export const docxOperationCatalog = {
             maxItems: 7,
             items: {
               type: 'string',
-              enum: ['fillHex', 'borderHex', 'textBold', 'textItalic', 'textUnderline', 'textColor', 'textAlign'],
+              enum: [
+                'fillHex',
+                'borderHex',
+                'textBold',
+                'textItalic',
+                'textUnderline',
+                'textColor',
+                'textAlign',
+              ],
             },
           },
         },
@@ -4463,7 +4483,15 @@ export const docxOperationCatalog = {
             maxItems: 7,
             items: {
               type: 'string',
-              enum: ['fillHex', 'borderHex', 'textBold', 'textItalic', 'textUnderline', 'textColor', 'textAlign'],
+              enum: [
+                'fillHex',
+                'borderHex',
+                'textBold',
+                'textItalic',
+                'textUnderline',
+                'textColor',
+                'textAlign',
+              ],
             },
           },
           changed: { type: 'boolean' },

@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const th = {
-  ribbonAiCreditNote: 'เรียกใช้ AI และใช้เครดิต',
-  ribbonAiRewriteConfirm:
-    'การดำเนินการนี้จะเรียกใช้ AI: ใช้เครดิตและอาจเขียนเนื้อหาทั้งหมดใหม่ ดำเนินการต่อหรือไม่ (จะไม่ถามอีก)',
-  // tabs
   ribbonTabFile: 'ไฟล์',
   ribbonTabHome: 'หน้าแรก',
   ribbonTabInsert: 'แทรก',
@@ -171,8 +167,6 @@ export const th = {
   ribbonFlipH: 'พลิกแนวนอน',
   ribbonFlipV: 'พลิกแนวตั้ง',
   ribbonDistributeHint: '{title} (ต้องเลือกองค์ประกอบอย่างน้อย 3 รายการ)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'แสดง/ซ่อนแผงผู้ช่วย AI',
   ribbonGroupTable: 'ตาราง',
   ribbonInsertTableTip: 'แทรกตาราง (สไตล์เริ่มต้น เลือกจำนวนแถวและคอลัมน์ได้)',
   ribbonTablePickerHint: 'เลือกแถวและคอลัมน์',

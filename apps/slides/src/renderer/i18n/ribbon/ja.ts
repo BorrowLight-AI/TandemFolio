@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const ja = {
-  ribbonAiCreditNote: 'AI を呼び出し、クレジットを消費します',
-  ribbonAiRewriteConfirm:
-    'この操作は AI を呼び出します。クレジットを消費し、内容全体が書き換えられる可能性があります。続行しますか？（確認後は再表示されません）',
-  // tabs
   ribbonTabFile: 'ファイル',
   ribbonTabHome: 'ホーム',
   ribbonTabInsert: '挿入',
@@ -175,9 +171,6 @@ export const ja = {
   ribbonFlipH: '左右反転',
   ribbonFlipV: '上下反転',
   ribbonDistributeHint: '{title}（3 つ以上の要素を選択）',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'AI アシスタントパネルの表示/非表示',
-  // Insert
   ribbonGroupTable: '表',
   ribbonInsertTableTip: '表の挿入（既定のスタイル、行数と列数を選択可能）',
   ribbonTablePickerHint: '行数と列数を選択',

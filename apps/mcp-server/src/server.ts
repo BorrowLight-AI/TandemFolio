@@ -188,6 +188,13 @@ function stagedPdfPageInsertOperation(): string {
   )
 }
 
+function stagedPdfPageReplaceOperation(): string {
+  return (
+    resolveRegisteredOperation('pdf', 'pdf.page.replace_staged', 'internal')?.id ??
+    'pdf.page.replace_staged'
+  )
+}
+
 async function editorHtml(
   format: 'docx' | 'markdown' | 'xlsx' | 'pptx' | 'pdf' = 'docx',
 ): Promise<string> {
@@ -766,6 +773,21 @@ server.registerTool(
           const command = enqueue(stagedPdfPageInsertOperation(), {
             ...staged,
             afterPageIndex: args.afterPageIndex,
+          })
+          return await waitForExecution(command, descriptor.id)
+        } finally {
+          if (blobId) localFiles.release(blobId)
+        }
+      }
+      if (session.format === 'pdf' && descriptor.id === 'pdf.page.replace') {
+        let blobId: string | undefined
+        try {
+          const staged = await localFiles.stage(sessionId, 'pdf', args.path as string)
+          blobId = staged.blobId
+          blobId = deferStagedFileRelease(activeTransaction, blobId)
+          const command = enqueue(stagedPdfPageReplaceOperation(), {
+            ...staged,
+            pages: args.pages,
           })
           return await waitForExecution(command, descriptor.id)
         } finally {

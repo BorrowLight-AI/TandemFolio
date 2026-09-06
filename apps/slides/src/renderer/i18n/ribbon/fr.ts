@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const fr = {
-  ribbonAiCreditNote: "Fait appel à l'IA et consomme des crédits",
-  ribbonAiRewriteConfirm:
-    "Cette action fait appel à l'IA : elle consomme des crédits et peut réécrire tout le contenu. Continuer ? (Vous ne serez plus averti.)",
-  // tabs
   ribbonTabFile: 'Fichier',
   ribbonTabHome: 'Accueil',
   ribbonTabInsert: 'Insertion',
@@ -177,8 +173,6 @@ export const fr = {
   ribbonFlipH: 'Miroir horizontal',
   ribbonFlipV: 'Miroir vertical',
   ribbonDistributeHint: '{title} (sélectionnez au moins 3 éléments)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: "Afficher ou masquer le panneau de l'assistant IA",
   ribbonGroupTable: 'Tableau',
   ribbonInsertTableTip: 'Insérer un tableau (style par défaut ; lignes et colonnes au choix)',
   ribbonTablePickerHint: 'Choisir les lignes et colonnes',

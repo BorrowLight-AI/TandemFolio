@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: retain source-current native table border controls.
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { ChainedCommands, Editor } from '@tiptap/core'
@@ -56,6 +57,7 @@ import {
   setSelectedTableCellFormat,
   setSelectedTableRowHeight,
   setSelectedTableStyle,
+  type TableCellBorderMode,
 } from '../editor/table-actions'
 import { useI18n, type StringKey } from '../i18n/locale'
 import { fontFamiliesFor, isEastAsianFontName } from '../font-list'
@@ -83,9 +85,15 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconBorderAll,
+  IconBorderBottom,
   IconBorderInner,
+  IconBorderInsideH,
+  IconBorderInsideV,
+  IconBorderLeft,
   IconBorderNone,
   IconBorderOuter,
+  IconBorderRight,
+  IconBorderTop,
   IconBullets,
   IconCaret,
   IconCellAlignBottom,
@@ -943,7 +951,7 @@ function RibbonInner({
     ? (Math.max(1, section.pageHeight - section.marginTop - section.marginBottom) / 1440) * 2.54
     : 23.28
 
-  const applyCellBorders = (mode: 'all' | 'outer' | 'inner' | 'none') =>
+  const applyCellBorders = (mode: TableCellBorderMode) =>
     runTableCommand(
       setSelectedTableCellBorders(
         mode,
@@ -1545,7 +1553,11 @@ function RibbonInner({
       aria-label={title}
       onClick={() => {
         if (sub) chain().toggleMark(name).run()
-        else setSelectedDocxObjectStyle(editor, { style: { [field]: active ? null : true }, fields: [field] })
+        else
+          setSelectedDocxObjectStyle(editor, {
+            style: { [field]: active ? null : true },
+            fields: [field],
+          })
       }}
     >
       {label}
@@ -1565,7 +1577,8 @@ function RibbonInner({
       aria-label={title}
       onClick={() => {
         if (sub) setSelectionAlign(ed, align)
-        else setSelectedDocxObjectStyle(editor, { style: { textAlign: align }, fields: ['textAlign'] })
+        else
+          setSelectedDocxObjectStyle(editor, { style: { textAlign: align }, fields: ['textAlign'] })
       }}
     >
       {icon}
@@ -1752,9 +1765,27 @@ function RibbonInner({
                 <div className="ribbon-group-items">
                   <div className="rb-col">
                     <div className="rb-row">
-                      {shapeMarkBtn('bold', 'textBold', shapeTextActive.bold, t('ribbonBoldTip'), <b>B</b>)}
-                      {shapeMarkBtn('italic', 'textItalic', shapeTextActive.italic, t('ribbonItalicTip'), <i>I</i>)}
-                      {shapeMarkBtn('underline', 'textUnderline', shapeTextActive.underline, t('ribbonUnderlineTip'), <u>U</u>)}
+                      {shapeMarkBtn(
+                        'bold',
+                        'textBold',
+                        shapeTextActive.bold,
+                        t('ribbonBoldTip'),
+                        <b>B</b>,
+                      )}
+                      {shapeMarkBtn(
+                        'italic',
+                        'textItalic',
+                        shapeTextActive.italic,
+                        t('ribbonItalicTip'),
+                        <i>I</i>,
+                      )}
+                      {shapeMarkBtn(
+                        'underline',
+                        'textUnderline',
+                        shapeTextActive.underline,
+                        t('ribbonUnderlineTip'),
+                        <u>U</u>,
+                      )}
                       <div className="rb-split-wrap">
                         <button
                           className="rb-icon rb-color-btn"
@@ -1762,11 +1793,22 @@ function RibbonInner({
                           title={t('ribbonFontColor')}
                           data-tip={t('ribbonFontColor')}
                           aria-label={t('ribbonFontColor')}
-                          onClick={() => setDropdown((value) => value === 'shapeTextColor' ? null : 'shapeTextColor')}
+                          onClick={() =>
+                            setDropdown((value) =>
+                              value === 'shapeTextColor' ? null : 'shapeTextColor',
+                            )
+                          }
                         >
                           <span className="rb-color-glyph rb-color-glyph-svg">
                             <IconFontColorA />
-                            <span className="rb-color-bar" style={{ background: shapeTextActive.color ? `#${shapeTextActive.color}` : 'transparent' }} />
+                            <span
+                              className="rb-color-bar"
+                              style={{
+                                background: shapeTextActive.color
+                                  ? `#${shapeTextActive.color}`
+                                  : 'transparent',
+                              }}
+                            />
                           </span>
                         </button>
                         {dropdown === 'shapeTextColor' && (
@@ -1775,7 +1817,11 @@ function RibbonInner({
                             noneLabel={t('ribbonAutomatic')}
                             onPick={(hex) => {
                               if (sub) setTextStyle({ color: hex })
-                              else setSelectedDocxObjectStyle(editor, { style: { textColor: hex }, fields: ['textColor'] })
+                              else
+                                setSelectedDocxObjectStyle(editor, {
+                                  style: { textColor: hex },
+                                  fields: ['textColor'],
+                                })
                               setDropdown(null)
                             }}
                           />
@@ -2091,6 +2137,44 @@ function RibbonInner({
                 <button title={t('ribbonClearBordersTip')} onClick={() => applyCellBorders('none')}>
                   <IconBorderNone />
                   {t('ribbonNoBorders')}
+                </button>
+              </div>
+              <div className="table-tool-grid table-tool-grid-three">
+                <button title={t('ribbonOuterBordersTip')} onClick={() => applyCellBorders('top')}>
+                  <IconBorderTop />
+                  {t('ribbonBorderTop')}
+                </button>
+                <button
+                  title={t('ribbonOuterBordersTip')}
+                  onClick={() => applyCellBorders('bottom')}
+                >
+                  <IconBorderBottom />
+                  {t('ribbonBorderBottom')}
+                </button>
+                <button title={t('ribbonOuterBordersTip')} onClick={() => applyCellBorders('left')}>
+                  <IconBorderLeft />
+                  {t('ribbonBorderLeft')}
+                </button>
+                <button
+                  title={t('ribbonOuterBordersTip')}
+                  onClick={() => applyCellBorders('right')}
+                >
+                  <IconBorderRight />
+                  {t('ribbonBorderRight')}
+                </button>
+                <button
+                  title={t('ribbonTableInsideHBordersTip')}
+                  onClick={() => applyCellBorders('insideH')}
+                >
+                  <IconBorderInsideH />
+                  {t('ribbonTableInsideHBorders')}
+                </button>
+                <button
+                  title={t('ribbonTableInsideVBordersTip')}
+                  onClick={() => applyCellBorders('insideV')}
+                >
+                  <IconBorderInsideV />
+                  {t('ribbonTableInsideVBorders')}
                 </button>
               </div>
               <div className="table-tool-row table-border-opts">

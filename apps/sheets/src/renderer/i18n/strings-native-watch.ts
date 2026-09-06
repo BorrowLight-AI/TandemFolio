@@ -1,5 +1,5 @@
 // Modified by TandemFolio contributors: native Watch Window copy.
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 export const nativeWatchStrings = defineStrings({
   zh: { appWatchWindowDetail: '监视单元格的值', appWatchAdd: '添加监视', appWatchEmpty: '选中单元格后点「添加监视」。', appWatchSheet: '工作表', appWatchCell: '单元格', appWatchValue: '值', appWatchFormula: '公式' },

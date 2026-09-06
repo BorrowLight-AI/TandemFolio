@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: retain upstream TSV newline fidelity.
 /**
  * Clipboard plain-text interop. Univer's copy joins raw cell text with
  * tabs — booleans land as 1/0 and embedded newlines go out unquoted (as bare
@@ -32,7 +33,7 @@ export function clipboardField(cell: ClipboardCell | null | undefined): string {
         // extractPureTextFromCell strips \r line breaks — keep string values
         // verbatim so embedded newlines survive to be quoted below
         (typeof cell.v === 'string' ? cell.v : extractPureTextFromCell(cell)))
-  const normalized = text.replace(/\r\n|\r+/g, '\n').replace(/\n+$/, '')
+  const normalized = text.replace(/\r\n|\r+/g, '\n')
   return /[\t\n"]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized
 }
 

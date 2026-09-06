@@ -1,90 +1,104 @@
-# PDF pinned renderer capability inventory
+# PDF source-current native capability inventory
 
-- Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
-- Scope: community `apps/pdf/src/renderer` and its focused tests only; enterprise `ee/` is outside the permitted source boundary
-- Status: format-local retained state-changing command parity complete; R6-01 passed; PDF is release-ready
+- Extraction baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
+- Reviewed candidate: `genspark-ai/genoffice@f2c3d0879df29622d5a447935d2b4aeac033544d`
+- Scope: browser-safe community PDF renderer, format engine, focused tests, and TandemFolio browser/MCP adapters; `ee/` was not inspected
+- Status: applicable native PDF migration and typed command parity complete; source-current release recapture pending and the release gate remains fail-closed
 
-## Source evidence
+## Source boundary
 
-The pinned renderer contains 40 files. All 33 non-AI files are present at their original
-`apps/pdf/src/renderer` paths. The seven intentionally absent paths are prohibited product AI:
+The candidate changes native PDF behavior in ten snapshots between `d5558b6` and `2239cce`;
+`99d376b` and the later `99dfbc1` change only the prohibited PDF AI panel. No PDF-native behavior was
+added between the prior `360ce06` review point and the final `f2c3d08` candidate. The retained renderer
+is the community visual editor. Its file calls are
+adapted to `host/browser-pdf-api.ts`, while `community-command-bridge.ts` binds the typed Registry to
+the same mounted React state. PDF.js remains the viewing authority; browser PDFium and PDF-lib are
+format-owned save helpers, never a second mounted editor.
 
-- `ai/AiPanel.tsx`
-- `ai/pdf-skill.ts`
-- `ai/tools.ts`
-- `ai/transport.ts`
-- `assets/send-enter-off.png`
-- `assets/send-enter-on.png`
-- `assets/send-stop.png`
+The following candidate-native renderer modules are retained or browser-adapted:
 
-`App.tsx`, `main.tsx`, `index.html`, `styles.css`, and `i18n/strings.ts` are host-adapted: the
-community PDF UI remains, while AI, branding, Electron preload, and IPC entry points are removed.
-`host/browser-pdf-api.ts` is the TandemFolio browser/file adapter and
-`host/community-command-bridge.ts` registers typed commands against the single mounted App state.
-The obsolete replacement renderer is absent.
+- `ColorPicker.tsx`, `PdfPage.tsx`, `PdfThumb.tsx`, and `icons.tsx` for the updated native editor chrome,
+  page and thumbnail lifecycle, and accessible Office color selection;
+- `NoteMargin.tsx`, `annotation-catalog.ts`, `note-margin-layout.ts`, and `note-threads.ts` for threaded
+  margin comments;
+- `PasswordDialog.tsx` for encrypted-file password retry and read-only viewing;
+- `SignDropOverlay.tsx` and the updated `SignatureDialog.tsx` for signature placement and the local
+  saved-signature library;
+- `doc-font.ts`, `edit-state.ts`, `text-edit-preview.tsx`, and the updated text block/wrap/color modules
+  for paragraph editing, movement, selection formatting, overflow preview, and font matching;
+- `view-config.ts` and `view-state.ts` for display-mode options and per-file reading-position restore.
 
-Browser text and image persistence uses the pinned community PDFium implementation through
-`src/domain/pdfium-browser.ts`. The WASM is gzip-compressed into the self-contained renderer at
-build time. Standard PDF fonts are used for bounded ASCII text; allowlisted OFL font assets are
-loaded on demand for CJK, Korean, Arabic, or extended text. A browser-safe cmap check rejects text
-that the chosen font cannot encode before mutation, rather than producing missing glyphs.
+Candidate `src/main` algorithms for blank pages, comments, annotations, page transforms, signature
+storage, and text editing were ported into `src/domain` or the browser host. Their Electron filesystem
+and IPC wrappers were not copied.
+
+## Retained native capabilities
+
+| Capability group | Retained behavior | Mounted implementation and evidence |
+| --- | --- | --- |
+| Viewing and navigation | Page and thumbnail render cancellation/restart, thumbnail context menus, outline/thumbnails/comments sidebars, single/continuous/two-page modes, fit width/page/custom zoom, internal links, current-page navigation, and per-file scroll/zoom/sidebar restore | `PdfPage.tsx`, `PdfThumb.tsx`, `view-config.ts`, `view-state.ts`; lifecycle and view-state unit tests plus existing real-host width/offscreen scenarios |
+| Search and print | Whole-document search with stable navigation and trailing-space-safe matches; browser print after flushing current edits | `search.ts`, renderer print path, and existing search/print tests; print remains a non-document host effect |
+| Password-protected PDFs | Password prompt, reveal toggle, retry/error state, and cancellation; a successful encrypted open is deliberately read-only because the browser save engines cannot preserve encryption | `PasswordDialog.tsx` and the `App.tsx` open lifecycle; the host open acknowledgement remains pending across password retries and ends on success or explicit cancellation |
+| Threaded comments | Root comments and replies with author/time metadata, margin collision layout, active-thread navigation, create/reply/edit/delete, exact same-rectangle reply identity, and save/reopen preservation of `/IRT` and `/RT` | `NoteMargin.tsx`, note helpers, `domain/save-pdf.ts`, `domain/annot-delete.ts`; `note-threads`, `note-margin-layout`, and `note-thread-save` tests |
+| Markup, ink, notes, and signatures | Highlight/underline/strike toggle, ink and note placement, move/resize, saved annotation deletion, signature draw/type/image modes, signature-field placement, drag/drop placement, and a bounded deduplicated saved-signature library | Existing annotation/drawing state plus updated layers/dialogs and browser signature store; document mutations share Registry/Undo/save, local signature-library state is a host preference |
+| Native text editing | Paragraph/block selection, exact run matching, object-preserving move, fragment replacement without dropping neighbours, deletion across multiple native objects, multiline layout, alignment/indent offsets, font/size/bold/italic/color and selection-level style runs, CJK/Korean/Arabic bundled-font coverage, unsupported-glyph rejection, overflow preview, and searchable saved output | `domain/browser-text-edit.ts` and renderer text modules; real PDFium-WASM tests cover movement, selection styling, fragment replacement, and deletion, while existing font/save-reopen tests cover multilingual output |
+| Images and forms | Existing content-image insert, select, move, resize, rotate, layer, replace, crop, cutout, flip, opacity and delete; static text/check/cross fills; AcroForm controls and signature widgets | Updated image/form layers and dialogs retain the existing typed image/static-form/form routes and PDFium/PDF-lib save paths |
+| Page organization | Insert another PDF, insert a matching blank page, delete, reorder/reverse, rotate one/all pages, replace selected pages from a PDF, crop one/all pages, and set all pages to an explicit paper size | Page UI and browser host share PDF-lib kernels. In-place structural writes preserve the prior bytes in a bounded mounted-document undo/redo journal and reload the same file |
+| Page/document outputs | Extract page ranges, split a PDF into chunks, merge selected pages N-up with direction/separator options, split each page into 2/4/9 pages, merge multiple PDFs, export page images, Save As, and browser print | Output operations create separate files and therefore remain declared host effects; they do not replace the mounted document |
+| Blank creation and file integrity | Create a one-page A4 document with explicit replacement confirmation; persistent page writes commit only after the browser save succeeds; failed persistence keeps mounted bytes and history unchanged | `domain/blank-pdf.ts`, browser host, blank/page operation tests, and the explicit-replacement gate |
 
 ## Registry and producer accounting
 
-The PDF-owned catalog and executable registry contain 25 descriptors: 23 Agent-visible operations
-and two internal staged-byte operations. `pdfRetainedProducerBaseline` classifies 25 retained
-producer families as Registry, non-document host effect, or view-only. It has no `missing` entry and
-every Registry mapping resolves to a catalog operation.
+The PDF-owned catalog contains 32 descriptors: 29 Agent-visible operations and three internal
+staged-byte routes. `pdfRetainedProducerBaseline` has no `missing` entry and every retained document
+mutation resolves to a descriptor and executable handler.
 
-| Family                      | Operations                                                                                                           |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Document                    | `pdf.document.set_metadata`, `pdf.document.save`; internal `pdf.document.load_staged`                                |
-| History                     | `pdf.history.undo`, `pdf.history.redo`                                                                               |
-| Markup and pending edits    | `pdf.markup.add`, `pdf.annotation.delete_saved`, `pdf.pending.delete`                                                |
-| Drawings, notes, signatures | `pdf.drawing.add`, `pdf.drawing.update`                                                                              |
-| Text                        | `pdf.text.insert`, `pdf.text.replace`, `pdf.text.update_inserted`                                                    |
-| Images and static forms     | `pdf.image.insert`, `pdf.image.transform`, `pdf.image.replace`, `pdf.image.delete`, `pdf.static_form.set`            |
-| AcroForm                    | `pdf.form.set_value`                                                                                                 |
-| Watermark/header/footer     | `pdf.stamp.set`                                                                                                      |
-| Pages                       | `pdf.page.insert`, `pdf.page.delete`, `pdf.page.reorder`, `pdf.page.set_rotation`; internal `pdf.page.insert_staged` |
+| Family | Operations |
+| --- | --- |
+| Document | `pdf.document.create_blank`, `pdf.document.set_metadata`, `pdf.document.save`; internal `pdf.document.load_staged` |
+| History | `pdf.history.undo`, `pdf.history.redo` |
+| Markup and comments | `pdf.markup.add`, `pdf.note.update_saved`, `pdf.annotation.delete_saved`, `pdf.pending.delete` |
+| Drawing and signature placement | `pdf.drawing.add`, `pdf.drawing.update` |
+| Text | `pdf.text.insert`, `pdf.text.replace`, `pdf.text.update_inserted` |
+| Images and static forms | `pdf.image.insert`, `pdf.image.transform`, `pdf.image.replace`, `pdf.image.delete`, `pdf.static_form.set` |
+| AcroForm | `pdf.form.set_value` |
+| Watermark/header/footer | `pdf.stamp.set` |
+| Pages | `pdf.page.insert`, `pdf.page.insert_blank`, `pdf.page.delete`, `pdf.page.replace`, `pdf.page.crop`, `pdf.page.reorder`, `pdf.page.set_size`, `pdf.page.set_rotation`; internal `pdf.page.insert_staged`, `pdf.page.replace_staged` |
 
-R6-09 retires the legacy public `save`, `delete_saved_annotation`, and `undo` names.
-`open_local_file` remains only as an internal staged-load transport alias. Discovery and
-Broker-side validation come from the generated Product Manifest; internal operations are hidden
-from discovery and rejected by direct `office_execute`.
+Public insertion/replacement accepts a bounded local path that the Broker hydrates into its matching
+internal operation. Immediate insert, replace, blank, crop, and paper-size changes share the browser
+host byte journal; `pdf.history.undo` and `pdf.history.redo` fall through to it when the mounted App
+has no newer pending-state entry. Save/reopen preserves the resulting PDF bytes.
 
-Page insertion is an explicit exception to the mounted App history model: public
-`pdf.page.insert { path, afterPageIndex }` stages a bounded local PDF, dispatches internal
-`pdf.page.insert_staged`, persists the merged bytes, and reloads the same active document. Its
-descriptor is therefore honestly `undoable:false`; user and Agent insertion share the same browser
-host primitive. Save As, image export, page extraction, and print are non-document host effects.
-Search, navigation, zoom, sidebars, view modes, and form focus are view-only.
+Signature-library changes, reading-position preferences, search/navigation/zoom/sidebar state,
+Save As, image export, extraction, split, merge, N-up, print, and password entry do not mutate the
+mounted PDF content and therefore do not require additional document operations.
+
+## Explicit exclusions
+
+| Candidate area | Disposition |
+| --- | --- |
+| `renderer/ai/**`, `AiAskPopover.tsx`, AI selection actions, PDF agent tools, AI navigation, and `99d376b` | Excluded by the user and product boundary; no model/provider/search flow is present |
+| `src/main/ocr.ts` and `renderer/ocr-layer.tsx` | Excluded because this is a native executable sidecar/raster-recognition pipeline rather than original PDF document formatting |
+| `auto-rename`, OS username lookup, and generated-document output | Excluded with account/AI-created-document lifecycle; comments use the local format-owned author label `GenOffice` |
+| Electron `src/main`, preload, IPC, shell drag/drop, native PrintDialog, filesystem atomic-write wrappers | Replaced by the existing browser/MCP host, browser print, and mounted in-memory persistence transaction |
+| Desktop system-font discovery | Replaced by lazy bundled browser font assets and cmap validation; retained text output stays portable and deterministic |
+| Encrypted-PDF editing or encryption-preserving save | Not admitted because neither retained browser save engine can preserve the encryption envelope; encrypted files open read-only instead of silently stripping protection |
+| `ee/` | Prohibited and not inspected |
 
 ## Verification evidence
 
-The PDF workspace passes 23 test files and 280 assertions. This includes the restored non-AI
-focused domains, operation catalog/handler coverage, producer-baseline validation, staged loading,
-browser PDFium save paths, font coverage, generated-stamp replacement, and PDF-lib reopen checks.
+The PDF workspace currently passes 35 test files and 332 assertions. Focused additions cover:
 
-`tests/visual/pdf-community.spec.ts` contains eleven real-host scenarios. Seven behavior tracers
-prove:
+1. native threaded-comment creation, reply identity, edit, delete, and save/reopen metadata;
+2. blank creation, page insertion/replacement/crop/resize, split/merge/N-up transforms, and PDF-lib reopen;
+3. page-mutation persistence failure plus whole-document undo/redo;
+4. real PDFium-WASM movement, selection styling, fragment replacement, multi-object deletion, and typed empty-text deletion;
+5. signature-library bounding/deduplication, reading-position state, page lifecycle helpers, document-font matching, color presets, and operation parity.
 
-1. user and MCP staged local open converge on the retained renderer;
-2. user delete/undo and Agent annotation delete share mounted state and survive save/reopen;
-3. Agent text and image insertion survives browser save and reopen;
-4. text replacement and image transform/replace/delete survive sequential saves and reopens;
-5. CJK, Korean, and Arabic text plus bounded selection-level colors remain searchable after save;
-6. generated watermark/header/footer state can be set and explicitly cleared after reopen.
-7. a positive staged-open acknowledgement is followed immediately by a typed page rotation,
-   proving load commit/controller readiness without a timing delay.
-
-Four additional scenarios cover the 420-pixel sidebar, 720-pixel split view, first fullscreen, and
-fullscreen exit without iframe remount. PDF.js currently emits a non-fatal `standardFontDataUrl`
-warning in some reopened fixtures; persisted content and extraction assertions still pass.
-
-## Shared completion evidence
-
-PDF has no unexplained retained state-changing producer gap. R6-01 closes the cross-format
-packaged-host visual, pinned-source comparison, performance/resource, real MCP smoke,
-license/prohibited-dependency, and repository acceptance gates. The generated capability reports
-`ready: true`; future PDF work must still enter through the format-owned Registry.
+The generated Product Manifest, root typecheck/build, packaged MCP smoke, resource limits, licenses,
+and prohibited-dependency scan pass. All 16 PDF real-browser host scenarios pass, including
+open/save/reopen, typed content-stream edits, shared Undo, narrow/split/fullscreen layout, exact-session
+continuation, and offscreen canvas release/resume. Earlier R6 performance/visual evidence is historical;
+`release:gate` continues to write `ready: false` until a new formal five-format source-current capture is
+approved.

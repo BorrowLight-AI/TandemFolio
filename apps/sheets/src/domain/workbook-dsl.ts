@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: adapt upstream whole-cell replacement semantics.
 import { z } from 'zod'
 import { ADDABLE_SHAPE_TYPES } from '../shared/shape-types'
 import { columnIndex, columnLabel, formatAddress, parseRange, rangeCellCount } from './cell-address'
@@ -1140,6 +1141,7 @@ export function expandToPrimitiveOps(
       }
       const matchCase = operation.matchCase ?? false
       const needle = matchCase ? operation.find : operation.find.toLowerCase()
+      const trimSpaces = (value: string): string => value.replace(/^ +/g, '').replace(/ +$/g, '')
       for (let row = bounds.startRow; row <= bounds.endRow; row += 1) {
         for (let column = bounds.startColumn; column <= bounds.endColumn; column += 1) {
           const address = formatAddress(row, column)
@@ -1148,7 +1150,7 @@ export function expandToPrimitiveOps(
           const haystack = matchCase ? current.value : current.value.toLowerCase()
           let next: string | null = null
           if (operation.wholeCell) {
-            if (haystack === needle) next = operation.replace
+            if (trimSpaces(haystack) === needle.trim()) next = operation.replace
           } else if (haystack.includes(needle)) {
             next = replaceOccurrences(current.value, operation.find, operation.replace, matchCase)
           }

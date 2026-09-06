@@ -3398,7 +3398,7 @@ export function App() {
               ))}
             </div>
             <div className="modal-actions">
-              <button onClick={() => setPrintDlgOpen(false)}>{t('appSettingsCancel')}</button>
+              <button onClick={() => setPrintDlgOpen(false)}>{t('paneCancel')}</button>
             </div>
           </div>
         </div>

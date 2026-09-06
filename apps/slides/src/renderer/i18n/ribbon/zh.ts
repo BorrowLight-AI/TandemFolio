@@ -1,9 +1,5 @@
 /** ribbon strings, zh: defines the key set every other locale shard must match. */
 export const zh = {
-  ribbonAiCreditNote: '将调用 AI 并消耗额度',
-  ribbonAiRewriteConfirm:
-    '此操作将调用 AI：会消耗额度，并可能改写整篇内容。是否继续？（确认后不再提示）',
-  // tabs
   ribbonTabFile: '文件',
   ribbonTabHome: '开始',
   ribbonTabInsert: '插入',
@@ -171,9 +167,6 @@ export const zh = {
   ribbonFlipH: '水平翻转',
   ribbonFlipV: '垂直翻转',
   ribbonDistributeHint: '{title}（需选中 ≥3 个元素）',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: '打开/收起 AI 助手面板',
-  // Insert
   ribbonGroupTable: '表格',
   ribbonInsertTableTip: '插入表格（默认样式，行列可选）',
   ribbonTablePickerHint: '选择行列',

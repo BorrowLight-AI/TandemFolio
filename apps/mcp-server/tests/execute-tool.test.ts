@@ -2103,6 +2103,7 @@ describe('office_execute', () => {
       ),
     ).toEqual([
       'pdf.annotation.delete_saved',
+      'pdf.document.create_blank',
       'pdf.document.save',
       'pdf.document.set_metadata',
       'pdf.drawing.add',
@@ -2115,10 +2116,15 @@ describe('office_execute', () => {
       'pdf.image.replace',
       'pdf.image.transform',
       'pdf.markup.add',
+      'pdf.note.update_saved',
+      'pdf.page.crop',
       'pdf.page.delete',
       'pdf.page.insert',
+      'pdf.page.insert_blank',
       'pdf.page.reorder',
+      'pdf.page.replace',
       'pdf.page.set_rotation',
+      'pdf.page.set_size',
       'pdf.pending.delete',
       'pdf.stamp.set',
       'pdf.static_form.set',
@@ -2134,6 +2140,10 @@ describe('office_execute', () => {
       (pdf.structuredContent as { capabilities: { operations: Record<string, unknown> } })
         .capabilities.operations,
     ).not.toHaveProperty('pdf.page.insert_staged')
+    expect(
+      (pdf.structuredContent as { capabilities: { operations: Record<string, unknown> } })
+        .capabilities.operations,
+    ).not.toHaveProperty('pdf.page.replace_staged')
   })
 
   it('projects canonical Markdown operations from the generated manifest', async () => {
@@ -4767,7 +4777,7 @@ describe('office_execute', () => {
         subtype: 'square',
         rect: [40, 220, 180, 242],
       },
-      'Invalid arguments for pdf.annotation.delete_saved: $.subtype must be one of "highlight", "underline", "strikeout".',
+      'Invalid arguments for pdf.annotation.delete_saved: $.subtype must be one of "highlight", "underline", "strikeout", "note".',
     )
   })
 
@@ -7225,6 +7235,75 @@ describe('office_execute', () => {
         result: {
           revision: 1,
           operations: [{ id: 'pdf.page.insert', result: { insertedCount: 2 } }],
+        },
+      },
+    })
+  })
+
+  it('stages pdf.page.replace paths as internal PDF bytes without inline payloads', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tandemfolio-pdf-replace-'))
+    temporaryDirectories.push(directory)
+    const path = join(directory, 'replacement.pdf')
+    const bytes = Buffer.from('%PDF-1.7\nreplacement-test-bytes')
+    await writeFile(path, bytes)
+
+    const client = await connectClient()
+    const created = await client.callTool({
+      name: 'office_create_session',
+      arguments: { format: 'pdf' },
+    })
+    const sessionId = (created.structuredContent as { session: { id: string } }).session.id
+    await client.callTool({ name: 'office_editor_poll', arguments: { sessionId } })
+
+    const replacement = executeOperation(client, sessionId, 0, 'pdf.page.replace', {
+      path,
+      pages: [1, 2],
+    })
+
+    let command:
+      | {
+          commandId: string
+          operation: string
+          arguments: { blobId: string; name: string; size: number; pages: number[] }
+        }
+      | undefined
+    for (let attempt = 0; attempt < 20 && !command; attempt += 1) {
+      const polled = await client.callTool({ name: 'office_editor_poll', arguments: { sessionId } })
+      command = (
+        polled.structuredContent as {
+          commands: Array<{
+            commandId: string
+            operation: string
+            arguments: { blobId: string; name: string; size: number; pages: number[] }
+          }>
+        }
+      ).commands[0]
+      if (!command) await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+
+    expect(command).toMatchObject({
+      operation: 'pdf.page.replace_staged',
+      arguments: { name: 'replacement.pdf', size: bytes.length, pages: [1, 2] },
+    })
+    expect(command!.arguments).not.toHaveProperty('path')
+    expect(command!.arguments).not.toHaveProperty('data')
+
+    await client.callTool({
+      name: 'office_editor_acknowledge',
+      arguments: {
+        sessionId,
+        commandId: command!.commandId,
+        revision: 1,
+        dirty: false,
+        output: { removed: 2, inserted: 3 },
+      },
+    })
+    await expect(replacement).resolves.toMatchObject({
+      structuredContent: {
+        ok: true,
+        result: {
+          revision: 1,
+          operations: [{ id: 'pdf.page.replace', result: { removed: 2, inserted: 3 } }],
         },
       },
     })

@@ -70,7 +70,7 @@ exact path, while format Save As flows create and bind a renamed copy.
 - `docx.table.merge_cells { tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn }`: merge one exact half-open logical-cell rectangle through the native table command; existing spans may not cross its boundary.
 - `docx.table.split_cell { tableBlockIndex, rowIndex, columnIndex }`: split the merged cell covering one bounded logical coordinate through the native table command; ordinary cells fail without mutation.
 - `docx.table.set_cell_format { tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn, format, fields }`: set masked fill and vertical-alignment final state over one exact half-open cell rectangle; Ribbon and Agent share the same write kernel.
-- `docx.table.set_cell_borders { tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn, mode, border }`: apply all/outer/inner/none over one exact rectangle with bounded color and eighth-point width; `none` requires `border: null`.
+- `docx.table.set_cell_borders { tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn, mode, border }`: apply all/outer/inner/none, top/bottom/left/right, or whole-table insideH/insideV with bounded color and eighth-point width; `none` requires `border: null`.
 - `docx.table.set_style { tableBlockIndex, styleId }`: set one current-document table style by stable top-level table identity; `null` clears the style and unknown IDs fail closed.
 - `docx.table.set_row_height { tableBlockIndex, rowIndex, count, heightTwips }`: set 1–100 explicit physical rows to a 1–31,680 twip height; `null` restores automatic height.
 - `docx.table.set_column_widths { tableBlockIndex, widthsPx }`: replace the complete 1–63-column grid with bounded 40–4096px widths (total at most 4096px), synchronizing cells, table width, and percentages.
@@ -305,24 +305,25 @@ five-format evidence is recaptured and approved.
 
 ## PDF
 
-- Document: `pdf.document.set_metadata`, `pdf.document.save`.
+- Document: `pdf.document.create_blank`, `pdf.document.set_metadata`, `pdf.document.save`.
 - History: `pdf.history.undo`, `pdf.history.redo`.
-- Markup and pending objects: `pdf.markup.add`, `pdf.annotation.delete_saved`,
+- Markup and pending objects: `pdf.markup.add`, `pdf.note.update_saved`, `pdf.annotation.delete_saved`,
   `pdf.pending.delete`.
 - Drawings, notes, and visual signatures: `pdf.drawing.add`, `pdf.drawing.update`.
 - Searchable text: `pdf.text.insert`, `pdf.text.replace`, `pdf.text.update_inserted`.
 - Images and bitmap-backed static forms: `pdf.image.insert`, `pdf.image.transform`,
   `pdf.image.replace`, `pdf.image.delete`, `pdf.static_form.set`.
 - AcroForms and generated document stamps: `pdf.form.set_value`, `pdf.stamp.set`.
-- Pages: `pdf.page.insert`, `pdf.page.delete`, `pdf.page.reorder`,
-  `pdf.page.set_rotation`.
+- Pages: `pdf.page.insert`, `pdf.page.insert_blank`, `pdf.page.delete`, `pdf.page.replace`,
+  `pdf.page.crop`, `pdf.page.reorder`, `pdf.page.set_size`, `pdf.page.set_rotation`.
 
 Use exact bounded identities, page indexes, rectangles/quads, colors, and final states from the live
-schema. Public page insertion accepts an absolute local PDF path; the Broker stages it into internal
-`pdf.page.insert_staged`, persists the merged file, and reloads it, so the operation is not
-undoable. Local open similarly uses internal `pdf.document.load_staged`. Internal operations are
-hidden from discovery and rejected through direct `office_execute`.
+schema. Public page insertion and replacement accept absolute local PDF paths; the Broker stages them
+into internal `pdf.page.insert_staged` and `pdf.page.replace_staged`. Immediate page writes persist,
+reload, and enter the mounted whole-document Undo/Redo journal. Local open similarly uses internal
+`pdf.document.load_staged`. Internal operations are hidden from discovery and rejected through direct
+`office_execute`.
 
-Legacy `delete_saved_annotation`, `undo`, and `save` are input-only aliases. The 23 public and two
-internal PDF operations cover the retained state-changing producer baseline. PDF remains
-`ready: true` through the passing shared R6-01 release gate.
+Legacy public names are rejected. The 29 public and three internal PDF operations cover the retained
+state-changing producer baseline. The previous R6-01 capture is historical; `ready` remains
+fail-closed until source-current evidence is recaptured and approved.

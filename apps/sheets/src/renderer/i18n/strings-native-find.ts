@@ -1,5 +1,5 @@
 // Modified by TandemFolio contributors: native streamed-find status copy.
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 /** Status shown when bounded native Find cannot scan the complete workbook. */
 export const nativeFindStrings = defineStrings({

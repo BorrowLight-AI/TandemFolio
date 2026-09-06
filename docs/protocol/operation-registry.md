@@ -678,9 +678,10 @@ exact bounded logical rectangle. Unlisted cell attrs remain unchanged; Agent and
 adapters share the same write kernel and native Undo transaction. The generated Manifest contains
 158 operations, including thirty-four DOCX operations (thirty-three public and one internal).
 
-R2-155 adds `docx.table.set_cell_borders` for all/outer/inner/none edge policies over one exact
-cell rectangle. Color/width and the null clear state are bounded, while Registry and Ribbon share
-the same geometry/write kernel and Undo transaction. The generated Manifest contains 159
+R2-155 adds `docx.table.set_cell_borders` for all/outer/inner/none, one selected edge, and
+whole-table inside-horizontal/inside-vertical policies over one exact cell rectangle. Color/width
+and the null clear state are bounded, while Registry and Ribbon share the same geometry/write kernel
+and Undo transaction. The generated Manifest contains 159
 operations, including thirty-five DOCX operations (thirty-four public and one internal).
 
 R2-156 adds `docx.table.set_style { tableBlockIndex, styleId }`. Non-null style identity is
@@ -1233,7 +1234,7 @@ The source-current PPTX migration adds seven canonical native mutation routes:
 accept the expanded native gradient/effect/RTL/3D fields without introducing aliases. All 81 PPTX
 descriptors (80 Agent-visible and one internal) dispatch through the mounted
 `BrowserPresentation` history, recovery, and save/reopen seam. The generated Manifest now contains
-354 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 25 PDF.
+361 operations: 103 DOCX, 22 Markdown, 123 XLSX, 81 PPTX, and 32 PDF.
 
 ## Module map
 

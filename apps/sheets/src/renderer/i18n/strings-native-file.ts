@@ -1,5 +1,5 @@
 // Modified by TandemFolio contributors: native file-command copy.
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 export const nativeFileStrings = defineStrings({
   zh: { appSaveAs: '另存为' },

@@ -2,7 +2,16 @@ import type { LiveEditorExecution } from '@tandemfolio/host-bridge'
 import { executePdfOperation, type PdfOperationServices } from '../operations/registry'
 
 export interface PdfCommunityController extends Required<
-  Omit<PdfOperationServices, 'loadStaged' | 'insertPagesStaged'>
+  Omit<
+    PdfOperationServices,
+    | 'loadStaged'
+    | 'insertPagesStaged'
+    | 'insertBlankPage'
+    | 'replacePagesStaged'
+    | 'cropPages'
+    | 'setPageSize'
+    | 'createBlank'
+  >
 > {
   recoverySnapshot(force?: boolean): Promise<{ fileName: string; data: ArrayBuffer } | null>
   recoveryVersion(): number

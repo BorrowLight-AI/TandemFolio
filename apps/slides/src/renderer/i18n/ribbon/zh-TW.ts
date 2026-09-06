@@ -1,9 +1,6 @@
 import type { zh } from './zh'
 
 export const zhTW = {
-  ribbonAiCreditNote: '將呼叫 AI 並消耗額度',
-  ribbonAiRewriteConfirm:
-    '此操作將呼叫 AI：會消耗額度，並可能改寫整篇內容。是否繼續？（確認後不再提示）',
   ribbonTabFile: '檔案',
   ribbonTabHome: '常用',
   ribbonTabInsert: '插入',
@@ -166,8 +163,6 @@ export const zhTW = {
   ribbonFlipH: '水平翻轉',
   ribbonFlipV: '垂直翻轉',
   ribbonDistributeHint: '{title}（需選取 ≥3 個元素）',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: '開啟/收合 AI 助理面板',
   ribbonGroupTable: '表格',
   ribbonInsertTableTip: '插入表格（預設樣式，列欄可選）',
   ribbonTablePickerHint: '選擇列欄',

@@ -1,10 +1,6 @@
 import type { zh } from './zh'
 
 export const de = {
-  ribbonAiCreditNote: 'Ruft KI auf und verbraucht Guthaben',
-  ribbonAiRewriteConfirm:
-    'Diese Aktion ruft die KI auf: Sie verbraucht Guthaben und kann den gesamten Inhalt umschreiben. Fortfahren? (Sie werden nicht erneut gefragt.)',
-  // tabs
   ribbonTabFile: 'Datei',
   ribbonTabHome: 'Start',
   ribbonTabInsert: 'Einfügen',
@@ -175,8 +171,6 @@ export const de = {
   ribbonFlipH: 'Horizontal spiegeln',
   ribbonFlipV: 'Vertikal spiegeln',
   ribbonDistributeHint: '{title} (mindestens 3 Elemente auswählen)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: 'KI-Assistent-Bereich ein-/ausblenden',
   ribbonGroupTable: 'Tabelle',
   ribbonInsertTableTip: 'Tabelle einfügen (Standardstil; Zeilen und Spalten wählbar)',
   ribbonTablePickerHint: 'Zeilen und Spalten wählen',

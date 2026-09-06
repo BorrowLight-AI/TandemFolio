@@ -1,9 +1,6 @@
 import type { zh } from './zh'
 
 export const it = {
-  ribbonAiCreditNote: "Usa l'IA e consuma crediti",
-  ribbonAiRewriteConfirm:
-    "Questa azione richiama l'IA: consuma crediti e può riscrivere l'intero contenuto. Continuare? (Non verrà più chiesto.)",
   ribbonTabFile: 'File',
   ribbonTabHome: 'Home',
   ribbonTabInsert: 'Inserisci',
@@ -176,8 +173,6 @@ export const it = {
   ribbonFlipH: 'Capovolgi orizzontalmente',
   ribbonFlipV: 'Capovolgi verticalmente',
   ribbonDistributeHint: '{title} (seleziona almeno 3 elementi)',
-  ribbonAiAssistant: 'Genspark',
-  ribbonAiAssistantTip: "Mostra o nascondi il pannello dell'Assistente IA",
   ribbonGroupTable: 'Tabella',
   ribbonInsertTableTip: 'Inserisci una tabella (stile predefinito; scegli righe e colonne)',
   ribbonTablePickerHint: 'Scegli righe e colonne',

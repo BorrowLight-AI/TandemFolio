@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: adapt the source-current native ruler tab cycle.
 import { useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { Editor } from '@tiptap/core'
@@ -5,6 +6,10 @@ import type { SectionSettings, TabStop } from '@genoffice/docx-engine'
 import { t, type StringKey } from '../i18n/locale'
 
 const twipsToPx = (twips: number) => (twips / 1440) * 96
+
+export function isRenderableTabStop(stop: TabStop): boolean {
+  return stop.val !== 'clear'
+}
 
 /** Horizontal ruler above the page: inch numbers, gray margin zones, tab stops. */
 export function Ruler({
@@ -28,7 +33,7 @@ export function Ruler({
 
   // Tab stop type cycling (Word: click ruler button to cycle L/C/R/Decimal/Bar)
   const [nextTabType, setNextTabType] = useState<TabStop['val']>('left')
-  const TAB_TYPE_CYCLE: TabStop['val'][] = ['left', 'center', 'right', 'decimal']
+  const TAB_TYPE_CYCLE: TabStop['val'][] = ['left', 'center', 'right', 'decimal', 'bar']
   const TAB_TYPE_LABELS: Record<string, string> = {
     left: 'L',
     center: '⊥',
@@ -42,7 +47,7 @@ export function Ruler({
     right: 'appTabRight',
     decimal: 'appTabDecimal',
     bar: 'appTabBar',
-    clear: 'appTabBar',
+    clear: 'appTabClear',
   }
 
   // Get current tab stops from focused paragraph. rel stops mirror w:ptab
@@ -172,24 +177,26 @@ export function Ruler({
         />
       ))}
 
-      {/* Custom tab stops (interactive) */}
-      {stops.map((stop, i) => (
-        <span
-          key={`${stop.pos}-${i}`}
-          data-ruler-stop={i}
-          className={`ruler-tab ruler-tab-${stop.val}`}
-          style={{ left: twipsToPx(stop.pos) }}
-          data-tip={
-            t('appTabStopTitle', {
-              type: t(TAB_TYPE_NAME_KEYS[stop.val]),
-              pos: Math.round((stop.pos / 144) * 10) / 10,
-            }) + (stop.leader ? t('appTabLeader', { leader: stop.leader }) : '')
-          }
-          onMouseDown={(e) => handleTabMouseDown(e, i)}
-        >
-          {TAB_TYPE_LABELS[stop.val]}
-        </span>
-      ))}
+      {/* Clear stops cancel inherited positions and have no ruler marker. */}
+      {stops.map((stop, i) =>
+        !isRenderableTabStop(stop) ? null : (
+          <span
+            key={`${stop.pos}-${i}`}
+            data-ruler-stop={i}
+            className={`ruler-tab ruler-tab-${stop.val}`}
+            style={{ left: twipsToPx(stop.pos) }}
+            data-tip={
+              t('appTabStopTitle', {
+                type: t(TAB_TYPE_NAME_KEYS[stop.val]),
+                pos: Math.round((stop.pos / 144) * 10) / 10,
+              }) + (stop.leader ? t('appTabLeader', { leader: stop.leader }) : '')
+            }
+            onMouseDown={(e) => handleTabMouseDown(e, i)}
+          >
+            {TAB_TYPE_LABELS[stop.val]}
+          </span>
+        ),
+      )}
     </div>
   )
 }

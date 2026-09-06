@@ -554,7 +554,7 @@ collision-safe output target, even if its name matches the previously opened doc
 | `docx.table.merge_cells`                     | `{ tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn }`                 | Merges one exact half-open logical-cell rectangle.                                |
 | `docx.table.split_cell`                      | `{ tableBlockIndex, rowIndex, columnIndex }`                                      | Splits the merged cell covering one exact logical coordinate.                     |
 | `docx.table.set_cell_format`                 | `{ tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn, format, fields }` | Sets masked fill/alignment over one exact cell rectangle.                         |
-| `docx.table.set_cell_borders`                | `{ tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn, mode, border }`   | Applies one bounded edge policy over an exact cell rectangle.                     |
+| `docx.table.set_cell_borders`                | `{ tableBlockIndex, topRow, leftColumn, bottomRow, rightColumn, mode, border }`   | Applies all/outer/inner/none, one selected edge, or whole-table inside H/V through the native border transaction. |
 | `docx.table.set_style`                       | `{ tableBlockIndex, styleId }`                                                    | Sets or clears one current-document table style identity.                         |
 | `docx.table.set_row_height`                  | `{ tableBlockIndex, rowIndex, count, heightTwips }`                               | Sets or clears height over one bounded physical-row interval.                     |
 | `docx.table.set_column_widths`               | `{ tableBlockIndex, widthsPx }`                                                   | Replaces one complete bounded logical-column width vector.                        |
@@ -780,36 +780,45 @@ Context includes active slide, selected object summaries, bounding boxes, text, 
 ### PDF
 
 The retained PDF community renderer accepts local files from the visible browser picker and
-`office_open_local_file`. Its PDF-owned Registry contains 25 operations: 23 Agent-visible and two
+`office_open_local_file`. Its PDF-owned Registry contains 32 operations: 29 Agent-visible and three
 internal staged-byte routes.
 
 | Family                  | Public operations                                                                                         |
 | ----------------------- | --------------------------------------------------------------------------------------------------------- |
-| Document                | `pdf.document.set_metadata`, `pdf.document.save`                                                          |
+| Document                | `pdf.document.create_blank`, `pdf.document.set_metadata`, `pdf.document.save`                             |
 | History                 | `pdf.history.undo`, `pdf.history.redo`                                                                    |
-| Markup/pending          | `pdf.markup.add`, `pdf.annotation.delete_saved`, `pdf.pending.delete`                                     |
+| Markup/pending          | `pdf.markup.add`, `pdf.note.update_saved`, `pdf.annotation.delete_saved`, `pdf.pending.delete`            |
 | Drawing/signature       | `pdf.drawing.add`, `pdf.drawing.update`                                                                   |
 | Text                    | `pdf.text.insert`, `pdf.text.replace`, `pdf.text.update_inserted`                                         |
 | Image/static form       | `pdf.image.insert`, `pdf.image.transform`, `pdf.image.replace`, `pdf.image.delete`, `pdf.static_form.set` |
 | AcroForm                | `pdf.form.set_value`                                                                                      |
 | Watermark/header/footer | `pdf.stamp.set`                                                                                           |
-| Pages                   | `pdf.page.insert`, `pdf.page.delete`, `pdf.page.reorder`, `pdf.page.set_rotation`                         |
+| Pages                   | `pdf.page.insert`, `pdf.page.insert_blank`, `pdf.page.delete`, `pdf.page.replace`, `pdf.page.crop`, `pdf.page.reorder`, `pdf.page.set_size`, `pdf.page.set_rotation` |
 
-Internal `pdf.document.load_staged { blobId, name, size, data }` and
-`pdf.page.insert_staged { blobId, name, size, data, afterPageIndex }` receive Broker-hydrated bytes
-and cannot be called through `office_execute`. Public page insertion accepts a bounded absolute
-local PDF path, stages it, then persists and reloads the merged active document; it is explicitly
-non-undoable. Other mutations use mounted App history or their declared persistence semantics.
+Internal `pdf.document.load_staged { blobId, name, size, data }`,
+`pdf.page.insert_staged { blobId, name, size, data, afterPageIndex }`, and
+`pdf.page.replace_staged { blobId, name, size, data, pages }` receive Broker-hydrated bytes and
+cannot be called through `office_execute`. Public page insertion and replacement accept bounded
+absolute local PDF paths and stage their bytes. Insert, replace, blank insertion, crop, and paper-size
+changes persist and reload the active document through one bounded browser-host byte history;
+`pdf.history.undo` and `pdf.history.redo` use that history when no newer mounted App edit exists.
+Other mutations use mounted App history or their declared persistence semantics. Blank-document
+creation requires `confirmReplace: true` when it would replace an active document.
 Staged document load resolves only after PDF.js parsing, page-size/base-rotation state, React
 status, and the refreshed community command controller have committed for two animation frames.
 A positive load acknowledgement therefore makes an immediately following typed mutation safe; it
 cannot race the previous document controller.
 
 R6-09 retires the legacy `delete_saved_annotation`, `undo`, and `save` aliases; `open_local_file`
-remains only as the internal staged-load transport alias. Browser PDFium supplies searchable text and content-image
-save paths; allowlisted script fonts are loaded lazily and cmap validation rejects unsupported
-glyphs before mutation. Save success returns `{ "saved": true }`. PDF is included in the passing
-R6-01 all-format readiness evidence.
+remains only as the internal staged-load transport alias. Browser PDFium supplies searchable text
+and content-image save paths; allowlisted script fonts are loaded lazily and cmap validation rejects
+unsupported glyphs before mutation. Text replacement can move an exact run, retain neighbours around
+a fragment, delete multiple matched objects, and emit selection-level font/size/bold/italic/color
+runs. Threaded note replies preserve PDF `/IRT` and `/RT` identity. Save success returns
+`{ "saved": true }`. Encrypted PDFs open read-only after password retry because browser save cannot
+preserve the encryption envelope. Split, merge, N-up, per-page split, extraction, image export, Save
+As, and print are separate-output host effects. The earlier R6-01 evidence is historical after this
+source-current migration; the release gate remains fail-closed.
 
 ## Errors
 
@@ -859,9 +868,10 @@ command gaps.
   geometry/adjustment handles, text-body direction/autofit/wrap/insets, expanded gradients/strokes,
   RTL paragraphs/tables, and 3D chart kinds. The previous release capture is historical until the
   source-current five-format gate is recaptured.
-- PDF's 25-operation Registry covers every retained state-changing producer. Browser PDFium handles
-  text/image content streams and PDF-lib-safe routes cover annotations, drawings, forms,
-  stamps/signatures, metadata, and pages. PDF passes the same all-format release evidence.
+- PDF's 32-operation Registry covers every retained state-changing producer. Browser PDFium handles
+  native text/image content streams and PDF-lib-safe routes cover threaded comments, annotations,
+  drawings, forms, stamps/signatures, metadata, and pages. Immediate page writes share mounted
+  whole-document Undo/Redo. The source-current release recapture is pending.
 - All five generated editor mounts have standalone visual smoke coverage and active four-state
   Codex-host pixel matrices. R6-01 adds pinned-source split-view provenance, deterministic
   small/medium/large opens, cold start, interaction, ACK decomposition, and peak-memory evidence.

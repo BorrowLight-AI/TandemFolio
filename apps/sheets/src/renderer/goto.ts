@@ -1,9 +1,12 @@
+// Modified by TandemFolio contributors: adapt upstream XLSX grid-boundary validation.
 /// Reference resolution for the Name Box and the Go To dialog, kept pure so
 /// it unit-tests without Univer. Turns user input (an A1 address like `C5`,
 /// a range like `B2:D5`, or a defined name like `SalesData`) into an
 /// A1-notation string that FWorksheet.getRange() accepts — Univer's parser
 /// tolerates `$` markers and `Sheet1!` prefixes but silently yields NaN rows
 /// for garbage, so validity is decided here, not by try/catch alone.
+
+import { columnIndex } from '../domain/cell-address'
 
 export interface GoToNameEntry {
   readonly name: string
@@ -22,12 +25,44 @@ function splitSheetPrefix(ref: string): { readonly sheet: string; readonly body:
   return { sheet: ref.slice(0, bang), body: ref.slice(bang + 1) }
 }
 
+const MAX_ROW_NUMBER = 1048576
+const MAX_COLUMN_INDEX = 16383
+const CELL_PART = /^\$?([A-Za-z]{1,3})\$?(\d+)$/
+
+function columnInBounds(letters: string): boolean {
+  try {
+    return columnIndex(letters.toUpperCase()) <= MAX_COLUMN_INDEX
+  } catch {
+    return false
+  }
+}
+
+function rowInBounds(digits: string): boolean {
+  const row = Number(digits)
+  return Number.isInteger(row) && row >= 1 && row <= MAX_ROW_NUMBER
+}
+
+function endpointsInBounds(body: string): boolean {
+  return body.split(':').every((part) => {
+    const cell = CELL_PART.exec(part)
+    if (cell?.[1] !== undefined && cell[2] !== undefined) {
+      return columnInBounds(cell[1]) && rowInBounds(cell[2])
+    }
+    const lettersOnly = /^\$?([A-Za-z]{1,3})$/.exec(part)
+    if (lettersOnly?.[1] !== undefined) return columnInBounds(lettersOnly[1])
+    const digitsOnly = /^\$?(\d+)$/.exec(part)
+    if (digitsOnly?.[1] !== undefined) return rowInBounds(digitsOnly[1])
+    return false
+  })
+}
+
 /// True when the reference (after any sheet prefix) is a cell, a range, a
 /// whole-column span, or a whole-row span in A1 notation.
 export function isA1Reference(ref: string): boolean {
   const { sheet, body } = splitSheetPrefix(ref)
   if (ref.includes('!') && sheet === '') return false
-  return CELL_OR_RANGE.test(body) || COLUMN_SPAN.test(body) || ROW_SPAN.test(body)
+  if (!CELL_OR_RANGE.test(body) && !COLUMN_SPAN.test(body) && !ROW_SPAN.test(body)) return false
+  return endpointsInBounds(body)
 }
 
 /// Resolves Name Box / Go To input to the A1 reference to jump to, or null

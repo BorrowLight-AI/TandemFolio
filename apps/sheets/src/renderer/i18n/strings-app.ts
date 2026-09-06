@@ -1,4 +1,4 @@
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 /** Copy for App.tsx / ExcelShell / chart panels / non-dialog components */
 export const appStrings = defineStrings({

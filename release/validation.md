@@ -2,10 +2,18 @@
 
 ## Current status: recapture required after 2026-09-06 upstream ports
 
-The selectively ported DOCX-, XLSX-, and PPTX-native candidate work changed the source fingerprint. The
+The selectively ported DOCX-, XLSX-, PPTX-, and PDF-native candidate work changed the source fingerprint. The
 2026-09-04 approval below is historical and cannot authorize this source tree.
 See [upstream review](../docs/migration/upstream-review-2026-09-05.md) for changes
 and functional validation. No release ceiling or fail-closed check was changed.
+
+Current functional verification passes all workspace typechecks, 405 test files / 4,855 assertions
+(plus one environment-conditioned skip), all 16 PDF real-browser host scenarios, the 361-operation
+Manifest check, five-format build, packaged MCP smoke, license allowlist, prohibited-code scans, and
+resource ceilings. Current packaged raw/gzip sizes are DOCX 3,519,371/990,505, Markdown
+1,873,914/572,436, XLSX 19,776,759/8,531,618, PPTX 3,890,839/1,146,015, and PDF
+6,722,411/3,396,327 bytes. XLSX locale copy is retained in a deferred module, reducing its identity
+entry to 9,674,481 bytes under the unchanged 11,000,000-byte ceiling.
 
 ## Historical outcome: local release evidence approved
 

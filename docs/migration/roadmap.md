@@ -842,7 +842,7 @@ Existing behavior moves first and must remain behaviorally equivalent. Each repl
 | DOCX     |                 130 files | Community renderer selectively retained                                                | Retained-command parity and R6-01 release gate complete; ready    |
 | XLSX     |                 111 files | 76 permitted pinned files plus TandemFolio host/operation adapters; pinned App mounted | Renderer/mutation parity and R6-01 release gate complete; ready   |
 | PPTX     |                 104 files | 61 identical + 19 adapted permitted files; original App mounted                        | Retained-command parity and R6-01 release gate complete; ready    |
-| PDF      |                  40 files | All 33 permitted renderer files boot from `src/renderer`                               | Retained producer baseline and R6-01 release gate complete; ready |
+| PDF      |                  40 files | Pinned renderer plus applicable candidate-native PDF modules boot from `src/renderer` | Candidate-native parity complete; release recapture pending       |
 | Markdown |         30 renderer files | 21 pinned non-AI files plus browser/operation adapters                                 | Retained-command parity and R6-01 release gate complete; ready    |
 
 These counts are pinned-source evidence, not a completion metric by themselves. Completion is determined by the source and capability gates below.
@@ -935,20 +935,21 @@ visual/performance/package release evidence remains pending. See
 
 ### M4 — PDF complete renderer
 
-Status: Format-local retained state-changing command parity and the shared R6-01 release gate complete.
+Status: Candidate-native retained command parity complete; source-current release recapture pending.
 
-Current evidence: all 33 permitted pinned renderer files are present at their original paths and
-boot through `src/renderer`; seven AI files/assets remain intentionally excluded. The 25-operation
-PDF registry contains 23 Agent-visible routes plus two staged-byte internals. Its machine-checked
-producer baseline has no missing entry. Browser PDFium text/image mutation, PDF-lib-safe annotation,
-form, stamp, metadata and page persistence, 23 test files / 280 assertions, and eleven real-host
-scenarios cover the retained families. See
+Current evidence: the pinned non-AI renderer and applicable candidate-native renderer modules boot
+through `src/renderer`; AI, OCR sidecar, account, Electron/IPC, encryption-preserving write, and
+enterprise areas remain intentionally excluded. The 32-operation PDF registry contains 29
+Agent-visible routes plus three staged-byte internals. Its machine-checked producer baseline has no
+missing entry. Browser PDFium text/image mutation, threaded comments, PDF-lib-safe annotation/form/
+stamp/metadata/page persistence, mounted byte-level page Undo/Redo, and 35 test files / 332
+assertions cover the retained families. See
 [`pdf-capability-inventory.md`](pdf-capability-inventory.md).
 
 - Preserve the closed producer baseline and require every future retained state change to land as a
   typed Registry tracer with the matching native state/history and persistence evidence.
-- Keep page insertion's immediate persistence/reload route explicitly non-undoable; do not imply an
-  App-history guarantee that the retained host primitive cannot provide.
+- Keep immediate page persistence/reload operations in the mounted byte-level history and verify
+  their save failure, Undo, Redo, and reopen behavior together.
 - Complete the shared visual, performance/resource, MCP smoke, license, provenance, and repository
   acceptance gates before changing PDF `ready`.
 

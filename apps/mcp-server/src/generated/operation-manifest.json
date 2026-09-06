@@ -7897,7 +7897,13 @@
               "all",
               "outer",
               "inner",
-              "none"
+              "none",
+              "top",
+              "bottom",
+              "left",
+              "right",
+              "insideH",
+              "insideV"
             ],
             "type": "string"
           },
@@ -10889,6 +10895,10 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "contents": {
+            "maxLength": 100000,
+            "type": "string"
+          },
           "objNum": {
             "minimum": 1,
             "type": "integer"
@@ -10909,7 +10919,8 @@
             "enum": [
               "highlight",
               "underline",
-              "strikeout"
+              "strikeout",
+              "note"
             ],
             "type": "string"
           }
@@ -10939,6 +10950,59 @@
       "risk": "medium",
       "summary": "Delete one exact saved PDF text-markup annotation.",
       "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [],
+      "effects": [
+        "document",
+        "selection"
+      ],
+      "family": "document",
+      "format": "pdf",
+      "id": "pdf.document.create_blank",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmReplace": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "opened": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
+          "pageCount": {
+            "enum": [
+              1
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "opened",
+          "fileName",
+          "pageCount"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Create a one-page blank PDF. Replacing an opened or edited document requires confirmReplace: true.",
+      "undoable": false,
       "visibility": "agent"
     },
     {
@@ -11127,6 +11191,10 @@
             "minItems": 2,
             "type": "array"
           },
+          "author": {
+            "maxLength": 1000,
+            "type": "string"
+          },
           "color": {
             "items": {
               "maximum": 1,
@@ -11141,6 +11209,10 @@
             "maxLength": 100000,
             "minLength": 1,
             "type": "string"
+          },
+          "createdMs": {
+            "minimum": 0,
+            "type": "number"
           },
           "formFieldName": {
             "maxLength": 512,
@@ -11174,6 +11246,11 @@
             ],
             "type": "string"
           },
+          "localId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
           "pageIndex": {
             "maximum": 999999,
             "minimum": 0,
@@ -11203,6 +11280,40 @@
             "maxItems": 4,
             "minItems": 4,
             "type": "array"
+          },
+          "replyToLocalId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "replyToSaved": {
+            "additionalProperties": false,
+            "properties": {
+              "contents": {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              "objNum": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "rect": {
+                "items": {
+                  "maximum": 10000000,
+                  "minimum": -10000000,
+                  "type": "number"
+                },
+                "maxItems": 4,
+                "minItems": 4,
+                "type": "array"
+              }
+            },
+            "required": [
+              "objNum",
+              "rect",
+              "contents"
+            ],
+            "type": "object"
           },
           "to": {
             "items": {
@@ -11275,6 +11386,10 @@
                 "minItems": 2,
                 "type": "array"
               },
+              "author": {
+                "maxLength": 1000,
+                "type": "string"
+              },
               "color": {
                 "items": {
                   "maximum": 1,
@@ -11289,6 +11404,10 @@
                 "maxLength": 100000,
                 "minLength": 1,
                 "type": "string"
+              },
+              "createdMs": {
+                "minimum": 0,
+                "type": "number"
               },
               "formFieldName": {
                 "maxLength": 512,
@@ -11322,6 +11441,11 @@
                 ],
                 "type": "string"
               },
+              "localId": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
               "pageIndex": {
                 "maximum": 999999,
                 "minimum": 0,
@@ -11351,6 +11475,40 @@
                 "maxItems": 4,
                 "minItems": 4,
                 "type": "array"
+              },
+              "replyToLocalId": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "replyToSaved": {
+                "additionalProperties": false,
+                "properties": {
+                  "contents": {
+                    "maxLength": 100000,
+                    "type": "string"
+                  },
+                  "objNum": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "rect": {
+                    "items": {
+                      "maximum": 10000000,
+                      "minimum": -10000000,
+                      "type": "number"
+                    },
+                    "maxItems": 4,
+                    "minItems": 4,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "objNum",
+                  "rect",
+                  "contents"
+                ],
+                "type": "object"
               },
               "to": {
                 "items": {
@@ -11951,6 +12109,163 @@
         "document"
       ],
       "effects": [
+        "document"
+      ],
+      "family": "annotation",
+      "format": "pdf",
+      "id": "pdf.note.update_saved",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contents": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "objNum": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "oldContents": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "pageIndex": {
+            "maximum": 999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rect": {
+            "items": {
+              "maximum": 10000000,
+              "minimum": -10000000,
+              "type": "number"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "type": "array"
+          }
+        },
+        "required": [
+          "pageIndex",
+          "objNum",
+          "rect",
+          "oldContents",
+          "contents"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "updated": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "type": "object"
+      },
+      "risk": "medium",
+      "summary": "Replace the contents of one exact saved PDF comment without changing its identity.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      "family": "page",
+      "format": "pdf",
+      "id": "pdf.page.crop",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pages": {
+            "items": {
+              "maximum": 999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 1000000,
+            "minItems": 1,
+            "type": "array"
+          },
+          "rect": {
+            "additionalProperties": false,
+            "properties": {
+              "b": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "l": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "r": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "t": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "l",
+              "t",
+              "r",
+              "b"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "pages",
+          "rect"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "croppedPages": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "croppedPages"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Crop exact original pages to a displayed-page fractional rectangle.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
         "document",
         "selection"
       ],
@@ -12042,7 +12357,55 @@
       },
       "risk": "high",
       "summary": "Insert every page from one local PDF after an exact original page.",
-      "undoable": false,
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      "family": "page",
+      "format": "pdf",
+      "id": "pdf.page.insert_blank",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "afterPageIndex": {
+            "maximum": 999999,
+            "minimum": -1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "afterPageIndex"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "insertedAfterPage": {
+            "maximum": 999999,
+            "minimum": -1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "insertedAfterPage"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Insert one blank page after an exact original page, matching its size and rotation.",
+      "undoable": true,
       "visibility": "agent"
     },
     {
@@ -12116,7 +12479,7 @@
       },
       "risk": "high",
       "summary": "Insert Broker-hydrated PDF bytes after an exact original page.",
-      "undoable": false,
+      "undoable": true,
       "visibility": "internal"
     },
     {
@@ -12178,6 +12541,156 @@
         "document"
       ],
       "effects": [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      "family": "page",
+      "format": "pdf",
+      "id": "pdf.page.replace",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pages": {
+            "items": {
+              "maximum": 999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 1000000,
+            "minItems": 1,
+            "type": "array"
+          },
+          "path": {
+            "maxLength": 32768,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "pages"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "inserted": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "removed": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "removed",
+          "inserted"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Replace exact original pages with every page from one local PDF.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      "family": "page",
+      "format": "pdf",
+      "id": "pdf.page.replace_staged",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "blobId": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": false,
+            "description": "Hydrated ArrayBuffer supplied by the live-session host bridge.",
+            "properties": {},
+            "required": [],
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "type": "string"
+          },
+          "pages": {
+            "items": {
+              "maximum": 999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 1000000,
+            "minItems": 1,
+            "type": "array"
+          },
+          "size": {
+            "maximum": 100000000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "blobId",
+          "name",
+          "size",
+          "data",
+          "pages"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "inserted": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "removed": {
+            "maximum": 1000000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "removed",
+          "inserted"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Replace exact original pages with Broker-hydrated PDF bytes.",
+      "undoable": true,
+      "visibility": "internal"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
         "document"
       ],
       "family": "page",
@@ -12228,6 +12741,64 @@
       },
       "risk": "medium",
       "summary": "Set one original page to an explicit final clockwise rotation.",
+      "undoable": true,
+      "visibility": "agent"
+    },
+    {
+      "atomic": true,
+      "compatibilityAliases": [],
+      "context": [
+        "document"
+      ],
+      "effects": [
+        "document",
+        "selection",
+        "persistence"
+      ],
+      "family": "page",
+      "format": "pdf",
+      "id": "pdf.page.set_size",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "height": {
+            "maximum": 100000,
+            "minimum": 1,
+            "type": "number"
+          },
+          "width": {
+            "maximum": 100000,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "type": "object"
+      },
+      "mutates": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "height": {
+            "minimum": 1,
+            "type": "number"
+          },
+          "width": {
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "type": "object"
+      },
+      "risk": "high",
+      "summary": "Resize every PDF page to an explicit paper size in points.",
       "undoable": true,
       "visibility": "agent"
     },
@@ -12775,7 +13346,6 @@
           },
           "newText": {
             "maxLength": 1000000,
-            "minLength": 1,
             "type": "string"
           },
           "oldText": {
@@ -12806,6 +13376,66 @@
             },
             "maxItems": 4,
             "minItems": 4,
+            "type": "array"
+          },
+          "styleRuns": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "bold": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "items": {
+                    "maximum": 255,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "end": {
+                  "maximum": 1000000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "font": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "size": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "number"
+                },
+                "start": {
+                  "maximum": 1000000,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ],
+              "type": "object"
+            },
+            "maxItems": 100000,
+            "type": "array"
+          },
+          "translate": {
+            "items": {
+              "maximum": 10000000,
+              "minimum": -10000000,
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
             "type": "array"
           }
         },

@@ -1,5 +1,5 @@
 // Modified by TandemFolio contributors: browser-native workbook merge copy.
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from './define-strings'
 
 export const nativeMergeStrings = defineStrings({
   zh: { appMergeWorkbooks: '合并工作簿', appMergeWorkbooksTip: '将其他 Excel 文件的工作表并入当前工作簿', appMergeWorkbooksPicking: '选择要合并的文件…', appMergeWorkbooksReading: '正在导入 {file} 的 {sheet}…', appMergeWorkbooksDone: '已合并 {files} 个文件的 {sheets} 张工作表（公式已转为数值）。', appMergeWorkbooksFailed: '合并工作簿失败。', appMergeWorkbooksInsertFailed: '无法创建工作表 {sheet}。', appMergeWorkbooksLocked: '工作簿结构已锁定，暂时无法合并工作簿。' },

@@ -7,7 +7,7 @@ This page is the public factual reference for TandemFolio's status, source prove
 - **Product:** TandemFolio
 - **Form:** a local-first MCP Apps plugin with persistent visual editors and a local MCP server
 - **Formats:** DOCX, XLSX, PPTX, PDF, and Markdown
-- **Status:** pre-release. The 2026-09-06 DOCX/XLSX/PPTX upstream ports require a source-current release recapture; the prior approved projection is historical, and native release CI and publication remain pending.
+- **Status:** pre-release. The 2026-09-06 DOCX/XLSX/PPTX/PDF upstream ports require a source-current release recapture; the prior approved projection is historical, and native release CI and publication remain pending.
 - **Distribution license:** [Apache License 2.0](../LICENSE)
 
 The [2026-09-03 full capture](../release/validation.md) now supplies the previously
