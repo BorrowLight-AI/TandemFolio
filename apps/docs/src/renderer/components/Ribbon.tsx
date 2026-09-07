@@ -143,8 +143,8 @@ interface RibbonProps {
   }>
   /** Quick-access area on the tab row's left (save/undo-redo/autosave), matching the WPS/Office QAT */
   quickActions?: React.ReactNode
-  /** Right side of the tab row (file name, etc.) */
-  trailingActions?: React.ReactNode
+  /** Actions immediately after File, before save/undo-redo in the quick-access area. */
+  postFileActions?: React.ReactNode
   editor: Editor
   /** shallow-stable snapshot of every editor-state read shown in the ribbon (memo invalidation key) */
   formatState: RibbonFormatState
@@ -628,7 +628,7 @@ function findNumIdOfKind(blocks: Block[], kind: 'bullet' | 'ordered'): string | 
 function RibbonInner({
   actionsRef,
   quickActions,
-  trailingActions,
+  postFileActions,
   editor,
   formatState: fs,
   hasDoc,
@@ -1632,6 +1632,7 @@ function RibbonInner({
             )}
           </div>
         )}
+        {postFileActions}
         {quickActions}
         {TABS.filter((tabName) => tabName !== 'file').map((tabName) => (
           <button
@@ -1687,7 +1688,6 @@ function RibbonInner({
             </button>
           ))}
         <span className="ribbon-tabs-spacer" />
-        {trailingActions}
       </div>
 
       <div className="ribbon-body">

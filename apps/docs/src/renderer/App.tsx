@@ -3680,7 +3680,7 @@ export function App() {
       <Ribbon
         actionsRef={ribbonActionsRef}
         quickActions={quickActions}
-        trailingActions={mcpDisplayAction}
+        postFileActions={mcpDisplayAction}
         editor={editor}
         formatState={formatState}
         hasDoc={!!doc}
