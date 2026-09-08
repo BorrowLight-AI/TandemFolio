@@ -134,6 +134,18 @@ describe('SessionStore', () => {
     )
   })
 
+  it('accepts an exact duplicate acknowledgement after the first response is lost', () => {
+    const store = new SessionStore()
+    const session = store.create()
+    store.connect(session.id)
+    const command = store.enqueue(session.id, 0, 'insert_text', { text: 'first' })
+    store.poll(session.id)
+
+    store.acknowledge(session.id, command.commandId, 1, { dirty: true })
+    expect(() => store.acknowledge(session.id, command.commandId, 1, { dirty: true })).not.toThrow()
+    expect(store.get(session.id)).toMatchObject({ revision: 1, dirty: true })
+  })
+
   it('resolves a command only after the editor acknowledges its next revision', async () => {
     const store = new SessionStore()
     const session = store.create()

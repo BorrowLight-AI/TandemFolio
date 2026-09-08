@@ -618,7 +618,7 @@ server.registerTool(
     try {
       const session = store.get(sessionId)
       session.filePath ??= await documentSaves.boundPath(sessionId, session.format)
-      return result({ ok: true, session })
+      return result({ ok: true, session, command: store.commandStatus(sessionId) })
     } catch (error) {
       return failure(error)
     }
@@ -798,9 +798,16 @@ server.registerTool(
       return await waitForExecution(command, descriptor.id)
     } catch (error) {
       const response = failure(error)
-      if (!(error instanceof SessionError && error.code === 'command_timeout')) {
-        transaction?.fail(response)
+      if (error instanceof SessionError && error.code === 'command_timeout') {
+        return {
+          ...response,
+          structuredContent: {
+            ...response.structuredContent,
+            transaction: { requestId, state: 'in_flight', retry: 'exact_replay' },
+          },
+        }
       }
+      transaction?.fail(response)
       return response
     }
   },

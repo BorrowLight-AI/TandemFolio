@@ -26,6 +26,21 @@ export interface CommandCompletion {
   output?: Record<string, unknown>
 }
 
+export interface CommandStatus {
+  commandId: string
+  baseRevision: number
+  operation: string
+  state: 'queued' | 'active'
+}
+
+interface CommandSettlement {
+  commandId: string
+  ok: boolean
+  revision?: number
+  error?: 'unsupported_operation' | 'invalid_arguments' | 'execution_failed'
+  message?: string
+}
+
 interface CommandCompletionRecord {
   promise: Promise<CommandCompletion>
   resolve: (completion: CommandCompletion) => void
@@ -96,6 +111,7 @@ export class SessionStore {
   readonly #sessions = new Map<string, LiveSession>()
   readonly #activeCommands = new Map<string, QueuedCommand>()
   readonly #commandCompletions = new Map<string, CommandCompletionRecord>()
+  readonly #lastCommandSettlements = new Map<string, CommandSettlement>()
   readonly #pollWaiters = new Map<string, PollWaiter>()
   readonly #activeViews = new Map<string, string>()
   readonly #lastContact = new Map<string, number>()
@@ -326,6 +342,19 @@ export class SessionStore {
     return session
   }
 
+  commandStatus(sessionId: string): CommandStatus | null {
+    const session = this.get(sessionId)
+    const active = this.#activeCommands.get(sessionId)
+    const command = active ?? session.pending[0]
+    if (!command) return null
+    return {
+      commandId: command.commandId,
+      baseRevision: command.baseRevision,
+      operation: command.operation,
+      state: active ? 'active' : 'queued',
+    }
+  }
+
   assertCanReplaceDocument(sessionId: string, commandId?: string): void {
     const active = this.#activeCommands.get(sessionId)
     if (
@@ -458,6 +487,15 @@ export class SessionStore {
     const session = this.get(sessionId)
     const activeCommand = this.#activeCommands.get(sessionId)
     if (activeCommand?.commandId !== commandId) {
+      const settled = this.#lastCommandSettlements.get(sessionId)
+      if (
+        settled?.commandId === commandId &&
+        !settled.ok &&
+        settled.error === code &&
+        settled.message === message
+      ) {
+        return session
+      }
       throw new SessionError(
         'command_not_found',
         `Command ${commandId} is not the active command for this session.`,
@@ -465,6 +503,7 @@ export class SessionStore {
     }
 
     this.#activeCommands.delete(sessionId)
+    this.#lastCommandSettlements.set(sessionId, { commandId, ok: false, error: code, message })
     const completion = this.#commandCompletions.get(commandId)
     this.#commandCompletions.delete(commandId)
     completion?.reject(new SessionError(code, message))
@@ -481,6 +520,10 @@ export class SessionStore {
     const session = this.get(sessionId)
     const activeCommand = this.#activeCommands.get(sessionId)
     if (activeCommand?.commandId !== commandId) {
+      const settled = this.#lastCommandSettlements.get(sessionId)
+      if (settled?.commandId === commandId && settled.ok && settled.revision === revision) {
+        return session
+      }
       throw new SessionError(
         'command_not_found',
         `Command ${commandId} is not the active command for this session.`,
@@ -495,6 +538,7 @@ export class SessionStore {
     session.revision = revision
     Object.assign(session, context)
     this.#activeCommands.delete(sessionId)
+    this.#lastCommandSettlements.set(sessionId, { commandId, ok: true, revision })
     const completion = this.#commandCompletions.get(commandId)
     this.#commandCompletions.delete(commandId)
     completion?.resolve({ commandId, ok: true, revision, ...(output ? { output } : {}) })

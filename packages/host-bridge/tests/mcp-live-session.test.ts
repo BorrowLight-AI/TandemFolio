@@ -12,6 +12,7 @@ const mcp = vi.hoisted(() => ({
   sizeNotifications: [] as Array<{ width: number; height: number }>,
   pollWaiters: [] as Array<() => void>,
   pollFailures: 0,
+  acknowledgeFailures: 0,
   pollError: null as string | null,
   pollRetryAfterMs: undefined as number | undefined,
   pollFilePath: undefined as string | null | undefined,
@@ -66,6 +67,10 @@ vi.mock('@modelcontextprotocol/ext-apps', () => ({
     async callServerTool(call: { name: string; arguments: Record<string, unknown> }) {
       mcp.events.push(`tool:${call.name}`)
       mcp.calls.push(call)
+      if (call.name === 'office_editor_acknowledge' && mcp.acknowledgeFailures > 0) {
+        mcp.acknowledgeFailures -= 1
+        throw new Error('temporary acknowledgement transport failure')
+      }
       if (call.name === 'office_editor_poll') {
         if (mcp.pollError) {
           return {
@@ -214,6 +219,7 @@ import {
   saveLiveEditorFile,
   replaceLiveEditorDocument,
   subscribeLiveEditorActivity,
+  waitForRendererCommit,
 } from '../src/mcp-live-session'
 
 afterEach(() => {
@@ -228,6 +234,7 @@ afterEach(() => {
   mcp.requestedModes = []
   mcp.sizeNotifications = []
   mcp.pollFailures = 0
+  mcp.acknowledgeFailures = 0
   mcp.pollError = null
   mcp.pollRetryAfterMs = undefined
   mcp.pollFilePath = undefined
@@ -286,6 +293,45 @@ function bindEditor(sessionId: string, viewId = `view-${sessionId}`): void {
 }
 
 describe('format-neutral MCP live session', () => {
+  it('acknowledges a command when a hidden renderer stops delivering animation frames', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1)
+    mcp.commands.push({
+      commandId: 'command-hidden-frame',
+      baseRevision: 0,
+      operation: 'xlsx.range.set_values',
+      arguments: { sheet: 'Sheet1', range: 'A1', values: [[1]] },
+    })
+    const teardown = attachMcpLiveSession({
+      execute: async () => {
+        await waitForRendererCommit()
+        return { ok: true, output: { changed: 1 } }
+      },
+      snapshot: (revision) => ({
+        revision,
+        fileName: null,
+        dirty: true,
+        selection: { sheet: 'Sheet1', range: 'A1' },
+      }),
+    })
+    try {
+      bindEditor('hidden-frame')
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(mcp.calls).toContainEqual({
+        name: 'office_editor_acknowledge',
+        arguments: expect.objectContaining({
+          commandId: 'command-hidden-frame',
+          ok: true,
+          revision: 1,
+        }),
+      })
+    } finally {
+      teardown()
+      requestFrame.mockRestore()
+    }
+  })
+
   it('honors explicit continuation despite a stale inactive viewport hint', async () => {
     vi.useFakeTimers()
     Object.defineProperty(window, 'parent', { configurable: true, value: {} })
@@ -1411,6 +1457,78 @@ describe('format-neutral MCP live session', () => {
       (acknowledgement.arguments.timing as { hydrateMs: number; executeMs: number }).executeMs,
     ).toBeGreaterThanOrEqual(0)
     teardown()
+  })
+
+  it('retries a transient acknowledgement failure before polling for another command', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    mcp.acknowledgeFailures = 1
+    mcp.commands.push({
+      commandId: 'command-retry-ack',
+      baseRevision: 0,
+      operation: 'set_cell_value',
+      arguments: { address: 'A1', value: 'Ready' },
+    })
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true, output: { changed: 1 } }),
+      snapshot: (revision) => ({
+        revision,
+        fileName: 'book.xlsx',
+        dirty: true,
+        selection: { sheet: 'Sheet1', range: 'A1' },
+      }),
+    })
+    try {
+      bindEditor('retry-ack')
+      await vi.waitFor(() => {
+        const acknowledgements = mcp.calls.filter(
+          (call) => call.name === 'office_editor_acknowledge',
+        )
+        expect(acknowledgements).toHaveLength(2)
+        expect(acknowledgements[1]!.arguments).toEqual(acknowledgements[0]!.arguments)
+      })
+    } finally {
+      teardown()
+    }
+  })
+
+  it('acknowledges a successful mutation when the fresh renderer snapshot throws', async () => {
+    Object.defineProperty(window, 'parent', { configurable: true, value: {} })
+    mcp.commands.push({
+      commandId: 'command-snapshot-fallback',
+      baseRevision: 0,
+      operation: 'xlsx.range.set_values',
+      arguments: {
+        sheet: 'Sheet1',
+        range: 'A1:B2',
+        values: [
+          [1, 2],
+          [3, 4],
+        ],
+      },
+    })
+    const teardown = attachMcpLiveSession({
+      execute: async () => ({ ok: true, output: { changed: 4 } }),
+      snapshot: (revision) => {
+        if (revision === 1) throw new Error('selection changed while snapshotting')
+        return { revision, fileName: 'book.xlsx', dirty: false, selection: null }
+      },
+    })
+    try {
+      bindEditor('snapshot-fallback')
+      await vi.waitFor(() => {
+        expect(mcp.calls).toContainEqual({
+          name: 'office_editor_acknowledge',
+          arguments: expect.objectContaining({
+            commandId: 'command-snapshot-fallback',
+            revision: 1,
+            ok: true,
+            output: { changed: 4 },
+          }),
+        })
+      })
+    } finally {
+      teardown()
+    }
   })
 
   it('hydrates a canonical staged-load operation before renderer execution', async () => {

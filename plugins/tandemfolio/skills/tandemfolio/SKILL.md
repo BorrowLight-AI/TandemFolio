@@ -96,6 +96,11 @@ same `sessionId`: wait for its existing view's restore/handoff, show once only i
 or use `resume: "exact"` after a Broker restart. Do not create or mutate a hidden second copy and
 do not fall back to `latest`.
 
+`office_get_context.session.pending` lists only commands not yet taken by the renderer. Inspect the
+top-level `command` projection as well: `state: "active"` means the renderer has taken the command
+and its acknowledgement is still outstanding, even when `pending` is empty. A timeout response's
+`transaction.retry: "exact_replay"` names the only safe retry path.
+
 Choose only canonical operations returned by summary discovery and use exact detail discovery as
 the schema authority. Internal staged-load ids and compatibility aliases are intentionally absent.
 The concise intent catalog is in [references/operations.md](references/operations.md).

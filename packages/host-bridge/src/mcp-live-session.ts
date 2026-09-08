@@ -82,6 +82,28 @@ let liveEditorActivity = true
 const MAX_LOCAL_ASSET_BYTES = 20 * 1024 * 1024
 const MCP_CONNECT_TIMEOUT_MS = 1_000
 const MCP_CONNECT_RETRY_MS = 250
+const RENDERER_COMMIT_FALLBACK_MS = 250
+
+/**
+ * Wait for a paint boundary without letting a background/occluded MCP App
+ * deadlock its command acknowledgement when the browser suspends animation frames.
+ */
+export function waitForRendererCommit(): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false
+    let frame = 0
+    let fallback = 0
+    const finish = () => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(fallback)
+      if (frame) window.cancelAnimationFrame(frame)
+      resolve()
+    }
+    fallback = window.setTimeout(finish, RENDERER_COMMIT_FALLBACK_MS)
+    frame = window.requestAnimationFrame(finish)
+  })
+}
 
 export interface LiveEditorLocalAsset {
   readonly mime: 'image/png' | 'image/jpeg' | 'image/gif'
@@ -340,6 +362,8 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
   let documentChanging = false
   let replacementBarrier: Promise<void> | null = null
   let executingCommandId: string | undefined
+  let pendingAcknowledgement: Record<string, unknown> | null = null
+  let lastSnapshot: LiveEditorSnapshot | null = null
   let saveTask: Promise<LiveEditorFileSaveResult> | null = null
   const storedRecoveryVersions = new Map<string, string | number>()
   let appConnected = false
@@ -581,7 +605,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
       status.path(null)
       storedRecoveryVersions.delete(sessionId)
       const result = await replace()
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+      await waitForRendererCommit()
       await checkpoint(sessionId, true)
       return result
     } finally {
@@ -773,13 +797,45 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     target.onhostcontextchanged = () => displayController.sync(displayContext(target))
   }
 
+  const snapshot = (revision: number): LiveEditorSnapshot => {
+    try {
+      const current = adapter.snapshot(revision)
+      lastSnapshot = current
+      return current
+    } catch {
+      return lastSnapshot
+        ? { ...lastSnapshot, revision }
+        : { revision, fileName: null, dirty: false, selection: null }
+    }
+  }
+
+  const flushAcknowledgement = async (): Promise<void> => {
+    const acknowledgement = pendingAcknowledgement
+    if (!acknowledgement) return
+    const response = await app.callServerTool({
+      name: 'office_editor_acknowledge',
+      arguments: acknowledgement,
+    })
+    const payload = response.structuredContent as { ok?: unknown; message?: string } | undefined
+    if (response.isError || payload?.ok !== true) {
+      throw new Error(payload?.message ?? 'The editor acknowledgement did not succeed.')
+    }
+    if (pendingAcknowledgement === acknowledgement) pendingAcknowledgement = null
+  }
+
+  const acknowledge = async (arguments_: Record<string, unknown>): Promise<void> => {
+    pendingAcknowledgement = arguments_
+    await flushAcknowledgement()
+  }
+
   const poll = async (waitMs: number): Promise<void> => {
     if (stopped) return
     if (!sessionId || !viewId) return
+    await flushAcknowledgement()
     const polledSessionId = sessionId
     const polledBindingVersion = bindingVersion
     const requestedActivation = activateView
-    const { fileName, dirty, selection } = adapter.snapshot(0)
+    const { fileName, dirty, selection } = snapshot(0)
     const response = await app.callServerTool({
       name: 'office_editor_poll',
       arguments: {
@@ -902,16 +958,13 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           const restoreFailed = stopFailedRestore(message)
-          await app.callServerTool({
-            name: 'office_editor_acknowledge',
-            arguments: {
-              sessionId: polledSessionId,
-              viewId,
-              commandId: command.commandId,
-              ok: false,
-              error: 'execution_failed',
-              message,
-            },
+          await acknowledge({
+            sessionId: polledSessionId,
+            viewId,
+            commandId: command.commandId,
+            ok: false,
+            error: 'execution_failed',
+            message,
           })
           if (restoreFailed) return
           continue
@@ -934,14 +987,11 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
       const executeMs = performance.now() - executeStartedAt
       if (!execution.ok) {
         const restoreFailed = stopFailedRestore(execution.message)
-        await app.callServerTool({
-          name: 'office_editor_acknowledge',
-          arguments: {
-            sessionId: polledSessionId,
-            viewId,
-            commandId: command.commandId,
-            ...execution,
-          },
+        await acknowledge({
+          sessionId: polledSessionId,
+          viewId,
+          commandId: command.commandId,
+          ...execution,
         })
         if (restoreFailed) return
         continue
@@ -956,21 +1006,18 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
           // Best effort: the mounted renderer remains authoritative.
         }
       }
-      await app.callServerTool({
-        name: 'office_editor_acknowledge',
-        arguments: {
-          sessionId: polledSessionId,
-          viewId,
-          commandId: command.commandId,
-          ok: true,
-          ...(execution.output ? { output: execution.output } : {}),
-          timing: {
-            hydrateMs,
-            executeMs,
-            ...(execution.trace ? { trace: execution.trace } : {}),
-          },
-          ...adapter.snapshot(command.baseRevision + 1),
+      await acknowledge({
+        sessionId: polledSessionId,
+        viewId,
+        commandId: command.commandId,
+        ok: true,
+        ...(execution.output ? { output: execution.output } : {}),
+        timing: {
+          hydrateMs,
+          executeMs,
+          ...(execution.trace ? { trace: execution.trace } : {}),
         },
+        ...snapshot(command.baseRevision + 1),
       })
     }
     editingReady = true
@@ -989,7 +1036,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
     if (!displayStarted) {
       displayStarted = true
       startRecoveryTimer()
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+      await waitForRendererCommit()
       if (stopped) return
       void displayController.connect(
         { requestDisplayMode: async (mode) => app.requestDisplayMode({ mode }) },
@@ -1115,7 +1162,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
 
   async function checkpoint(targetSessionId: string, force = false): Promise<void> {
     if (stopped || terminalError || !targetSessionId || !adapter.recoverySnapshot) return
-    if (!force && (documentChanging || saveTask || !adapter.snapshot(0).dirty)) return
+    if (!force && (documentChanging || saveTask || !snapshot(0).dirty)) return
     const recoveryVersion = adapter.recoveryVersion?.()
     if (
       !force &&
@@ -1166,7 +1213,7 @@ export function attachMcpLiveSession(adapter: LiveEditorAdapter): () => void {
       await target.connect(undefined, { timeout: MCP_CONNECT_TIMEOUT_MS })
       if (stopped || app !== target) return
       const startupTracePromise = adapter.startupTrace?.()
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+      await waitForRendererCommit()
       if (stopped || app !== target) return
       startupTrace = await startupTracePromise
       startupTracePending = startupTrace !== undefined

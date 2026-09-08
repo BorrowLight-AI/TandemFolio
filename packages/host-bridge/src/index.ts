@@ -59,6 +59,7 @@ export {
   subscribeLiveEditorDisplayMode,
   subscribeLiveEditorActivity,
   toggleLiveEditorFullscreen,
+  waitForRendererCommit,
   type LiveEditorAdapter,
   type LiveEditorCommand,
   type LiveEditorDisplayModeState,

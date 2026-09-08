@@ -856,7 +856,29 @@ describe('office_execute', () => {
       .commands[0]!.commandId
     await expect(firstExecution).resolves.toMatchObject({
       isError: true,
-      structuredContent: { ok: false, error: 'command_timeout' },
+      structuredContent: {
+        ok: false,
+        error: 'command_timeout',
+        transaction: {
+          requestId: 'request-replay-after-timeout',
+          state: 'in_flight',
+          retry: 'exact_replay',
+        },
+      },
+    })
+
+    const contextWhileActive = await client.callTool({
+      name: 'office_get_context',
+      arguments: { sessionId },
+    })
+    expect(contextWhileActive.structuredContent).toMatchObject({
+      command: {
+        state: 'active',
+        commandId,
+        baseRevision: 0,
+        operation: 'markdown.text.insert',
+      },
+      session: { pending: [] },
     })
 
     await client.callTool({
