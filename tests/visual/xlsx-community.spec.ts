@@ -243,7 +243,7 @@ test('opening a local XLSX loads its cells into the mounted workbook session', a
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
 
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'local-fixture.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Community renderer'),
@@ -302,7 +302,7 @@ test('an MCP cell edit changes the mounted workbook revision and saved XLSX', as
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'roundtrip.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -347,7 +347,7 @@ test('XLSX stores each dirty workbook version only once', async ({ page }) => {
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'recovery-version.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -387,7 +387,7 @@ test('the XLSX history operations undo and redo the latest mounted workbook edit
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-history.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -478,7 +478,7 @@ test('the XLSX copy-values operation copies computed values through shared undo 
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-copy-values.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithCopyValuesSource(),
@@ -567,7 +567,7 @@ test('the XLSX copy-formulas operation translates references through shared undo
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-copy-formulas.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithCopyFormulasSource(),
@@ -632,7 +632,7 @@ test('the XLSX copy-formats operation replaces only cell formats through shared 
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-copy-formats.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithCopyFormatsSource(),
@@ -797,7 +797,7 @@ test('the XLSX copy-without-borders operation copies cells while preserving dest
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-copy-without-borders.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithCopyWithoutBordersSource(),
@@ -971,7 +971,7 @@ test('the XLSX copy-column-widths operation copies explicit widths through share
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-copy-column-widths.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithCopyColumnWidthsSource(),
@@ -1065,7 +1065,7 @@ test('a user grid edit is preserved by the browser XLSX save path', async ({ pag
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'user-edit.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -1095,7 +1095,7 @@ test('a user formula remains a formula after browser XLSX save', async ({ page }
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'formula.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -1124,7 +1124,7 @@ test('an MCP range edit updates the shared grid and saved XLSX', async ({ page }
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'range-edit.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -1174,7 +1174,7 @@ test('the MCP save operation uses the community browser save path', async ({ pag
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'mcp-save.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Saved through MCP'),
@@ -1207,7 +1207,7 @@ test('an edited XLSX saves through local persistence when an iframe picker is un
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'host-save.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -1285,7 +1285,7 @@ test('an XLSX hyperlink registry edit survives typed save and browser reopen', a
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-hyperlink.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Open report'),
@@ -1341,7 +1341,7 @@ test('an XLSX hyperlink registry edit survives typed save and browser reopen', a
   expect(sheetXml).toMatch(/<hyperlink\b[^>]*\bref="A1"[^>]*\br:id="rId1"/)
   expect(relsXml).toContain('Target="https://example.com/report"')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-hyperlink-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -1360,7 +1360,7 @@ test('an XLSX table registry edit survives typed save and browser reopen', async
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-table.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('placeholder'),
@@ -1442,7 +1442,7 @@ test('an XLSX table registry edit survives typed save and browser reopen', async
   expect(sheetXml).toMatch(/<tablePart\b[^>]*\br:id="rId1"/)
   expect(relsXml).toContain('Target="../tables/table1.xml"')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-table-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -1463,7 +1463,7 @@ test('an XLSX chart registry edit renders and survives typed browser save', asyn
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-chart.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('placeholder'),
@@ -1616,7 +1616,7 @@ test('an XLSX chart registry edit renders and survives typed browser save', asyn
   expect(chartXml).toContain('<c:v>40</c:v>')
   expect(drawingXml).toContain('<xdr:from><xdr:col>3</xdr:col>')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-chart-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -1702,7 +1702,7 @@ test('an XLSX shape registry add shares undo and survives typed browser save/reo
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-shape.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Shape host'),
@@ -1769,7 +1769,7 @@ test('an XLSX shape registry add shares undo and survives typed browser save/reo
   expect(drawingXml).toContain('<a:srgbClr val="DDEBF7"/>')
   expect(drawingXml).toContain('<a:t>Forecast</a:t>')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-shape-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -1836,7 +1836,7 @@ test('an XLSX shape registry add shares undo and survives typed browser save/reo
   expect(updatedDrawingXml).toContain('<a:srgbClr val="4472C4"/>')
   expect(updatedDrawingXml).toContain('<a:t>Updated forecast</a:t>')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-shape-updated.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: updatedBytes,
@@ -1883,7 +1883,7 @@ test('an XLSX chart registry removal cancels a session visual before typed save'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-chart-remove.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('placeholder'),
@@ -1979,7 +1979,7 @@ test('a staged XLSX image registry edit renders and survives typed browser save'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-image.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('image'),
@@ -2044,7 +2044,7 @@ test('a staged XLSX image registry edit renders and survives typed browser save'
   )
   expect(drawingXml).toContain('<xdr:pic>')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-image-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -2096,7 +2096,7 @@ test('a staged XLSX image registry edit renders and survives typed browser save'
     '<xdr:from><xdr:col>5</xdr:col>',
   )
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-image-moved.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: movedBytes,
@@ -2145,7 +2145,7 @@ test('an XLSX note registry edit survives typed save, reopen, and native removal
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-note.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('note'),
@@ -2188,7 +2188,7 @@ test('an XLSX note registry edit survives typed save, reopen, and native removal
     '<x:Row>3</x:Row><x:Column>2</x:Column>',
   )
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-note-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: notedBytes,
@@ -2236,7 +2236,7 @@ test('browser reopen hydrates native XLSX table metadata into the mounted view',
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'native-table.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithTableSource(),
@@ -2254,7 +2254,7 @@ test('XLSX cell and sheet protection registry edits survive typed save and reope
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-protection.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('protected'),
@@ -2320,7 +2320,7 @@ test('XLSX cell and sheet protection registry edits survive typed save and reope
   expect(sheetXml).toContain('<sheetProtection sheet="1"')
   expect(stylesXml).toContain('<protection locked="0" hidden="1"/>')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-protection-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -2351,7 +2351,7 @@ test('an XLSX sparkline registry edit survives typed save and browser reopen', a
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-sparkline.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('placeholder'),
@@ -2424,7 +2424,7 @@ test('an XLSX sparkline registry edit survives typed save and browser reopen', a
   expect(sheetXml).toContain('<x14:sparklineGroup displayEmptyCellsAs="gap" type="column">')
   expect(sheetXml).toContain("<xm:f>'Sheet1'!$A$1:$C$1</xm:f><xm:sqref>D1</xm:sqref>")
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-sparkline-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -2439,7 +2439,7 @@ test('XLSX outline registry state survives typed save, reopen, and explicit expa
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-outline.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('outline'),
@@ -2504,7 +2504,7 @@ test('XLSX outline registry state survives typed save, reopen, and explicit expa
   )
   expect(collapsedXml).toMatch(/<row\b[^>]*\br="4"[^>]*\bcollapsed="1"/)
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-outline-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: collapsedBytes,
@@ -2552,7 +2552,7 @@ test('XLSX checkbox validation survives typed save, reopen, and explicit removal
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-checkbox.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('checkbox'),
@@ -2594,7 +2594,7 @@ test('XLSX checkbox validation survives typed save, reopen, and explicit removal
   expect(checkedXml).toMatch(/<dataValidation\b[^>]*\btype="list"[^>]*\bsqref="B2:C3"/)
   expect(checkedXml).toContain('<formula1>"1,0"</formula1>')
 
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-checkbox-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: checkedBytes,
@@ -2670,7 +2670,7 @@ test('a user Ribbon format is preserved in XLSX styles on save', async ({ page }
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'formatted.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Format me'),
@@ -2697,7 +2697,7 @@ test('undo removes a Ribbon format from the XLSX that is subsequently saved', as
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'undo-format.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Undo format'),
@@ -2886,7 +2886,7 @@ test('the XLSX range-style registry operations share state, undo, and saved outp
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-styles.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Style me'),
@@ -3008,7 +3008,7 @@ test('the XLSX number-format, merge, clear, and fill registry operations share s
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-range-actions.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -3134,7 +3134,7 @@ test('the XLSX sort and remove-duplicates registry operations share state, undo,
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-sort-dedupe.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -3262,7 +3262,7 @@ test('the XLSX filter registry operation and Ribbon share undo and saved output'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-filter.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -3343,7 +3343,7 @@ test('the XLSX filter registry operation and Ribbon share undo and saved output'
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-filter-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -3382,7 +3382,7 @@ test('the XLSX filter criteria operations and retained Data controls share undo 
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-filter-criteria.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -3495,7 +3495,7 @@ test('the XLSX filter criteria operations and retained Data controls share undo 
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-filter-criteria-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: savedBytes,
@@ -3537,7 +3537,7 @@ test('the XLSX row-height registry operation shares user undo and saved output',
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-row-height.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Sized row'),
@@ -3582,7 +3582,7 @@ test('the XLSX row-height registry operation shares user undo and saved output',
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-row-height-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -3624,7 +3624,7 @@ test('the XLSX column-width registry operation shares user undo and saved output
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-column-width.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Sized column'),
@@ -3673,7 +3673,7 @@ test('the XLSX column-width registry operation shares user undo and saved output
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-column-width-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -3710,7 +3710,7 @@ test('the XLSX freeze registry operation shares user undo and saved output', asy
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-freeze.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Frozen sheet'),
@@ -3756,7 +3756,7 @@ test('the XLSX freeze registry operation shares user undo and saved output', asy
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-freeze-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -3793,7 +3793,7 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-gridlines.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Gridlines'),
@@ -3837,7 +3837,7 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-gridlines-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -3877,7 +3877,7 @@ test('the XLSX formula-view registry operation shares user undo and saved output
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-formula-view.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Formula view'),
@@ -3951,7 +3951,7 @@ test('the XLSX formula-view registry operation shares user undo and saved output
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-formula-view-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -3990,7 +3990,7 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-page-orientation.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Page orientation'),
@@ -4081,7 +4081,7 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-page-orientation-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4120,7 +4120,7 @@ test('the XLSX page-margins registry operation shares user undo and saved output
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-page-margins.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Page margins'),
@@ -4213,7 +4213,7 @@ test('the XLSX page-margins registry operation shares user undo and saved output
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-page-margins-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4252,7 +4252,7 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-paper-size.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Paper size'),
@@ -4343,7 +4343,7 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-paper-size-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4382,7 +4382,7 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-fit-to-pages.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Fit to pages'),
@@ -4475,7 +4475,7 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-fit-to-pages-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4517,7 +4517,7 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-scale.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithFitToPages('Print scale'),
@@ -4609,7 +4609,7 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-scale-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4649,7 +4649,7 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-gridlines.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print gridlines'),
@@ -4739,7 +4739,7 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-gridlines-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4778,7 +4778,7 @@ test('the retained print-gridline Ribbon control shares user undo and saved outp
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-gridlines.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print gridlines'),
@@ -4835,7 +4835,7 @@ test('the retained print-gridline Ribbon control shares user undo and saved outp
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-gridlines-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4860,7 +4860,7 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-headings.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print headings'),
@@ -4950,7 +4950,7 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-headings-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -4989,7 +4989,7 @@ test('the retained print-heading Ribbon control shares user undo and saved outpu
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-headings.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print headings'),
@@ -5046,7 +5046,7 @@ test('the retained print-heading Ribbon control shares user undo and saved outpu
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-headings-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -5071,7 +5071,7 @@ test('the XLSX print-area registry operation shares user undo and saved output',
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-area.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print area'),
@@ -5162,7 +5162,7 @@ test('the XLSX print-area registry operation shares user undo and saved output',
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-area-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -5210,7 +5210,7 @@ test('the XLSX print-title registry operation shares user undo and saved output'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-titles.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print titles'),
@@ -5301,7 +5301,7 @@ test('the XLSX print-title registry operation shares user undo and saved output'
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'registry-print-titles-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -5347,7 +5347,7 @@ test('the retained print-title Ribbon menu shares user undo and saved output', a
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-titles.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print titles'),
@@ -5418,7 +5418,7 @@ test('the retained print-title Ribbon menu shares user undo and saved output', a
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-titles-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -5445,7 +5445,7 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-area.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print area'),
@@ -5517,7 +5517,7 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'ribbon-print-area-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
@@ -5544,7 +5544,7 @@ test('a user can insert a row and the shifted cells survive save and reopen', as
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'insert-row.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Shift me'),
@@ -5566,7 +5566,7 @@ test('a user can insert a row and the shifted cells survive save and reopen', as
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'insert-row-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -5589,7 +5589,7 @@ test('undo reverses a user row insertion in the subsequently saved XLSX', async 
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'undo-insert-row.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Stay in A1'),
@@ -5634,7 +5634,7 @@ test('an MCP row insertion updates the shared grid and survives save and reopen'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'mcp-insert-rows.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Agent shifted'),
@@ -5671,7 +5671,7 @@ test('an MCP row insertion updates the shared grid and survives save and reopen'
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'mcp-insert-rows-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -5696,7 +5696,7 @@ test('an MCP column insertion updates the shared grid and survives save and reop
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'mcp-insert-columns.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Move to B1'),
@@ -5737,7 +5737,7 @@ test('an MCP column insertion updates the shared grid and survives save and reop
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'mcp-insert-columns-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -5763,7 +5763,7 @@ test('MCP row and column deletion share the community journal and saved package'
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'mcp-delete-axes.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -5826,7 +5826,7 @@ test('an MCP sheet insertion creates a valid worksheet package that reopens', as
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'add-sheet.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Existing'),
@@ -5868,7 +5868,7 @@ test('an MCP sheet insertion creates a valid worksheet package that reopens', as
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'add-sheet-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -5890,7 +5890,7 @@ test('the community sheet-tab add button shares the saved workbook and undo stac
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'user-add-sheet.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Existing'),
@@ -5917,7 +5917,7 @@ test('an MCP sheet rename updates the tab and survives save and reopen', async (
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'rename-sheet.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Existing'),
@@ -5955,7 +5955,7 @@ test('an MCP sheet rename updates the tab and survives save and reopen', async (
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'rename-sheet-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -5967,7 +5967,7 @@ test('an MCP sheet deletion removes its package parts and survives reopen', asyn
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'delete-sheet.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Remove me'),
@@ -6024,7 +6024,7 @@ test('an MCP sheet deletion removes its package parts and survives reopen', asyn
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'delete-sheet-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -6036,7 +6036,7 @@ test('an MCP sheet move persists the tab order and reopens in that order', async
   await page.goto('/?format=xlsx&width=720&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'move-sheet.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('First'),
@@ -6093,7 +6093,7 @@ test('an MCP sheet move persists the tab order and reopens in that order', async
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'move-sheet-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -6109,7 +6109,7 @@ test('a user-defined name survives XLSX save and reopen through the community Na
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'defined-name.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Named value'),
@@ -6137,7 +6137,7 @@ test('a user-defined name survives XLSX save and reopen through the community Na
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'defined-name-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,
@@ -6155,7 +6155,7 @@ test('the community Insert Function dialog writes a formula that survives XLSX s
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'insert-function.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Before'),
@@ -6185,7 +6185,7 @@ test('community Page Layout and Header & Footer edits survive XLSX save and reop
   await page.goto('/?format=xlsx&width=1332&height=900')
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const editor = page.frameLocator('#editor-frame')
-  await editor.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'page-layout.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Printable'),
@@ -6243,7 +6243,7 @@ test('community Page Layout and Header & Footer edits survive XLSX save and reop
   await page.reload()
   await page.waitForFunction(() => window.__codexVisualHost?.initialized)
   const reopened = page.frameLocator('#editor-frame')
-  await reopened.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({
+  await reopened.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
     name: 'page-layout-reopened.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: saved,

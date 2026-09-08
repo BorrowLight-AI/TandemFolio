@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fixture } from './document-fixtures'
 
-
 for (const format of ['docx', 'markdown', 'xlsx', 'pptx', 'pdf']) {
   test(`${format}: real save path and native content survive a broker restart and cold remount`, async ({
     page,
@@ -96,7 +95,9 @@ for (const format of ['docx', 'markdown', 'xlsx', 'pptx', 'pdf']) {
       // checkpoint even clean imported content, and never overwrite A on the next Save.
       const checkpointCount = await page.evaluate(() => window.__codexVisualHost.recoveryCommits)
       if (format === 'xlsx' || format === 'pdf') {
-        await editor.locator(`input[type="file"][accept*=".${format}"]`).setInputFiles(source)
+        await editor
+          .locator(`input[type="file"]:not([multiple])[accept*=".${format}"]`)
+          .setInputFiles(source)
       } else {
         const chooserPromise = page.waitForEvent('filechooser')
         if (format !== 'markdown')
