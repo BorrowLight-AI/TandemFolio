@@ -31204,6 +31204,7 @@ var SessionStore = class {
   #sessions = /* @__PURE__ */ new Map();
   #activeCommands = /* @__PURE__ */ new Map();
   #commandCompletions = /* @__PURE__ */ new Map();
+  #lastCommandSettlements = /* @__PURE__ */ new Map();
   #pollWaiters = /* @__PURE__ */ new Map();
   #activeViews = /* @__PURE__ */ new Map();
   #lastContact = /* @__PURE__ */ new Map();
@@ -31388,6 +31389,18 @@ var SessionStore = class {
     }
     return session;
   }
+  commandStatus(sessionId) {
+    const session = this.get(sessionId);
+    const active = this.#activeCommands.get(sessionId);
+    const command = active ?? session.pending[0];
+    if (!command) return null;
+    return {
+      commandId: command.commandId,
+      baseRevision: command.baseRevision,
+      operation: command.operation,
+      state: active ? "active" : "queued"
+    };
+  }
   assertCanReplaceDocument(sessionId, commandId) {
     const active = this.#activeCommands.get(sessionId);
     if (commandId && active?.commandId === commandId && active.operation === "pptx.document.create_blank")
@@ -31482,12 +31495,17 @@ var SessionStore = class {
     const session = this.get(sessionId);
     const activeCommand = this.#activeCommands.get(sessionId);
     if (activeCommand?.commandId !== commandId) {
+      const settled = this.#lastCommandSettlements.get(sessionId);
+      if (settled?.commandId === commandId && !settled.ok && settled.error === code && settled.message === message) {
+        return session;
+      }
       throw new SessionError(
         "command_not_found",
         `Command ${commandId} is not the active command for this session.`
       );
     }
     this.#activeCommands.delete(sessionId);
+    this.#lastCommandSettlements.set(sessionId, { commandId, ok: false, error: code, message });
     const completion = this.#commandCompletions.get(commandId);
     this.#commandCompletions.delete(commandId);
     completion?.reject(new SessionError(code, message));
@@ -31497,6 +31515,10 @@ var SessionStore = class {
     const session = this.get(sessionId);
     const activeCommand = this.#activeCommands.get(sessionId);
     if (activeCommand?.commandId !== commandId) {
+      const settled = this.#lastCommandSettlements.get(sessionId);
+      if (settled?.commandId === commandId && settled.ok && settled.revision === revision) {
+        return session;
+      }
       throw new SessionError(
         "command_not_found",
         `Command ${commandId} is not the active command for this session.`
@@ -31511,6 +31533,7 @@ var SessionStore = class {
     session.revision = revision;
     Object.assign(session, context);
     this.#activeCommands.delete(sessionId);
+    this.#lastCommandSettlements.set(sessionId, { commandId, ok: true, revision });
     const completion = this.#commandCompletions.get(commandId);
     this.#commandCompletions.delete(commandId);
     completion?.resolve({ commandId, ok: true, revision, ...output ? { output } : {} });
@@ -62157,16 +62180,16 @@ function resolveRegisteredOperation(format, requestedOperation, visibility = "ag
 // src/generated/release-readiness.json
 var release_readiness_default = {
   schemaVersion: 1,
-  ready: false,
+  ready: true,
   formats: {
-    docx: false,
-    markdown: false,
-    xlsx: false,
-    pptx: false,
-    pdf: false
+    docx: true,
+    markdown: true,
+    xlsx: true,
+    pptx: true,
+    pdf: true
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "a177e71dcd05871fbbecc3c8d719157ab99348b03e3c3c2c238eafa2c5a4ad4c"
+  sourceFingerprint: "ba154ee2f2d8c9acf98a55e5285c7bd333a7eb76cf3e393ec6cb760896dd8ac4"
 };
 
 // src/capabilities.ts
@@ -63041,7 +63064,7 @@ server.registerTool(
     try {
       const session = store.get(sessionId);
       session.filePath ??= await documentSaves.boundPath(sessionId, session.format);
-      return result({ ok: true, session });
+      return result({ ok: true, session, command: store.commandStatus(sessionId) });
     } catch (error51) {
       return failure(error51);
     }
@@ -63201,9 +63224,16 @@ server.registerTool(
       return await waitForExecution(command, descriptor.id);
     } catch (error51) {
       const response = failure(error51);
-      if (!(error51 instanceof SessionError && error51.code === "command_timeout")) {
-        transaction?.fail(response);
+      if (error51 instanceof SessionError && error51.code === "command_timeout") {
+        return {
+          ...response,
+          structuredContent: {
+            ...response.structuredContent,
+            transaction: { requestId, state: "in_flight", retry: "exact_replay" }
+          }
+        };
       }
+      transaction?.fail(response);
       return response;
     }
   }

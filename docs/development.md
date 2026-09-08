@@ -411,6 +411,14 @@ Confirm the packaged HTML contains inline JavaScript and the CSP permits the gen
 
 Run the cachebuster/reinstall loop above and test in a new task. Rebuilding files alone does not refresh an already loaded plugin.
 
+### Codex reports “HTML exceeds the maximum supported size”
+
+Codex rejects an MCP App HTML resource above 10,000,000 UTF-8 Blob bytes before mounting its
+iframe. Run `npm run package:plugin`, `npm run measure:assets`, and the packaged-editor test.
+The XLSX resource must remain under that fixed boundary while retaining every module in its
+self-contained gzip module vault. Rebuilding the checkout does not refresh an installed cache;
+use the documented cachebuster/reinstall loop and start a new task.
+
 ### Browser save downloads instead of overwriting
 
 The browser did not grant or expose a writable `FileSystemFileHandle`. This is expected fallback behavior, not an IPC failure.

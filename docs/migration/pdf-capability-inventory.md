@@ -3,7 +3,7 @@
 - Extraction baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Reviewed candidate: `genspark-ai/genoffice@f2c3d0879df29622d5a447935d2b4aeac033544d`
 - Scope: browser-safe community PDF renderer, format engine, focused tests, and TandemFolio browser/MCP adapters; `ee/` was not inspected
-- Status: applicable native PDF migration and typed command parity complete; source-current release recapture pending and the release gate remains fail-closed
+- Status: applicable native PDF migration and typed command parity complete; 2026-09-07 source-current release evidence approved and the release gate remains fail-closed for later drift
 
 ## Source boundary
 
@@ -100,5 +100,5 @@ The generated Product Manifest, root typecheck/build, packaged MCP smoke, resour
 and prohibited-dependency scan pass. All 16 PDF real-browser host scenarios pass, including
 open/save/reopen, typed content-stream edits, shared Undo, narrow/split/fullscreen layout, exact-session
 continuation, and offscreen canvas release/resume. Earlier R6 performance/visual evidence is historical;
-`release:gate` continues to write `ready: false` until a new formal five-format source-current capture is
-approved.
+`release:gate` writes `ready: true` for the approved 2026-09-07 formal five-format source-current
+capture and returns to `ready: false` when evidence is stale, unapproved, or mismatched.

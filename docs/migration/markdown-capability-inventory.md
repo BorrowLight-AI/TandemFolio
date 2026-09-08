@@ -96,8 +96,8 @@ rejects any `missing` disposition.
 - Print/PDF remains a host dialog rather than a headless PDF generator. R2-233 reports popup blocking as a deterministic operation failure.
 
 These are host adaptations rather than unexplained capability gaps. R6-01 runs the shared
-cross-format gates together; the generated projection remains `ready: false` until source-current
-evidence is recaptured.
+cross-format gates together; the approved 2026-09-07 source-current evidence generates a
+`ready: true` projection, while later source drift still fails closed.
 
 R6-03 makes staged-open performance part of that evidence. Successful internal load ACKs report
 decode, parse, TipTap state installation, and final React layout commit; ACK follows the committed

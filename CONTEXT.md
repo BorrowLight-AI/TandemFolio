@@ -20,11 +20,11 @@ mounted through format-owned browser/MCP adapters. Their machine-checked produce
 unexplained state-changing gap: 103 DOCX, 25 Markdown, 123 XLSX, 81 PPTX, and 32 PDF operations feed
 the generated product Manifest. Native renderer history or explicitly declared format-owned
 journals remain authoritative, and persisted families have save/reopen evidence. The remaining work
-is no longer an unexplained renderer-parity migration. The prior R6-01 capture records approved pinned-source
-visual, packaged-host performance/resource, MCP smoke, license/prohibited-dependency, and repository
-gate evidence for all five formats, but the 2026-09 source-current DOCX/XLSX/PPTX ports make that
-capture historical. `ready` remains generated from source-fingerprinted evidence and fails closed
-until the current source is recaptured; it is never maintained as a hand-written capability claim.
+is no longer an unexplained renderer-parity migration. The prior R6-01 capture is historical. The
+2026-09-08 source-current five-format capture records approved visual, packaged-host
+performance/resource, MCP smoke, license/prohibited-dependency, and repository gate evidence.
+`ready` remains generated from source-fingerprinted evidence and fails closed after later source
+drift; it is never maintained as a hand-written capability claim.
 
 R6-02 keeps that authority model but removes the fixed 500 ms command cadence. Every mounted
 renderer performs one immediate bootstrap poll and then holds one bounded app-only poll that the
@@ -62,6 +62,34 @@ the initial native blank worksheet does not need that adapter. All modules remai
 embedded and loadable, and first-open latency is measured separately rather than
 hidden behind the bootstrap result. No startup boundary or budget changes. The
 source-current approved capture records XLSX bootstrap p95 at 432.5 ms.
+
+R6-17 corrects that packaging refinement under ADR 0017 after the Codex host's exact resource
+boundary was reproduced. Codex rejects MCP App HTML above 10,000,000 UTF-8 Blob bytes before an
+iframe mounts, while the complete XLSX resource had reached 19,639,844 bytes behind a 21 MB local
+gate. The entry now uses the existing gzip module vault, and Aptos/Calibri/Carlito share one
+four-style fallback module that settles before Univer's first canvas measurement. The complete
+resource is 8,721,880 bytes and the entry inflates to 8,390,150 bytes. All retained modules and the
+fixed 11 MB entry, 500 ms bootstrap, and 1,400 ms total gates remain intact.
+
+R6-18 prevents a hidden or occluded renderer from stranding an accepted Agent command. Browser
+animation frames may be suspended after an already-issued long poll receives work, so renderer
+commit waits now retain the next-frame boundary with a 250 ms timer fallback before ACK. XLSX also
+validates that `xlsx.range.set_values` matrix dimensions exactly match the addressed range before
+entering Univer. A malformed matrix is rejected without mutation, and the following valid command
+can execute through the same mounted workbook and revision path.
+
+R6-19 gives every newly created XLSX session a minimal renderer-owned OOXML backing package after
+the first visible canvas commit and before any Agent mutation can run. The initially mounted Univer
+grid remains the visible authority while this bounded promotion completes. Native charts, data
+validation, conditional formatting, notes, and Save therefore use the same file journal on a blank
+workbook. Browser serialization establishes added worksheet identities before replaying their
+sheet-scoped edits, so a generated dashboard can be written, charted, and saved in one pass.
+
+R6-20 completes that blank package with native stylesheet and Office theme parts. The browser
+package adapter also repairs pre-R6-20 blank packages when an exact recovery session reopens them,
+including their workbook relationships and content-type declarations. Generated workbooks can now
+persist named styles, number formats, themes, data validation, charts, and worksheet changes through
+one mounted renderer save without requiring a template or manual Save As.
 
 R6-06 makes Registry discovery bounded as capability count grows. `office_get_capabilities` now
 defaults to a schema-free summary of at most twenty Agent-visible operations, supports family

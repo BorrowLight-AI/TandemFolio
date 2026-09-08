@@ -1,14 +1,14 @@
 # Performance and visual baselines
 
-## Current verification (2026-09-04)
+## Current verification (2026-09-08)
 
 The [source-current verification record](../release/validation.md) and
 `release/release-evidence.json` contain the new complete five-format 7/7/21 capture.
-Visual differences are 0.1–0.5% under the unchanged 3% limit.
+Visual differences are 0.1–1.2% under the unchanged 3% limit.
 The source-current approved capture passes every fixed gate. XLSX bootstrap p95 is
-**432.5 ms < 500 ms**, with two preceding seven-sample XLSX candidates at 423.5 ms
-and 422.7 ms. Markdown small-file open p95 is **14.3 ms < 20 ms**. The generated
-readiness projection is true for all five formats; Windows/macOS release CI remains pending.
+**432.0 ms < 500 ms**, total XLSX cold start is **746.657 ms < 1,400 ms**, and
+Markdown small-file open p95 is **15.8 ms < 20 ms**. The generated readiness
+projection is true for all five formats; Windows/macOS release CI remains pending.
 The reference PNGs and visual manifest are included in the checkout; no baseline
 images were refreshed.
 
@@ -28,23 +28,25 @@ presented as current evidence or used to fabricate a replacement approved bundle
 Run `npm run measure:assets` after `npm run build`. The command fails when a raw self-contained HTML resource exceeds its budget.
 
 | Format   |  Raw bytes | Gzip bytes | Raw budget |
-| -------- | ---------: | ---------: | ---------: |
-| DOCX     |  3,519,509 |    990,512 |  3,650,000 |
-| Markdown |  2,573,199 |    936,265 |  2,750,000 |
-| XLSX     | 19,777,247 |  8,531,694 | 21,000,000 |
-| PPTX     |  3,890,977 |  1,146,047 |  4,000,000 |
-| PDF      |  6,722,550 |  3,396,372 |  7,000,000 |
+| -------- | --------: | ---------: | ---------: |
+| DOCX     |  3,519,897 |    990,721 |  3,650,000 |
+| Markdown |  2,573,562 |    936,420 |  2,750,000 |
+| XLSX     |  8,725,632 |  6,469,910 | 10,000,000 |
+| PPTX     |  3,891,323 |  1,146,141 |  4,000,000 |
+| PDF      |  6,722,930 |  3,396,388 |  7,000,000 |
 
 The plugin is about 55 MB on disk because allowlisted document/PDF edit fonts remain external lazy
 assets (about 20 MB) rather than entering the initial renderer HTML. The bundled MCP server is
-1,906,024 bytes raw. Markdown embeds its KaTeX WOFF2 fonts so formulas remain correct inside the
+1,907,305 bytes raw. Markdown embeds its KaTeX WOFF2 fonts so formulas remain correct inside the
 self-contained MCP resource.
 
 The DOCX ceiling was rebaselined on 2026-09-05 for the audited upstream-native pagination, layout,
 font and dialog port; it keeps about 4% raw headroom without treating capability removal as an
-optimization. XLSX keeps the full permitted pinned community App in one HTML resource, but its
-Vite modules are individually gzip/base64 embedded: the packaged entry inflates to 10,081,034 bytes
-under an 11,000,000-byte gate and optional locale/hyphenation modules inflate only on demand. Both
+optimization. XLSX keeps the full permitted pinned community App in one HTML resource. Codex
+rejects MCP App HTML above 10,000,000 UTF-8 Blob bytes, so every Vite module, including the initial
+entry, is gzip/base64 embedded. The entry inflates to 8,400,847 bytes under the unchanged
+11,000,000-byte gate; the shared Office font fallback, locale, package-I/O, operation-registry, and
+hyphenation modules inflate only on demand. Both
 raw and entry budgets are regression ceilings, not permission to remove renderer capabilities.
 
 The PDF ceiling was recaptured after restoring browser-safe content-stream text/image editing with
@@ -104,42 +106,41 @@ hydration, renderer execution, and return transport separate.
 
 | Format   | Cold start | Open small | Open medium | Open large | Interaction |
 | -------- | ---------: | ---------: | ----------: | ---------: | ----------: |
-| DOCX     |    328.823 |      131.2 |       182.0 |      335.9 |         5.9 |
-| Markdown |    251.242 |       16.7 |        77.1 |      385.8 |         2.0 |
-| XLSX     |    728.690 |      105.9 |       114.3 |      368.2 |        33.3 |
-| PPTX     |    350.018 |       14.0 |        31.3 |      103.8 |        26.3 |
-| PDF      |    437.481 |      130.6 |       132.9 |      150.2 |        32.8 |
+| DOCX     |    310.583 |       83.8 |       138.5 |      311.7 |         5.7 |
+| Markdown |    255.193 |       16.1 |        60.1 |      380.4 |         2.4 |
+| XLSX     |    750.416 |       55.5 |       129.9 |      383.2 |        32.7 |
+| PPTX     |    325.191 |      110.4 |       134.6 |      226.0 |        22.2 |
+| PDF      |    421.547 |      109.2 |       115.1 |      145.0 |        33.9 |
 
 The Markdown canonical-large p95 remains 98.3% below the R6-02 22,175.5 ms baseline at 385.8 ms.
 The source-current schema-v4 phase p95 values are:
 
 | Fixture | Decode | Parse | TipTap state install | React commit |
 | ------- | -----: | ----: | -------------------: | -----------: |
-| Small   |    1.2 |   4.8 |                  6.3 |          0.6 |
-| Medium  |    0.2 |  22.2 |                 35.2 |          3.2 |
-| Large   |    0.2 |  53.3 |                199.2 |          8.4 |
+| Small   |    1.0 |   4.4 |                  4.4 |          0.5 |
+| Medium  |    0.1 |  18.3 |                 13.2 |          0.7 |
+| Large   |    0.2 | 129.4 |                 53.8 |          1.7 |
 
 The residual between these four owned phases and total renderer execution includes registry
 dispatch and Markdown local-image hydration. The acknowledgement remains after the React commit;
 phase data contains durations only, never document text or paths.
 
-R6-05 reduces the approved R6-04 XLSX cold-start p95 from 1,188.7 ms to 728.69 ms, a 38.7%
-reduction, and retains the fixed 1,400 ms total gate. Bootstrap falls from 613.5 ms to 469.0 ms,
-23.6% lower and below its new fixed 500 ms gate. The seven-sample aggregate phase p95 values are:
+The source-current capture retains the fixed 1,400 ms total and 500 ms bootstrap gates. The
+seven-sample aggregate phase p95 values are:
 
 | Bootstrap | Univer create | Worksheet install | First commit |
 | --------: | ------------: | ----------------: | -----------: |
-|     469.0 |          11.6 |              15.7 |         64.8 |
+|     446.2 |           7.3 |              13.8 |         66.9 |
 
 The bootstrap p95 decomposition is:
 
 | Resource receive | Module graph ready | React mount |
 | ---------------: | -----------------: | ----------: |
-|             23.1 |              411.8 |        35.9 |
+|             24.6 |              414.1 |         8.4 |
 
-The complete split module set stays gzip-compressed inside the same HTML; only the initial graph is
-inflated/evaluated before React, while optional locale and hyphenation modules retain their lazy
-imports. The residual to host-observed cold start includes outer host/AppBridge setup. The first
+The complete split module set stays inside the same HTML. The initial App graph and optional
+font, locale, package-I/O, operation-registry, and hyphenation modules stay gzip-compressed and
+retain lazy imports. The residual to host-observed cold start includes outer host/AppBridge setup. The first
 successful poll remains after an active workbook, active worksheet, and canvas; its trace is
 retried on transport failure and consumed once. No preset, Registry operation, locale, history
 route, or persistence behavior was removed.
@@ -150,22 +151,22 @@ measured poll wait, hydration, and renderer execution durations.
 
 | Format   | Poll wait | Hydrate | Renderer execute | ACK transport |
 | -------- | --------: | ------: | ---------------: | ------------: |
-| DOCX     |       0.1 |     1.3 |            315.0 |          12.9 |
-| Markdown |       0.0 |    94.4 |            238.9 |          30.3 |
-| XLSX     |       0.1 |    13.1 |            345.1 |           6.3 |
-| PPTX     |       0.1 |     5.0 |             79.6 |          18.0 |
-| PDF      |       0.1 |     9.8 |            125.1 |          11.1 |
+| DOCX     |       0.1 |     1.3 |            298.7 |          11.3 |
+| Markdown |       0.1 |    84.9 |            181.9 |         109.6 |
+| XLSX     |       0.1 |    11.7 |            339.9 |           5.0 |
+| PPTX     |       0.1 |     5.4 |            188.2 |          18.8 |
+| PDF      |       0.1 |     9.6 |            118.9 |          12.0 |
 
 Peak memory is sampled throughout cold start, open, and interaction scenarios. JS heap is the
 primary stable browser gate; renderer RSS is the summed Chromium renderer-process diagnostic.
 
 | Format   | Peak JS heap | Peak renderer RSS |
 | -------- | -----------: | ----------------: |
-| DOCX     |     80.9 MiB |         345.1 MiB |
-| Markdown |     56.6 MiB |         383.7 MiB |
-| XLSX     |    129.0 MiB |         482.4 MiB |
-| PPTX     |    109.4 MiB |         378.6 MiB |
-| PDF      |    106.1 MiB |         351.7 MiB |
+| DOCX     |     80.8 MiB |         349.1 MiB |
+| Markdown |     56.5 MiB |         364.6 MiB |
+| XLSX     |    153.6 MiB |         490.1 MiB |
+| PPTX     |    132.1 MiB |         468.5 MiB |
+| PDF      |    108.2 MiB |         433.5 MiB |
 
 The exact samples, nearest-rank summaries, reviewed fixed Markdown open/XLSX cold-start/bootstrap
 ceilings, derived phase and other regression ceilings, fixture hashes, environment profile, source fingerprint, screenshot

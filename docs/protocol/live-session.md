@@ -1,6 +1,6 @@
 # Live session protocol
 
-- Status: Implemented five-format source contract; release projection pending source-current evidence
+- Status: Implemented five-format source contract; source-current release projection approved
 - Version: `0.3.31`
 - Transport: MCP over stdio; MCP App calls proxied by the host
 - UI resources: `ui://tandemfolio/editor.html`, `markdown.html`, `xlsx.html`, `pptx.html`, and `pdf.html`
@@ -71,9 +71,16 @@ interface LiveSession {
   selection: Record<string, unknown> | null
   pending: QueuedCommand[]
 }
+
+interface CommandStatus {
+  commandId: string
+  baseRevision: number
+  operation: string
+  state: 'queued' | 'active'
+}
 ```
 
-`revision` starts at `0` and advances exactly once after a successful renderer acknowledgement. A negative acknowledgement clears the active command without advancing revision. At most one command may be pending or active.
+`revision` starts at `0` and advances exactly once after a successful renderer acknowledgement. A negative acknowledgement clears the active command without advancing revision. At most one command may be pending or active. `pending` contains only commands that the renderer has not taken; `office_get_context.command` projects the queued or active command without its arguments.
 
 ## Lifecycle
 
@@ -133,6 +140,13 @@ automatic retries until the user explicitly retries. A newer
 poll supersedes a lost older waiter, and editor disconnect releases the outstanding waiter. This is
 the wakeable bounded-poll contract from [ADR 0006](../adr/0006-wakeable-live-session-command-delivery.md),
 not a new public MCP tool or a second document authority.
+
+An already-issued active long poll may receive a command just after its iframe becomes hidden or
+occluded. Because browsers may suspend `requestAnimationFrame` in that state, renderer commit waits
+use the next animation frame when available and a 250 ms timer fallback otherwise. The fallback
+settles only the post-mutation observation boundary; the mounted renderer still performs the native
+operation and remains document authority. The bridge can therefore send the operation ACK instead
+of leaving the Broker command permanently active and making later handoff preparation fail.
 
 A returning view blocks native pointer/keyboard editing until restoration succeeds; it cannot save
 or modify its default blank replica. File location is always visible, including a conflict response,
@@ -250,7 +264,10 @@ Input: `{ "sessionId": "<uuid>" }`.
 Returns the last broker-acknowledged lightweight session state. `filePath` is the absolute local
 target of the last bound Save, or `null` before persistence; an Export Copy does not change it. DOCX
 selection currently uses zero-based ProseMirror `{ from, to, empty }` positions. Complete document
-bytes and undo history are never model context.
+bytes and undo history are never model context. The top-level `command` is `null` when idle. Its
+`queued` state means the command still awaits renderer delivery; `active` means the renderer already
+took it and the Broker is waiting for the same command's acknowledgement. Therefore `pending: []`
+does not imply idle when `command.state` is `active`.
 
 ### `office_execute`
 
@@ -316,7 +333,9 @@ edit or an existing document opened only for inspection/editing.
 `command_timeout` limits one tool caller's wait; it is not a final transaction outcome. The Broker
 keeps the underlying command, request record, and any staged local bytes alive until the renderer
 acknowledges or rejects it. Retry only the exact same envelope and request id. A later exact replay
-returns the final acknowledged response without redispatch.
+returns the final acknowledged response without redispatch. Its structured error includes
+`transaction: { requestId, state: "in_flight", retry: "exact_replay" }` so callers do not invent a
+new request id or split the mutation while the outcome remains unknown.
 
 The retired `{ sessionId, baseRevision, operation, arguments }` form fails MCP input validation
 before renderer dispatch because `requestId` and `operations` are required. `office_execute`
@@ -386,7 +405,9 @@ These tools use `_meta.ui.visibility: ["app"]`:
   `execution_failed`. Successful acknowledgements may include app-only hydration, execution, and
   optional trace timing; the host combines these renderer-local durations with queue/poll and
   acknowledgement timestamps without exporting telemetry. The trace is a strict
-  operation-discriminated object rather than an open phase map.
+  operation-discriminated object rather than an open phase map. The bridge retains an unconfirmed
+  acknowledgement and retries it before polling another command. The Broker accepts an exact
+  duplicate of the last settled acknowledgement, covering a response lost after server commit.
 
 For internal `markdown.document.load_staged`, the optional trace has this exact shape:
 
@@ -651,7 +672,7 @@ are in [`../migration/markdown-capability-inventory.md`](../migration/markdown-c
 | Operation                                  | Arguments                                                                             | Effect                                                                                                                               |
 | ------------------------------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `xlsx.cell.set_value`                      | `{ "sheet": string, "address": string, "value": scalar }`                             | Changes one cell in the named worksheet.                                                                                             |
-| `xlsx.range.set_values`                    | `{ "sheet": string, "range": string, "values": scalar[][] }`                          | Writes a bounded non-empty scalar matrix and activates the target range.                                                             |
+| `xlsx.range.set_values`                    | `{ "sheet": string, "range": string, "values": scalar[][] }`                          | Writes a bounded non-empty scalar matrix whose dimensions exactly match the target range, then activates it.                         |
 | `xlsx.range.set_text_style`                | `{ "sheet", "range", "style", "fields" }`                                             | Explicitly sets bold, italic, underline, or strike fields as one Univer range mutation.                                              |
 | `xlsx.range.set_alignment`                 | `{ "sheet", "range", "alignment", "fields" }`                                         | Explicitly sets masked horizontal, vertical, wrap, indent, and rotation fields in one mutation.                                      |
 | `xlsx.range.set_font`                      | `{ "sheet", "range", "font", "fields" }`                                              | Explicitly sets or clears masked font family, size, and color fields in one mutation.                                                |
@@ -866,17 +887,17 @@ command gaps.
   not a save. Inside an MCP Apps iframe, all five formats use the lease-checked internal atomic
   persistence protocol, not `ui/download-file`. Save As writes a collision-safe file under the
   configured output root; there is no arbitrary-path picker in the embedded protocol.
-- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 123 format-owned operations cover the audited mutation surface plus explicit calculation mode, recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, selection-derived Defined Names, and staged workbook merging through shared Univer/file-journal and browser save/reopen routes. Native Error Checking and the 20-cell Watch Window remain renderer-owned read-only inspection/navigation. Transient UI/navigation/clipboard arming and external export gestures are not document mutations. Candidate-native migration invalidates the earlier release capture until the source-current gate is recaptured.
+- XLSX mounts the community `App` directly; permitted renderer files and focused tests are retained, and 123 format-owned operations cover the audited mutation surface plus explicit calculation mode, recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, selection-derived Defined Names, and staged workbook merging through shared Univer/file-journal and browser save/reopen routes. A newly created session receives a renderer-owned OOXML package behind the first-commit command barrier, including registered stylesheet and Office theme parts; exact recovery repairs older blank packages that lack them. Worksheet lifecycle changes are serialized before mutations targeting newly added sheets. Native Error Checking and the 20-cell Watch Window remain renderer-owned read-only inspection/navigation. The 2026-09-08 source-current five-format gate records `ready: true`; later source drift remains fail closed.
 - PPTX's 81-operation Registry covers every retained state-changing producer through its complete
   browser API, native history, recovery, and package save seam. The source-current native migration
   adds complete background gradients/images/reset/master-graphics visibility, object effects and
   geometry/adjustment handles, text-body direction/autofit/wrap/insets, expanded gradients/strokes,
-  RTL paragraphs/tables, and 3D chart kinds. The previous release capture is historical until the
-  source-current five-format gate is recaptured.
+  RTL paragraphs/tables, and 3D chart kinds. The 2026-09-08 source-current five-format gate records
+  `ready: true`; later source drift remains fail closed.
 - PDF's 32-operation Registry covers every retained state-changing producer. Browser PDFium handles
   native text/image content streams and PDF-lib-safe routes cover threaded comments, annotations,
   drawings, forms, stamps/signatures, metadata, and pages. Immediate page writes share mounted
-  whole-document Undo/Redo. The source-current release recapture is pending.
+  whole-document Undo/Redo. The 2026-09-07 source-current release evidence is approved.
 - All five generated editor mounts have standalone visual smoke coverage and active four-state
   Codex-host pixel matrices. R6-01 adds pinned-source split-view provenance, deterministic
   small/medium/large opens, cold start, interaction, ACK decomposition, and peak-memory evidence.

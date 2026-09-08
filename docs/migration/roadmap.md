@@ -735,7 +735,7 @@ Markdown-current-01 through -03 select the applicable native deltas from reviewe
 ADR 0016 extends the opaque save transaction with safe companion image files, serialization,
 rollback, and session-owned orphan collection. Markdown owns 25 operations (23 Agent-visible and
 two internal), and the product Manifest contains 364. AI and Electron source remains prohibited;
-source-current release evidence remains pending and fail closed.
+the 2026-09-07 source-current release evidence is approved; later drift remains fail closed.
 
 R6-01 closes those shared gates. It adds an approved release-evidence contract, deterministic
 small/medium/large fixtures for all formats, pinned-source visual provenance, 7/7/21 canonical
@@ -775,6 +775,31 @@ the entry graph first and optional locale/hyphenation chunks on demand without n
 Schema-v4 evidence keeps the 1,400 ms total XLSX cold-start ceiling, adds a fixed 500 ms bootstrap
 p95 ceiling, and package tests cap initial executable JavaScript at 11 MB. All retained modules,
 Registry operations, native history, persistence, and the first-commit-before-poll boundary remain.
+
+R6-17 applies the Codex host's 10,000,000-byte MCP App HTML boundary to the complete XLSX
+resource. The initial graph and the shared Office font fallback remain gzip modules in the same
+self-contained vault, settle before Univer's first measurement, and preserve the fixed 11 MB
+inflated-entry and cold-start timing gates. Package tests reject oversized HTML before release.
+
+R6-18 bounds renderer commit settlement when an already-issued command poll returns after its MCP
+App iframe becomes hidden or occluded. The shared next-frame boundary falls back after 250 ms, so
+browser animation-frame suspension cannot leave the Broker command permanently active or block a
+later cooperative handoff. XLSX range-value writes additionally require the scalar matrix height
+and width to equal the addressed range before calling Univer; rejected input does not mutate the
+workbook, and the next valid transaction remains executable.
+
+R6-19 closes the blank-XLSX persistence gap found by replaying a real Agent chart trace. After the
+first visible canvas commit, a command barrier attaches a minimal renderer-owned OOXML package to
+the same mounted workbook before mutations run. The browser serializer now creates, renames, or
+duplicates worksheet identities before applying edits scoped to those sheets. A new workbook can
+therefore add sheets, populate them, insert native charts, and save/reopen without first asking the
+user to create a file manually.
+
+R6-20 closes the remaining native-format persistence gap found in task
+`01a07e95-a365-7e30-bc21-1e0916b5aacb`. Blank packages now include a standard stylesheet and Office
+theme with their OOXML relationships and content types. The browser package adapter repairs older
+blank packages that lack both parts when exact recovery reopens them. Styles, number formats, theme,
+charts, validation, and added worksheets therefore save together without a template migration.
 
 R6-06 replaces the complete per-format Registry response with bounded Manifest discovery. Default
 calls return at most twenty schema-free summaries with family filtering and stable cursor
@@ -846,12 +871,12 @@ Existing behavior moves first and must remain behaviorally equivalent. Each repl
 ## Current facts
 
 | Format   | Pinned community renderer | Current implementation                                                                 | Decision status                                                   |
-| -------- | ------------------------: | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| -------- | ------------------------: | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | DOCX     |                 130 files | Community renderer selectively retained                                                | Retained-command parity and R6-01 release gate complete; ready    |
 | XLSX     |                 111 files | 76 permitted pinned files plus TandemFolio host/operation adapters; pinned App mounted | Renderer/mutation parity and R6-01 release gate complete; ready   |
 | PPTX     |                 104 files | 61 identical + 19 adapted permitted files; original App mounted                        | Retained-command parity and R6-01 release gate complete; ready    |
-| PDF      |                  40 files | Pinned renderer plus applicable candidate-native PDF modules boot from `src/renderer` | Candidate-native parity complete; release recapture pending       |
-| Markdown |         30 renderer files | Pinned non-AI files plus candidate math/zoom/UI and browser save adapters               | Candidate-native parity complete; release recapture pending       |
+| PDF      |                  40 files | Pinned renderer plus applicable candidate-native PDF modules boot from `src/renderer`  | Candidate-native parity and source-current release gate complete |
+| Markdown |         30 renderer files | Pinned non-AI files plus candidate math/zoom/UI and browser save adapters              | Candidate-native parity and source-current release gate complete |
 
 These counts are pinned-source evidence, not a completion metric by themselves. Completion is determined by the source and capability gates below.
 
@@ -943,7 +968,7 @@ visual/performance/package release evidence remains pending. See
 
 ### M4 — PDF complete renderer
 
-Status: Candidate-native retained command parity complete; source-current release recapture pending.
+Status: Candidate-native retained command parity and 2026-09-07 source-current release gate complete.
 
 Current evidence: the pinned non-AI renderer and applicable candidate-native renderer modules boot
 through `src/renderer`; AI, OCR sidecar, account, Electron/IPC, encryption-preserving write, and

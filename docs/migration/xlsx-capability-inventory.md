@@ -3,11 +3,11 @@
 - Baseline: `genspark-ai/genoffice@dc4d7e5927864498913b7ba42d0da06cc7cf628e`
 - Renderer-source status: complete for the permitted pinned community source set
 - Capability status: candidate-native migration complete; 123 XLSX registry operations (120 Agent-visible, three internal) cover every retained state-changing command, including calculation mode, explicit recalculation, Goal Seek, native workbook themes, workbook structure protection, allow-edit ranges, manual page breaks, create-names-from-selection, and staged workbook merging
-- Product readiness: a new source-current release capture is still required; capability discovery
-  therefore remains fail-closed
+- Product readiness: source-current five-format release evidence is approved; later source drift
+  remains fail-closed
 
 This file separates renderer-source restoration from product completion. The format-local migration
-is complete; the shared ADR 0003/ADR 0005 release evidence must be recaptured against this source.
+is complete, and the shared ADR 0003/ADR 0005 release evidence is approved against this source.
 
 ## 2026-09-05 candidate-native migration
 
@@ -31,6 +31,13 @@ continue through the browser workbook adapter and save/reopen path.
 The final 2026-09-06 source-current fixes reject A1 references beyond row 1,048,576 or column XFD,
 preserve quoted trailing newlines in copied TSV fields, and make whole-cell replacement ignore only
 surrounding spaces in both the mounted Univer mutation and deterministic workbook planner.
+The R6-19 blank-workbook repair initializes a minimal renderer-owned XLSX package after first paint
+and before Agent commands. It also applies worksheet lifecycle operations before sheet-scoped
+content during save. New sessions can add dashboard sheets, write data, create native charts, and
+persist those charts without a user Save As prerequisite.
+R6-20 completes that package with standard `styles.xml` and `theme1.xml` parts plus their OOXML
+registrations. Reopening a pre-R6-20 blank package repairs those same parts before native mutations
+run, so named styles, number formats, themes, validation, charts, and added sheets persist together.
 Review's workbook-protection control and `xlsx.document.set_protection` share a password-aware
 file journal, one native Undo item, and workbook.xml save/reopen state.
 Review's Allow Edit Ranges dialog and `xlsx.sheet.set_protected_ranges` share complete sheet-level
@@ -139,8 +146,8 @@ the row or column default. Existing load-time row-height suppression and style-o
 coercion are now covered by the candidate regression suites.
 
 Candidate Electron/preload/IPC, native sidecar, recovery-shell, desktop PDF-printing, AI, account,
-telemetry, and enterprise areas are excluded. No admitted XLSX-native slice remains pending; formal
-product readiness still waits for source-current release evidence.
+telemetry, and enterprise areas are excluded. No admitted XLSX-native slice remains pending; the
+formal source-current five-format gate records `ready: true`.
 
 ## Pinned renderer source accounting
 
@@ -185,6 +192,14 @@ The expected output is exactly 35 prohibited paths: 20 under `ai/`, 14 under `as
 original `ExcelShell`, Univer workbook, Ribbon tabs, formula bar, worksheet canvas, sheet tabs,
 dialogs, keyboard routes, selection, clipboard/context menu, undo/redo, status bar, chart/data/
 pivot/review/view surfaces, page layout, and header/footer UI.
+
+The locale catalog remains an embedded deferred module. The entry starts that load without a
+module-level await; `LocaleProvider` starts it after React mounts and advances a catalog revision
+when it settles. The App graph is statically linked into the compressed entry, required cell-font
+aliases settle before first measurement, Univer installs in a layout effect, and the operation
+registry waits for the first command dispatch. This
+lets the self-contained Blob entry finish evaluation and commit the canvas before optional locale
+copy settles, preventing the packaged host from stalling with an active workbook but no canvas.
 
 The rejected substitute renderer has been removed; there is no parallel XLSX UI entry. Browser-only OOXML package I/O now lives at
 `apps/sheets/src/host/browser-workbook.ts`; it is a host adapter used by the community App, not a
@@ -433,7 +448,8 @@ freshly loaded workbook; parse/load failure returns `execution_failed`. The form
 `xlsx.cell.set_value`, `xlsx.range.set_values`, `xlsx.row.insert`, `xlsx.row.delete`, and
 `xlsx.column.insert` are generated from the XLSX-owned catalog and dispatched by the same registry.
 Their schemas bound scalar matrices, 1-based row positions, and structural counts before enqueue;
-the renderer resolves the mounted workbook and calls native Univer range/structure methods. R6-09
+the renderer also checks that a range-value matrix exactly matches the target height and width
+before resolving the mounted workbook and calling native Univer range/structure methods. R6-09
 removes their legacy aliases; the five former hand-written capability entries and direct App
 branches remain absent.
 
@@ -894,8 +910,10 @@ subphase samples, a fixed 500 ms bootstrap p95 ceiling, and the retained fixed 1
 cold-start p95 ceiling. All retained presets, native Univer history, Registry operations, and
 browser package save/reopen routes remain unchanged.
 
-The restored self-contained XLSX resource is 6,485,773 raw bytes / 4,793,010 gzip bytes. Every
-split JavaScript module is still compressed and embedded in that single HTML resource; the initial
-entry graph inflates to about 10.08 MB and is capped at 11 MB, while optional locale/hyphenation
-modules inflate only on demand. These budgets are regression guardrails and cannot justify deleting
-renderer capabilities.
+The restored self-contained XLSX resource is 8,721,880 raw bytes / 6,467,162 gzip bytes. Codex
+rejects MCP App HTML above 10,000,000 UTF-8 Blob bytes before iframe mount, so every split
+JavaScript module, including the initial entry, is compressed and embedded in that single HTML
+resource. The initial entry inflates to 8,393,847 bytes and remains capped at 11 MB; the shared
+Office font fallback and optional locale/hyphenation modules inflate only on demand and remain
+available before their first use. These budgets are regression guardrails and cannot justify
+deleting renderer capabilities.
