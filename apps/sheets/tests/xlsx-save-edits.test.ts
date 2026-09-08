@@ -108,7 +108,28 @@ describe('applyCellEditsToXlsx', () => {
 
 describe('applyCellEditsToXlsx style edits', () => {
   it('creates and registers a stylesheet when the workbook has none', async () => {
-    const mutation = await applyCellEditsToXlsx(await blankXlsxBuffer(), [{
+    const source = await JSZip.loadAsync(await blankXlsxBuffer())
+    source.remove('xl/styles.xml')
+    source.file(
+      '[Content_Types].xml',
+      (await source.file('[Content_Types].xml')!.async('text')).replace(
+        /<Override PartName="\/xl\/styles\.xml"[^>]*\/>/,
+        '',
+      ),
+    )
+    source.file(
+      'xl/_rels/workbook.xml.rels',
+      (await source.file('xl/_rels/workbook.xml.rels')!.async('text')).replace(
+        /<Relationship[^>]*relationships\/styles[^>]*\/>/,
+        '',
+      ),
+    )
+    const sourceWithoutStyles = await source.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+    })
+
+    const mutation = await applyCellEditsToXlsx(sourceWithoutStyles, [{
       sheetName: 'Sheet1',
       row: 0,
       column: 0,

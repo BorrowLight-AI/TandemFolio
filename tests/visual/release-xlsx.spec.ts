@@ -112,6 +112,36 @@ test('an offscreen XLSX releases canvas backing stores and resumes the same work
   })
   await expect.poll(canvasPixels).toBe(0)
 
+  await editor.locator('html').evaluate(() => {
+    const target = window as Window & { __originalRequestAnimationFrame?: typeof requestAnimationFrame }
+    target.__originalRequestAnimationFrame = window.requestAnimationFrame
+    window.requestAnimationFrame = () => 1
+  })
+  await page.evaluate(() => {
+    window.__codexVisualHost.enqueueCommand({
+      commandId: 'xlsx-hidden-frame-command',
+      baseRevision: 0,
+      operation: 'xlsx.range.set_values',
+      arguments: { sheet: 'Sheet1', range: 'A1:B2', values: [[1, 2], [3, 4]] },
+    })
+  })
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__codexVisualHost.acknowledgements.find(
+          (entry) => entry.commandId === 'xlsx-hidden-frame-command',
+        ),
+      ),
+    )
+    .toMatchObject({ commandId: 'xlsx-hidden-frame-command', ok: true, revision: 1 })
+  await editor.locator('html').evaluate(() => {
+    const target = window as Window & { __originalRequestAnimationFrame?: typeof requestAnimationFrame }
+    if (target.__originalRequestAnimationFrame) {
+      window.requestAnimationFrame = target.__originalRequestAnimationFrame
+      delete target.__originalRequestAnimationFrame
+    }
+  })
+
   await editor.locator('#root').evaluate((root) => {
     root.dispatchEvent(
       Object.assign(new Event('contentvisibilityautostatechange'), { skipped: false }),

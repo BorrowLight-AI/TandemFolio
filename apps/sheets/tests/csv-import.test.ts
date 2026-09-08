@@ -140,10 +140,17 @@ describe('csvToXlsxBuffer', () => {
 })
 
 describe('blankXlsxBuffer', () => {
-  it('produces a one-sheet workbook with an empty grid', async () => {
+  it('produces an editable one-sheet workbook with styles and an Office theme', async () => {
     const zip = await JSZip.loadAsync(await blankXlsxBuffer())
     expect(await zip.file('xl/workbook.xml')?.async('text')).toContain('<sheet name="Sheet1"')
     const sheet = await zip.file('xl/worksheets/sheet1.xml')?.async('text')
     expect(sheet).toContain('<dimension ref="A1:A1"/><sheetData></sheetData>')
+    expect(await zip.file('xl/styles.xml')?.async('text')).toContain('<cellXfs count="1">')
+    expect(await zip.file('xl/theme/theme1.xml')?.async('text')).toContain(
+      '<a:clrScheme name="Office">',
+    )
+    const relationships = await zip.file('xl/_rels/workbook.xml.rels')?.async('text')
+    expect(relationships).toContain('relationships/styles')
+    expect(relationships).toContain('relationships/theme')
   })
 })

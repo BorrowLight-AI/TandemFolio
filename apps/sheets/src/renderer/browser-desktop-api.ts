@@ -172,6 +172,11 @@ export class BrowserWorkbookDesktopApi {
     return file ? this.openBuffer(await file.arrayBuffer(), file.name) : null
   }
 
+  async createBlankWorkbook(name = 'Untitled.xlsx'): Promise<WorkbookFile> {
+    const { blankXlsxArrayBuffer } = await import('../gateway/csv-import')
+    return this.openBuffer(await blankXlsxArrayBuffer(), xlsxName(name))
+  }
+
   async openBuffer(
     data: ArrayBuffer,
     name: string,
@@ -346,8 +351,31 @@ export class BrowserWorkbookDesktopApi {
   ): Promise<WorkbookSaveResult> {
     const session = this.#session(request.sessionId)
     const { workbook } = session
+    // Establish the final worksheet identities before replaying any
+    // sheet-scoped mutation. New blank workbooks commonly add sheets and then
+    // write cells, validation, formatting, and visuals into them in one save.
+    for (const operation of request.sheetOps) {
+      if (operation.kind === 'rename-sheet') {
+        const previous = this.#sheetName(session, operation.sheetId)
+        workbook.renameSheet(previous, operation.newName)
+        session.sheetNames.set(operation.sheetId, operation.newName)
+      } else if (operation.kind === 'add-sheet') {
+        workbook.addSheet(operation.name)
+        session.sheetNames.set(operation.sheetId, operation.name)
+      } else if (operation.kind === 'duplicate-sheet') {
+        workbook.duplicateSheet(this.#sheetName(session, operation.sourceSheetId), operation.name)
+        session.sheetNames.set(operation.sheetId, operation.name)
+      } else if (operation.kind === 'remove-sheet') {
+        workbook.deleteSheet(this.#sheetName(session, operation.sheetId))
+        session.sheetNames.delete(operation.sheetId)
+      } else if (operation.kind === 'set-sheet-hidden') {
+        workbook.setSheetHidden(this.#sheetName(session, operation.sheetId), operation.hidden)
+      } else if (operation.kind === 'reorder-sheets') {
+        // The final order is applied after all sheets exist.
+      }
+    }
     // Match the retained gateway contract: structural operations replay
-    // first; journaled edits already use the resulting coordinate space.
+    // before journaled edits, which already use the resulting coordinates.
     for (const operation of request.structuralOps) {
       const { sheetId, ...structural } = operation
       // Zod materialises optional keys as `undefined`; the package writer uses
@@ -372,26 +400,6 @@ export class BrowserWorkbookDesktopApi {
       }
       if (edit.style || edit.styleReset) {
         workbook.setRangeStyle(name, address, edit.styleReset ? {} : (edit.style ?? {}))
-      }
-    }
-    for (const operation of request.sheetOps) {
-      if (operation.kind === 'rename-sheet') {
-        const previous = this.#sheetName(session, operation.sheetId)
-        workbook.renameSheet(previous, operation.newName)
-        session.sheetNames.set(operation.sheetId, operation.newName)
-      } else if (operation.kind === 'add-sheet') {
-        workbook.addSheet(operation.name)
-        session.sheetNames.set(operation.sheetId, operation.name)
-      } else if (operation.kind === 'duplicate-sheet') {
-        workbook.duplicateSheet(this.#sheetName(session, operation.sourceSheetId), operation.name)
-        session.sheetNames.set(operation.sheetId, operation.name)
-      } else if (operation.kind === 'remove-sheet') {
-        workbook.deleteSheet(this.#sheetName(session, operation.sheetId))
-        session.sheetNames.delete(operation.sheetId)
-      } else if (operation.kind === 'set-sheet-hidden') {
-        workbook.setSheetHidden(this.#sheetName(session, operation.sheetId), operation.hidden)
-      } else if (operation.kind === 'reorder-sheets') {
-        // The final order is applied below.
       }
     }
     request.sheetOrder.forEach((sheetId, index) => {

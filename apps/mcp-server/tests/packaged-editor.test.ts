@@ -42,9 +42,9 @@ describe('packaged editor UI', () => {
       // remains a regression ceiling, never permission to delete capabilities.
       [packagedEditor, 3_650_000],
       [packagedMarkdownEditor, 2_750_000],
-      // Full permitted pinned Univer renderer; this is a regression ceiling,
-      // not permission to delete community capabilities for bundle size.
-      [packagedXlsxEditor, 21_000_000],
+      // Codex rejects MCP App HTML above 10,000,000 bytes before the iframe
+      // mounts. Keep the full permitted Univer renderer under that host limit.
+      [packagedXlsxEditor, 10_000_000],
       [packagedPptxEditor, 4_000_000],
       // Browser PDFium restores retained searchable text/image mutation. Its
       // WASM is gzip-compressed in the self-contained resource; fonts stay lazy.
@@ -135,28 +135,31 @@ describe('packaged editor UI', () => {
       ),
     ]
     const entry = html.match(
-      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true">([^<]+)<\/script>/,
     )
 
     expect(entry, 'missing embedded XLSX entry module').not.toBeNull()
     expect(payloads.length).toBeGreaterThan(1)
-    expect(Buffer.byteLength(entry![2])).toBeLessThanOrEqual(11_000_000)
+    const entrySource = gunzipSync(Buffer.from(entry![2], 'base64'))
+    expect(entrySource.byteLength).toBeLessThanOrEqual(11_000_000)
     expect(html).toContain('data-tandemfolio-module-bootstrap')
     expect(html).not.toMatch(/(?:src|href)="[^"]+\.(?:js|css)"/)
   })
 
-  it('loads the critical XLSX entry without runtime base64 or gzip decompression', async () => {
+  it('gzip-compresses the critical XLSX entry inside the module vault', async () => {
     const html = await readFile(packagedXlsxEditor, 'utf8')
     const entry = html.match(
-      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true">([^<]+)<\/script>/,
     )
 
-    expect(entry, 'missing identity-encoded XLSX entry').not.toBeNull()
+    expect(entry, 'missing gzip-encoded XLSX entry').not.toBeNull()
     expect(entry![1]).toMatch(/^index-[A-Za-z0-9_-]+\.js$/)
-    const source = entry![2]
+    expect(entry![2]).toMatch(/^[A-Za-z0-9+/]+=*$/)
+    const source = gunzipSync(Buffer.from(entry![2], 'base64')).toString('utf8')
     expect(Buffer.byteLength(source)).toBeLessThanOrEqual(11_000_000)
     expect(source).toContain('__genofficeXlsxEntryModuleReadyAt')
-    expect(entry![2]).not.toMatch(/^[A-Za-z0-9+/]+=*$/)
+    expect(html).toContain("new DecompressionStream('gzip')")
+    expect(html).not.toMatch(/data-module="mount-app-[^"]+\.js"/)
   })
 
   it('packages the Markdown community renderer without product AI or Electron code', async () => {
@@ -177,17 +180,27 @@ describe('packaged editor UI', () => {
     const graph = JSON.parse(graphTag![1]) as Record<string, string[]>
     const payloadModules = [
       ...html.matchAll(
-        /<script type="application\/x-tandemfolio-module" data-module="([^"]+)">([^<]+)<\/script>/g,
+        /<script type="application\/x-tandemfolio-module" data-module="([^"]+)"(?: data-encoding="(identity)")?>([\s\S]*?)<\/script>/g,
       ),
     ]
     const entry = html.match(
-      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true">([^<]+)<\/script>/,
     )!
-    const modules = [...payloadModules, ['', entry[1], entry[2]]]
-    expect(Object.keys(graph).sort()).toEqual(modules.map((m) => m[1]).sort())
-    for (const [, id, encoded] of modules) {
-      const source =
-        id === entry[1] ? encoded : gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8')
+    const modules = [
+      ...payloadModules.map((match) => ({
+        id: match[1],
+        source:
+          match[2] === 'identity'
+            ? match[3]
+            : gunzipSync(Buffer.from(match[3], 'base64')).toString('utf8'),
+      })),
+      {
+        id: entry[1],
+        source: gunzipSync(Buffer.from(entry[2], 'base64')).toString('utf8'),
+      },
+    ]
+    expect(Object.keys(graph).sort()).toEqual(modules.map(({ id }) => id).sort())
+    for (const { id, source } of modules) {
       const dependencies = [
         ...new Set(
           [...source.matchAll(/genoffice-static:([A-Za-z0-9._-]+\.js)/g)].map((m) => m[1]),
@@ -195,6 +208,7 @@ describe('packaged editor UI', () => {
       ]
       expect(graph[id]).toEqual(dependencies)
       for (const dependency of dependencies) expect(graph).toHaveProperty(dependency)
+      expect(source).not.toMatch(/__vite__mapDeps\(\[[^\]]+\]\)/)
     }
   })
 
@@ -203,9 +217,9 @@ describe('packaged editor UI', () => {
     const workbook = html.match(/data-module="(browser-workbook-[^"]+\.js)"/)
     expect(workbook, 'workbook ZIP/XML adapter must remain loadable on demand').not.toBeNull()
     const entry = html.match(
-      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true" data-encoding="identity">([\s\S]*?)<\/script>/,
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true">([^<]+)<\/script>/,
     )
-    const entrySource = entry![2]
+    const entrySource = gunzipSync(Buffer.from(entry![2], 'base64')).toString('utf8')
     expect(entrySource).toContain(`__genofficeImport("${workbook![1]}")`)
     const graphTag = html.match(/data-tandemfolio-module-dependencies>([^<]+)<\/script>/)
     const graph = JSON.parse(graphTag![1]) as Record<string, string[]>

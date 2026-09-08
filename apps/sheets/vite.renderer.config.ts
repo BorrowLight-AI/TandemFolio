@@ -21,6 +21,13 @@ export default defineConfig({
     outDir: new URL('./dist/renderer', import.meta.url).pathname,
     emptyOutDir: true,
     assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+    // The packaged editor resolves deferred chunks from its in-memory module
+    // vault. Vite's URL-based preload helper cannot resolve relative assets
+    // from the resulting blob: entry module.
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies: () => [],
+    },
     // Preserve optional locale and hyphenation imports as real lazy chunks.
     // package-plugin embeds them into the single XLSX UI resource and serves
     // them from an in-memory module vault rather than compiling them at boot.

@@ -26,7 +26,7 @@ import { INTERCEPTOR_POINT, SheetInterceptorService } from '@univerjs/sheets'
 
 import type { UniverRuntime } from './univer-state'
 import { getWorkbookMdw } from './app-constants'
-import { isSubstitutedCellFamily } from './cell-font-fallback'
+import { isSubstitutedCellFamily } from './cell-font-state'
 
 export const CELL_INSET_PX = 5
 

@@ -4,6 +4,8 @@
 
 import JSZip from 'jszip'
 
+import { DEFAULT_STYLESHEET_XML, DEFAULT_THEME_XML } from './xlsx-default-parts'
+
 const DELIMITERS = [',', ';', '\t'] as const
 
 // Excel writes CSV in the system's legacy charset, not UTF-8 (GBK on Chinese
@@ -208,10 +210,29 @@ export async function blankXlsxBuffer(sheetName = 'Sheet1'): Promise<Buffer> {
   return xlsxBufferFromRows([], sheetName)
 }
 
+/** Browser-safe minimal backing package for the initially mounted blank grid. */
+export async function blankXlsxArrayBuffer(sheetName = 'Sheet1'): Promise<ArrayBuffer> {
+  const bytes = await xlsxZipFromRows([], sheetName).generateAsync({
+    type: 'uint8array',
+    compression: 'DEFLATE',
+  })
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
 async function xlsxBufferFromRows(
   rows: readonly (readonly string[])[],
   sheetName: string,
 ): Promise<Buffer> {
+  return xlsxZipFromRows(rows, sheetName).generateAsync({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+  })
+}
+
+function xlsxZipFromRows(
+  rows: readonly (readonly string[])[],
+  sheetName: string,
+): JSZip {
   const zip = new JSZip()
   zip.file(
     '[Content_Types].xml',
@@ -221,6 +242,8 @@ async function xlsxBufferFromRows(
       '<Default Extension="xml" ContentType="application/xml"/>' +
       '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
       '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      '<Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>' +
       '</Types>',
   )
   zip.file(
@@ -241,8 +264,12 @@ async function xlsxBufferFromRows(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>' +
       '</Relationships>',
   )
   zip.file('xl/worksheets/sheet1.xml', buildWorksheetXml(rows))
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
+  zip.file('xl/styles.xml', DEFAULT_STYLESHEET_XML)
+  zip.file('xl/theme/theme1.xml', DEFAULT_THEME_XML)
+  return zip
 }

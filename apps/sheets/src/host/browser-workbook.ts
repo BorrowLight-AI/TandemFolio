@@ -36,6 +36,7 @@ import {
   type WorkbookThemeState,
 } from '../gateway/xlsx-theme'
 import { applySparklineAdditions, type SparklineGroupAdd } from '../gateway/xlsx-sparkline'
+import { DEFAULT_STYLESHEET_XML, DEFAULT_THEME_XML } from '../gateway/xlsx-default-parts'
 import { StylesheetEditor } from '../gateway/xlsx-styles'
 import { applyTableAdditions, type TableAddition } from '../gateway/xlsx-table-add'
 import {
@@ -143,6 +144,11 @@ interface StructureSnapshot {
 
 const MAX_ENTRIES = 10_000
 const MAX_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
+const STYLES_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles'
+const THEME_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme'
+const STYLES_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml'
+const THEME_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.theme+xml'
 
 function xmlAttribute(attributes: string, name: string): string | undefined {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -168,6 +174,38 @@ function escapeXml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+}
+
+function ensureWorkbookRelationship(xml: string, type: string, target: string): string {
+  if (xml.includes(`Type="${type}"`)) return xml
+  const relationship =
+    `<Relationship Id="rId${maxRelationshipId(xml) + 1}" ` +
+    `Type="${type}" Target="${target}"/>`
+  const closeAt = xml.lastIndexOf('</Relationships>')
+  if (closeAt < 0) {
+    if (/<Relationships\b[^>]*\/>/.test(xml)) {
+      return xml.replace(/<Relationships\b([^>]*)\/>/, `<Relationships$1>${relationship}</Relationships>`)
+    }
+    throw new Error('Workbook relationships XML is malformed.')
+  }
+  return `${xml.slice(0, closeAt)}${relationship}${xml.slice(closeAt)}`
+}
+
+function ensurePartOverride(
+  xml: string,
+  partName: string,
+  contentType: string,
+): string {
+  if (xml.includes(`PartName="${partName}"`)) return xml
+  const override = `<Override PartName="${partName}" ContentType="${contentType}"/>`
+  const closeAt = xml.lastIndexOf('</Types>')
+  if (closeAt < 0) {
+    if (/<Types\b[^>]*\/>/.test(xml)) {
+      return xml.replace(/<Types\b([^>]*)\/>/, `<Types$1>${override}</Types>`)
+    }
+    throw new Error('Workbook content types XML is malformed.')
+  }
+  return `${xml.slice(0, closeAt)}${override}${xml.slice(closeAt)}`
 }
 
 function textContent(xml: string, tag: string): string | undefined {
@@ -2925,8 +2963,29 @@ export async function openBrowserWorkbook(
   }
 
   const workbookXml = await zipText(zip, 'xl/workbook.xml')
-  const relsXml = await zipText(zip, 'xl/_rels/workbook.xml.rels')
-  const contentTypesXml = await zipText(zip, '[Content_Types].xml')
+  let relsXml = await zipText(zip, 'xl/_rels/workbook.xml.rels')
+  let contentTypesXml = await zipText(zip, '[Content_Types].xml')
+  const stylesheetWasMissing = !zip.file('xl/styles.xml')
+  if (stylesheetWasMissing) {
+    zip.file('xl/styles.xml', DEFAULT_STYLESHEET_XML)
+    relsXml = ensureWorkbookRelationship(relsXml, STYLES_REL_TYPE, 'styles.xml')
+    contentTypesXml = ensurePartOverride(
+      contentTypesXml,
+      '/xl/styles.xml',
+      STYLES_CONTENT_TYPE,
+    )
+  }
+  if (stylesheetWasMissing && !zip.file('xl/theme/theme1.xml')) {
+    zip.file('xl/theme/theme1.xml', DEFAULT_THEME_XML)
+    relsXml = ensureWorkbookRelationship(relsXml, THEME_REL_TYPE, 'theme/theme1.xml')
+    contentTypesXml = ensurePartOverride(
+      contentTypesXml,
+      '/xl/theme/theme1.xml',
+      THEME_CONTENT_TYPE,
+    )
+  }
+  zip.file('xl/_rels/workbook.xml.rels', relsXml)
+  zip.file('[Content_Types].xml', contentTypesXml)
   const metadataXml = new Map([
     ['xl/workbook.xml', workbookXml],
     ['xl/_rels/workbook.xml.rels', relsXml],

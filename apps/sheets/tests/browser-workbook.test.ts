@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { blankXlsxBuffer } from '../src/gateway/csv-import'
 import { buildChartXml } from '../src/gateway/xlsx-drawing-add'
 import { openBrowserWorkbook } from '../src/host/browser-workbook'
 import { BrowserWorkbookDesktopApi } from '../src/renderer/browser-desktop-api'
@@ -132,6 +133,47 @@ function cellSaveRequest(
 
 describe('browser XLSX workbook', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('repairs legacy blank workbooks before saving native styles and themes', async () => {
+    const legacy = await JSZip.loadAsync(await blankXlsxBuffer())
+    legacy.remove('xl/styles.xml')
+    legacy.remove('xl/theme/theme1.xml')
+    legacy.file(
+      'xl/_rels/workbook.xml.rels',
+      (await legacy.file('xl/_rels/workbook.xml.rels')!.async('text'))
+        .replace(/<Relationship\b[^>]*Type="[^"]*\/styles"[^>]*\/>/, '')
+        .replace(/<Relationship\b[^>]*Type="[^"]*\/theme"[^>]*\/>/, ''),
+    )
+    legacy.file(
+      '[Content_Types].xml',
+      (await legacy.file('[Content_Types].xml')!.async('text'))
+        .replace(/<Override\b[^>]*PartName="\/xl\/styles\.xml"[^>]*\/>/, '')
+        .replace(/<Override\b[^>]*PartName="\/xl\/theme\/theme1\.xml"[^>]*\/>/, ''),
+    )
+
+    const workbook = await openBrowserWorkbook(
+      await legacy.generateAsync({ type: 'uint8array' }),
+      'legacy-blank.xlsx',
+    )
+    workbook.setRangeStyle('Sheet1', 'A1:B1', { bold: true })
+    workbook.applyTheme({ fonts: { name: 'Office', major: 'Aptos Display', minor: 'Aptos' } })
+
+    const saved = await JSZip.loadAsync(await workbook.save())
+    expect(await saved.file('xl/styles.xml')!.async('text')).toContain('<b/>')
+    expect(await saved.file('xl/theme/theme1.xml')!.async('text')).toContain('Aptos Display')
+    expect(await saved.file('xl/_rels/workbook.xml.rels')!.async('text')).toContain(
+      '/relationships/styles',
+    )
+    expect(await saved.file('xl/_rels/workbook.xml.rels')!.async('text')).toContain(
+      '/relationships/theme',
+    )
+    expect(await saved.file('[Content_Types].xml')!.async('text')).toContain(
+      'PartName="/xl/styles.xml"',
+    )
+    expect(await saved.file('[Content_Types].xml')!.async('text')).toContain(
+      'PartName="/xl/theme/theme1.xml"',
+    )
+  })
 
   it('hydrates rich shared strings including subscript and superscript', async () => {
     vi.stubGlobal('window', {})

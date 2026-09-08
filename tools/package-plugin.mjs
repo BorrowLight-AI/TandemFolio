@@ -86,6 +86,10 @@ function replaceModuleSpecifiers(source, knownModules) {
       replacement.value +
       transformed.slice(replacement.end)
   }
+  // Every renderer stylesheet is already inlined into the packaged HTML.
+  // Vite's remaining preload maps resolve those CSS URLs relative to a blob:
+  // module and fail before a deferred workbook/locale import can execute.
+  transformed = transformed.replace(/__vite__mapDeps\(\[[^\]]+\]\)/g, '[]')
   return transformed
 }
 
@@ -128,6 +132,10 @@ const moduleVaultBootstrap = `(function () {
       let source;
       if (payload.encoding === 'identity') {
         source = payload.source;
+        for (const dependencyId of dependencyIds) {
+          const dependencyUrl = await ensureModule(dependencyId);
+          source = source.replaceAll('genoffice-static:' + dependencyId, dependencyUrl);
+        }
       } else if (dependencyIds.length === 0) {
         // Keep dependency-free modules as UTF-8 bytes: avoid decoding a large
         // entry to a JS string only to re-encode it when constructing its Blob.
@@ -181,10 +189,8 @@ async function inlineDeferredEditor(dist) {
   const dependencies = {}
   let entryPayload = ''
   for (const moduleId of moduleIds.sort()) {
-    const source = replaceModuleSpecifiers(
-      await readFile(join(assetDir, moduleId), 'utf8'),
-      knownModules,
-    )
+    let source = await readFile(join(assetDir, moduleId), 'utf8')
+    source = replaceModuleSpecifiers(source, knownModules)
     dependencies[moduleId] = [
       ...new Set(
         parse(source)[0]
@@ -196,7 +202,8 @@ async function inlineDeferredEditor(dist) {
       if (dependencies[moduleId].length > 0) {
         throw new Error('The directly executable XLSX entry cannot have static chunk imports.')
       }
-      entryPayload = `<script type="application/x-tandemfolio-module" data-module="${moduleId}" data-entry="true" data-encoding="identity">${source.replaceAll('</script', '<\\/script')}</script>`
+      const encoded = gzipSync(source, { level: 9 }).toString('base64')
+      entryPayload = `<script type="application/x-tandemfolio-module" data-module="${moduleId}" data-entry="true">${encoded}</script>`
       continue
     }
     const encoded = gzipSync(source, { level: 9 }).toString('base64')

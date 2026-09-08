@@ -99,6 +99,20 @@ describe('CELL_FONT_ALIASES', () => {
     for (const alias of CELL_FONT_ALIASES) {
       expect(alias.regular.length).toBeGreaterThan(0)
       if (alias.bold) expect(alias.bold.length).toBeGreaterThan(0)
+      if (alias.italic) expect(alias.italic.length).toBeGreaterThan(0)
+      if (alias.boldItalic) expect(alias.boldItalic.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('registers one complete four-style fallback for each default Office sans family', () => {
+    for (const family of ['Aptos', 'Calibri', 'Carlito']) {
+      const alias = CELL_FONT_ALIASES.find((candidate) => candidate.family === family)
+      expect(alias, family).toBeDefined()
+      expect(alias!.regular.join(' '), family).toContain('LiberationSans-Regular.ttf')
+      expect(alias!.bold?.join(' '), family).toContain('LiberationSans-Bold.ttf')
+      expect(alias!.italic?.join(' '), family).toContain('LiberationSans-Italic.ttf')
+      expect(alias!.boldItalic?.join(' '), family).toContain('LiberationSans-BoldItalic.ttf')
+      expect(alias!.skipIfLocal, family).toContain(family)
     }
   })
 

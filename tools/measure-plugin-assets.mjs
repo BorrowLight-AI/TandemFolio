@@ -8,10 +8,9 @@ const resources = [
   // layout, fonts and native dialogs; retain modest headroom over that audited build.
   ['DOCX', 'plugins/tandemfolio/assets/editor/index.html', 3_650_000],
   ['Markdown', 'plugins/tandemfolio/assets/editors/markdown/index.html', 2_750_000],
-  // The restored Univer renderer is intentionally much larger than the
-  // rejected five-file scaffold. This is a regression ceiling, not a target
-  // that permits deleting community capabilities.
-  ['XLSX', 'plugins/tandemfolio/assets/editors/xlsx/index.html', 21_000_000],
+  // Codex measures the returned MCP App HTML as a UTF-8 Blob and rejects it
+  // above 10,000,000 bytes, before mounting the renderer iframe.
+  ['XLSX', 'plugins/tandemfolio/assets/editors/xlsx/index.html', 10_000_000],
   // The complete pinned non-AI community renderer replaces the rejected
   // narrow scaffold. Keep a regression ceiling without deleting capabilities.
   ['PPTX', 'plugins/tandemfolio/assets/editors/pptx/index.html', 4_000_000],

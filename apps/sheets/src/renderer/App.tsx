@@ -42,7 +42,14 @@ import {
   renameChartRefsForSheet,
 } from './workbook-ops'
 import { isNumericIdentifierText } from './cell-warning'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 
 import {
   attachMcpLiveSession,
@@ -52,6 +59,7 @@ import {
   subscribeLiveEditorActivity,
   subscribeLiveEditorDisplayMode,
   toggleLiveEditorFullscreen,
+  waitForRendererCommit,
   type LiveEditorAdapter,
   type LiveEditorStartupTrace,
 } from '@tandemfolio/host-bridge'
@@ -70,7 +78,6 @@ import {
 } from '@univerjs/core'
 import { UniverSheetsConditionalFormattingPreset } from '@univerjs/preset-sheets-conditional-formatting'
 import UniverPresetSheetsConditionalFormattingEnUS from '@univerjs/preset-sheets-conditional-formatting/locales/en-US'
-import '@univerjs/preset-sheets-conditional-formatting/lib/index.css'
 import {
   INTERCEPTOR_POINT,
   SheetInterceptorService,
@@ -79,24 +86,17 @@ import {
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US'
 import { UniverSheetsDataValidationPreset } from '@univerjs/preset-sheets-data-validation'
 import UniverPresetSheetsDataValidationEnUS from '@univerjs/preset-sheets-data-validation/locales/en-US'
-import '@univerjs/preset-sheets-data-validation/lib/index.css'
 import { UniverSheetsDrawingPreset } from '@univerjs/preset-sheets-drawing'
-import '@univerjs/preset-sheets-drawing/lib/index.css'
 import { UniverSheetsFindReplacePreset } from '@univerjs/preset-sheets-find-replace'
 import UniverPresetSheetsFindReplaceEnUS from '@univerjs/preset-sheets-find-replace/locales/en-US'
-import '@univerjs/preset-sheets-find-replace/lib/index.css'
 import { UniverSheetsFilterPreset } from '@univerjs/preset-sheets-filter'
 import UniverPresetSheetsFilterEnUS from '@univerjs/preset-sheets-filter/locales/en-US'
-import '@univerjs/preset-sheets-filter/lib/index.css'
 import { UniverSheetsNotePreset } from '@univerjs/preset-sheets-note'
 import UniverPresetSheetsNoteEnUS from '@univerjs/preset-sheets-note/locales/en-US'
-import '@univerjs/preset-sheets-note/lib/index.css'
 import { UniverSheetsSortPreset } from '@univerjs/preset-sheets-sort'
 import UniverPresetSheetsSortEnUS from '@univerjs/preset-sheets-sort/locales/en-US'
-import '@univerjs/preset-sheets-sort/lib/index.css'
 import { UniverSheetsTablePreset } from '@univerjs/preset-sheets-table'
 import UniverPresetSheetsTableEnUS from '@univerjs/preset-sheets-table/locales/en-US'
-import '@univerjs/preset-sheets-table/lib/index.css'
 import { greenTheme } from '@univerjs/themes'
 import { createUniver } from './create-univer'
 import { BrowserWorkbookDesktopApi } from './browser-desktop-api'
@@ -284,7 +284,6 @@ import {
   type SaveActionResult,
   type SaveContext,
 } from './save-actions'
-import { executeXlsxOperation } from './operations/registry'
 import { listWorkbookConditionalFormats } from './conditional-format-actions'
 import {
   applyChartEdit as applyChartEditImpl,
@@ -319,7 +318,7 @@ import {
   shiftVisualForStructuralOp,
 } from './edit-journal'
 import { shiftPinnedCells } from './formula-closure'
-import { getLang, t } from './i18n/locale'
+import { getLang, t, useI18n } from './i18n/locale'
 import { netAxisDelta, screenToFile } from './view-transform'
 import { selectionFormatEquals, toSelectionFormat, type SelectionFormat } from './selection-format'
 import { applyWorkbookTextReplacement } from './text-replace'
@@ -386,6 +385,9 @@ function decodeImageBase64(base64: string): ArrayBuffer {
 }
 
 export function App(): React.JSX.Element {
+  // Subscribe the shell to the deferred locale catalog revision. Most child
+  // controls consume the context directly; App also renders translated labels.
+  useI18n()
   const adapterRef = useRef(new InMemoryWorkbookAdapter(initialSnapshot))
   const univerRef = useRef<UniverRuntime | null>(null)
   const lazyWorkbookRef = useRef<LazyWorkbookState | null>(null)
@@ -429,6 +431,7 @@ export function App(): React.JSX.Element {
   const demoVisualInstallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [_revision, setRevision] = useState(0)
   const [pendingEdits, setPendingEditsState] = useState(0)
+  const [blankBackingReady, setBlankBackingReady] = useState(false)
   const recoveryVersionRef = useRef(0)
   const setPendingEdits = useCallback((count: number) => {
     if (count > 0) recoveryVersionRef.current += 1
@@ -576,6 +579,7 @@ export function App(): React.JSX.Element {
           ) {
             await workbookReadyRef.current
           }
+          const { executeXlsxOperation } = await import('./operations/registry')
           const registered = await executeXlsxOperation(command, {
             runtime: () => univerRef.current,
             state: () => lazyWorkbookRef.current,
@@ -816,7 +820,7 @@ export function App(): React.JSX.Element {
                 message: registered.message,
               }
             }
-            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+            await waitForRendererCommit()
             return registered.output ? { ok: true, output: { ...registered.output } } : { ok: true }
           }
 
@@ -890,7 +894,7 @@ export function App(): React.JSX.Element {
     const id = window.setInterval(tick, 30_000)
     return () => window.clearInterval(id)
   }, [])
-  const [message, setMessage] = useState(t('appReadyInitial'))
+  const [message, setMessage] = useState('')
   /// Zoom of the active sheet in percent, echoed by the status-bar slider.
   const [zoomPercent, setZoomPercent] = useState(100)
   const [selectionFormat, setSelectionFormat] = useState<SelectionFormat | null>(null)
@@ -1041,7 +1045,7 @@ export function App(): React.JSX.Element {
     if (!selectedVisual) setChartDialog(null)
   }, [selectedVisual])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Univer paints the grid on canvas, so it can't follow the CSS tokens —
     // mirror the <html data-theme> state into its official darkMode flag
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
@@ -2147,6 +2151,7 @@ export function App(): React.JSX.Element {
       },
     )
     let firstCommitFrame = 0
+    let blankInitializationStarted = false
     const waitForFirstCommit = () => {
       firstCommitFrame = window.requestAnimationFrame(() => {
         const workbook = runtime.univerAPI.getActiveWorkbook()
@@ -2156,7 +2161,7 @@ export function App(): React.JSX.Element {
           waitForFirstCommit()
           return
         }
-        startupTraceRef.current!.resolve({
+        const trace = {
           operation: 'xlsx.editor.cold_start',
           phases: {
             bootstrapMs,
@@ -2165,7 +2170,27 @@ export function App(): React.JSX.Element {
             firstCommitMs: performance.now() - firstCommitStartedAt,
           },
           bootstrapPhases,
-        })
+        } as const
+        if (blankInitializationStarted) return
+        blankInitializationStarted = true
+        const initialization = browserHostRef.current!
+          .createBlankWorkbook()
+          .then(async (opened) => {
+            if (lazyWorkbookRef.current) {
+              await window.desktopApi.closeWorkbook(opened.sessionId)
+              return
+            }
+            await trackWorkbookOpen(opened)
+          })
+          .catch((error: unknown) => {
+            setMessage(error instanceof Error ? error.message : t('appOpenFailed'))
+          })
+          .finally(() => setBlankBackingReady(true))
+        // The first visible canvas remains the cold-start boundary. Commands
+        // released by that ACK wait for the native blank package to become the
+        // same mounted workbook authority before they can mutate it.
+        workbookReadyRef.current = initialization
+        startupTraceRef.current!.resolve(trace)
       })
     }
     waitForFirstCommit()
@@ -2996,6 +3021,7 @@ export function App(): React.JSX.Element {
   return (
     <>
       <ToastHost />
+      {!blankBackingReady && <div className="xlsx-blank-backing-guard" aria-hidden="true" />}
       {chartDialog && chartDialogTarget && chartDialog.kind === 'format' && (
         <ChartFormatPane
           chart={chartDialogTarget.chart}
@@ -3023,7 +3049,7 @@ export function App(): React.JSX.Element {
         calcManual={calcManual}
         crossHighlightVisible={crossHighlightVisible}
         selectionFormat={selectionFormat}
-        statusMessage={message}
+        statusMessage={message || t('appReadyInitial')}
         onUndo={handleUndo}
         canUndo={univerHist.canUndo || (!lazyWorkbookRef.current && adapterRef.current.canUndo)}
         canRedo={univerHist.canRedo}

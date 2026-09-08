@@ -510,6 +510,82 @@ describe('XLSX operation registry', () => {
     expect(activeRange).toBe('a1:b2')
   })
 
+  it('rejects a mismatched value matrix before mutation and accepts the next matching matrix', async () => {
+    const writes: unknown[][][] = []
+    const setValues = (values: unknown[][]) => {
+      writes.push(values)
+    }
+    const worksheet = {
+      getSheetName: () => 'Budget',
+      getRange: () => ({
+        getHeight: () => 2,
+        getWidth: () => 2,
+        setValues,
+        activate: () => undefined,
+      }),
+    }
+    const runtime = {
+      univerAPI: {
+        getActiveWorkbook: () => ({
+          getSheets: () => [worksheet],
+          setActiveSheet: () => undefined,
+        }),
+      },
+    }
+
+    await expect(
+      executeXlsxOperation(
+        {
+          operation: 'xlsx.range.set_values',
+          arguments: {
+            sheet: 'Budget',
+            range: 'A1:B2',
+            values: [[1, 2]],
+          },
+        },
+        {
+          runtime: () => runtime,
+          loadStaged: async () => undefined,
+          save: async () => ({ ok: true, fileName: 'budget.xlsx' }),
+        },
+      ),
+    ).resolves.toEqual({
+      handled: true,
+      operationId: 'xlsx.range.set_values',
+      ok: false,
+      error: 'invalid_arguments',
+      message: 'Range A1:B2 requires a 2×2 value matrix.',
+    })
+    expect(writes).toEqual([])
+
+    await expect(
+      executeXlsxOperation(
+        {
+          operation: 'xlsx.range.set_values',
+          arguments: {
+            sheet: 'Budget',
+            range: 'A1:B2',
+            values: [
+              [1, 2],
+              [3, 4],
+            ],
+          },
+        },
+        {
+          runtime: () => runtime,
+          loadStaged: async () => undefined,
+          save: async () => ({ ok: true, fileName: 'budget.xlsx' }),
+        },
+      ),
+    ).resolves.toMatchObject({ handled: true, ok: true })
+    expect(writes).toEqual([
+      [
+        [{ v: 1 }, { v: 2 }],
+        [{ v: 3 }, { v: 4 }],
+      ],
+    ])
+  })
+
   it('copies computed scalar values between explicit worksheets and activates the destination', async () => {
     let written: unknown[][] | null = null
     let destinationActive = false

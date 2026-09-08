@@ -29,6 +29,7 @@ import type {
 
 interface BrowserWorkbookHostApi {
   selectWorkbook(): Promise<WorkbookFile | null>
+  createBlankWorkbook(name?: string): Promise<WorkbookFile>
   readWorkbookRange(request: WorkbookRangeRequest): Promise<WorkbookRangeResult>
   readWorkbookFormulas(request: WorkbookFormulaCellsRequest): Promise<WorkbookFormulaCellsResult>
   recalcWorkbook(request: WorkbookRecalcRequest): Promise<WorkbookRecalcResult>

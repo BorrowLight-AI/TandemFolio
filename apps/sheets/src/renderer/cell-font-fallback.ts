@@ -11,6 +11,10 @@
  * names always fall to sans, matching Excel's substitution.
  */
 
+import { markSubstitutedCellFamily } from './cell-font-state'
+
+export { isSubstitutedCellFamily } from './cell-font-state'
+
 const GENERIC_FAMILY =
   /(?:^|[\s,])(?:serif|sans-serif|monospace|cursive|fantasy|system-ui|math|ui-serif|ui-sans-serif|ui-monospace|ui-rounded)$/i
 
@@ -74,13 +78,6 @@ export function withSansSerifFallback(font: string): string {
 }
 
 const canvasScopedFamilies = new Map<string, string>()
-/// Families whose registered face is a substitute (the skipIfLocal probe
-/// found no genuine font): only these carry alias-calibrated metrics.
-const substitutedFamilies = new Set<string>()
-
-export function isSubstitutedCellFamily(family: string): boolean {
-  return substitutedFamilies.has(family.toLowerCase())
-}
 
 const PASSTHROUGH_FAMILY =
   /^(?:serif|sans-serif|monospace|cursive|fantasy|system-ui|math|ui-serif|ui-sans-serif|ui-monospace|ui-rounded|-apple-system|BlinkMacSystemFont)$/i
@@ -116,6 +113,8 @@ export interface CellFontAlias {
   /// Real bold faces only — never a regular face, which would suppress
   /// synthetic bold where no true bold exists.
   readonly bold?: readonly string[]
+  readonly italic?: readonly string[]
+  readonly boldItalic?: readonly string[]
   /// size-adjust % matching the substitute's advances to the original's
   /// Excel-print advances (weighted per-char ratio measured from production
   /// ref PDFs). Requires skipIfLocal: the adjustment is derived for the
@@ -172,6 +171,18 @@ const CARLITO_BOLD_SRC = [
   'Carlito Bold',
   `url(${new URL('../../../docs/src/renderer/fonts/LiberationSans-Bold.ttf', import.meta.url).href})`,
 ]
+const BUNDLED_OFFICE_SANS = [
+  `url(${new URL('../../../docs/src/renderer/fonts/LiberationSans-Regular.ttf', import.meta.url).href})`,
+] as const
+const BUNDLED_OFFICE_SANS_BOLD = [
+  `url(${new URL('../../../docs/src/renderer/fonts/LiberationSans-Bold.ttf', import.meta.url).href})`,
+] as const
+const BUNDLED_OFFICE_SANS_ITALIC = [
+  `url(${new URL('../../../docs/src/renderer/fonts/LiberationSans-Italic.ttf', import.meta.url).href})`,
+] as const
+const BUNDLED_OFFICE_SANS_BOLD_ITALIC = [
+  `url(${new URL('../../../docs/src/renderer/fonts/LiberationSans-BoldItalic.ttf', import.meta.url).href})`,
+] as const
 /// Malgun Gothic prints hangul at 1.0em — exactly AppleGothic — but digits at
 /// 0.6em vs AppleGothic's 0.68em, so number tails clipped while hangul was
 /// perfect. Latin/digit runs go to width-corrected Helvetica Neue instead.
@@ -330,6 +341,61 @@ const SARABUN_METRICS: ThaiAliasMetrics = {
 }
 
 export const CELL_FONT_ALIASES: readonly CellFontAlias[] = [
+  // Office's default Latin families share one bundled fallback set. Register
+  // the aliases once before Univer's first measurement instead of embedding
+  // the same four font binaries under three CSS family names.
+  {
+    family: 'Aptos',
+    regular: ['Calibri', 'Carlito', ...BUNDLED_OFFICE_SANS, 'Helvetica Neue', 'Arial'],
+    bold: [
+      'Calibri Bold',
+      'Carlito Bold',
+      ...BUNDLED_OFFICE_SANS_BOLD,
+      'Helvetica Neue Bold',
+      'Arial Bold',
+    ],
+    italic: [
+      'Calibri Italic',
+      'Carlito Italic',
+      ...BUNDLED_OFFICE_SANS_ITALIC,
+      'Helvetica Neue Italic',
+      'Arial Italic',
+    ],
+    boldItalic: [
+      'Calibri Bold Italic',
+      'Carlito Bold Italic',
+      ...BUNDLED_OFFICE_SANS_BOLD_ITALIC,
+      'Helvetica Neue Bold Italic',
+      'Arial Bold Italic',
+    ],
+    skipIfLocal: ['Aptos', 'Aptos Display'],
+  },
+  {
+    family: 'Calibri',
+    regular: ['Carlito', ...BUNDLED_OFFICE_SANS, 'Helvetica Neue', 'Arial'],
+    bold: ['Carlito Bold', ...BUNDLED_OFFICE_SANS_BOLD, 'Helvetica Neue Bold', 'Arial Bold'],
+    italic: [
+      'Carlito Italic',
+      ...BUNDLED_OFFICE_SANS_ITALIC,
+      'Helvetica Neue Italic',
+      'Arial Italic',
+    ],
+    boldItalic: [
+      'Carlito Bold Italic',
+      ...BUNDLED_OFFICE_SANS_BOLD_ITALIC,
+      'Helvetica Neue Bold Italic',
+      'Arial Bold Italic',
+    ],
+    skipIfLocal: ['Calibri'],
+  },
+  {
+    family: 'Carlito',
+    regular: BUNDLED_OFFICE_SANS,
+    bold: BUNDLED_OFFICE_SANS_BOLD,
+    italic: BUNDLED_OFFICE_SANS_ITALIC,
+    boldItalic: BUNDLED_OFFICE_SANS_BOLD_ITALIC,
+    skipIfLocal: ['Carlito', 'Carlito Regular'],
+  },
   // JP gothic (sans intent), incl. fullwidth spellings
   jpGothic('ＭＳ Ｐゴシック', ['MS PGothic', 'MS-PGothic'], MS_GOTHIC_LATIN),
   jpGothic('ＭＳ ゴシック', ['MS Gothic', 'MS-Gothic'], MS_GOTHIC_MONO_LATIN),
@@ -551,6 +617,8 @@ function registerAlias(alias: CellFontAlias, loads: Promise<unknown>[]): void {
   addFace(family, alias.regular, { weight: '400', sizeAdjust: alias.sizeAdjust }, loads)
   if (alias.bold)
     addFace(family, alias.bold, { weight: '700', sizeAdjust: alias.boldSizeAdjust }, loads)
+  if (alias.italic) addFace(family, alias.italic, { style: 'italic', weight: '400' }, loads)
+  if (alias.boldItalic) addFace(family, alias.boldItalic, { style: 'italic', weight: '700' }, loads)
   const latin = alias.latin
   if (!latin) return
   const unicodeRange = latin.unicodeRange ?? LATIN_RANGE
@@ -589,7 +657,7 @@ export function registerCellFontAliases(): Promise<unknown> {
             if (alias.whenGenuine)
               registerAlias({ family: alias.family, ...alias.whenGenuine }, gatedLoads)
           } else {
-            substitutedFamilies.add(alias.family.toLowerCase())
+            markSubstitutedCellFamily(alias.family)
             registerAlias(alias, gatedLoads)
           }
           return Promise.all(gatedLoads)

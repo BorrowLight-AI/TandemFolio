@@ -2366,16 +2366,30 @@ const handlers = {
   },
   'xlsx.range.set_values': (arguments_, services) => {
     const sheet = arguments_.sheet as string
-    const range = arguments_.range as string
+    const rangeText = arguments_.range as string
+    const range = normalizeXlsxCellRange(rangeText)
     const values = arguments_.values
-    if (!isXlsxCellMatrix(values)) {
+    if (!range || !isXlsxCellMatrix(values)) {
       return {
         ok: false,
         error: 'invalid_arguments',
         message: 'xlsx.range.set_values requires a bounded scalar matrix.',
       }
     }
-    const targetRange = xlsxWorksheet(services.runtime(), sheet).getRange(range)
+    const bounds = parseRange(range)
+    const expectedRows = bounds.endRow - bounds.startRow + 1
+    const expectedColumns = bounds.endColumn - bounds.startColumn + 1
+    if (
+      values.length !== expectedRows ||
+      values.some((row) => row.length !== expectedColumns)
+    ) {
+      return {
+        ok: false,
+        error: 'invalid_arguments',
+        message: `Range ${range} requires a ${expectedRows}×${expectedColumns} value matrix.`,
+      }
+    }
+    const targetRange = xlsxWorksheet(services.runtime(), sheet).getRange(rangeText)
     applyWorkbookCellMatrix(
       targetRange,
       values.map((row) => row.map((value) => ({ v: value })) satisfies ICellData[]),
@@ -2385,7 +2399,7 @@ const handlers = {
       output: {
         changed: values.reduce((count, row) => count + row.length, 0),
         sheet,
-        range: range.toUpperCase(),
+        range,
       },
     }
   },
