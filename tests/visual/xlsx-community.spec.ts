@@ -2,7 +2,7 @@ import { expect, test, type FrameLocator } from '@playwright/test'
 import JSZip from 'jszip'
 
 function workbookSaveButton(editor: FrameLocator) {
-  return editor.getByRole('button', { name: '保存（⌘S）', exact: true })
+  return editor.getByRole('button', { name: /^保存（(?:⌘|Ctrl\+)S）$/ })
 }
 
 function workbookUndoButton(editor: FrameLocator) {
@@ -12,6 +12,24 @@ function workbookUndoButton(editor: FrameLocator) {
 function workbookRedoButton(editor: FrameLocator) {
   return editor.getByRole('button', { name: '重做', exact: true })
 }
+
+test('XLSX workbook commands remain addressable on non-macOS hosts', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      get: () => 'Linux x86_64',
+    })
+  })
+  await page.goto('/?format=xlsx&width=1280&height=900')
+  await page.waitForFunction(() => window.__codexVisualHost?.initialized)
+
+  const editor = page.frameLocator('#editor-frame')
+  const saveButton = workbookSaveButton(editor)
+  await expect(saveButton).toHaveAttribute('aria-label', '保存（Ctrl+S）', { timeout: 2_000 })
+  await expect(saveButton).toBeVisible()
+  await expect(workbookUndoButton(editor)).toBeVisible()
+  await expect(workbookRedoButton(editor)).toBeVisible()
+})
 
 test('XLSX exposes file, save, and fullscreen as accessible icon-only controls', async ({
   page,

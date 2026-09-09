@@ -18,6 +18,9 @@ export default defineConfig({
   reporter: [['list']],
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}{ext}',
   use: {
+    // Missing controls are deterministic test failures; do not let one locator
+    // consume the full per-test budget before CI can report the real cause.
+    actionTimeout: 15_000,
     baseURL: 'http://127.0.0.1:4178',
     browserName: 'chromium',
     colorScheme: 'light',
