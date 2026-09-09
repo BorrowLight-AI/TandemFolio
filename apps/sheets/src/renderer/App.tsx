@@ -43,6 +43,8 @@ import {
 } from './workbook-ops'
 import { isNumericIdentifierText } from './cell-warning'
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -324,12 +326,7 @@ import { selectionFormatEquals, toSelectionFormat, type SelectionFormat } from '
 import { applyWorkbookTextReplacement } from './text-replace'
 import { ExcelShell } from './ExcelShell'
 import { ToastHost } from './toast'
-import { AdvancedFilterDialog, type AdvancedFilterColumn } from './AdvancedFilterDialog'
-import { EquationDialog } from './EquationDialog'
-import { IconsDialog } from './IconsDialog'
-import { RecommendedChartsDialog } from './RecommendedChartsDialog'
-import { ScreenshotDialog } from './ScreenshotDialog'
-import { SymbolDialog } from './SymbolDialog'
+import type { AdvancedFilterColumn } from './AdvancedFilterDialog'
 import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPanel'
 import { TimelineFieldPicker, TimelinePanels, type TimelineUiState } from './TimelinePanel'
 import type { DefinedNameAction, DefinedNameRow } from './NameManagerDialog'
@@ -348,7 +345,35 @@ import {
   type ChartVectorRead,
   type ShapeEditChanges,
 } from './WorkbookVisuals'
-import { ChartFormatPane, SelectDataDialog } from './ChartPanels'
+
+const AdvancedFilterDialog = lazy(() =>
+  import('./AdvancedFilterDialog').then(({ AdvancedFilterDialog }) => ({
+    default: AdvancedFilterDialog,
+  })),
+)
+const EquationDialog = lazy(() =>
+  import('./EquationDialog').then(({ EquationDialog }) => ({ default: EquationDialog })),
+)
+const IconsDialog = lazy(() =>
+  import('./IconsDialog').then(({ IconsDialog }) => ({ default: IconsDialog })),
+)
+const RecommendedChartsDialog = lazy(() =>
+  import('./RecommendedChartsDialog').then(({ RecommendedChartsDialog }) => ({
+    default: RecommendedChartsDialog,
+  })),
+)
+const ScreenshotDialog = lazy(() =>
+  import('./ScreenshotDialog').then(({ ScreenshotDialog }) => ({ default: ScreenshotDialog })),
+)
+const SymbolDialog = lazy(() =>
+  import('./SymbolDialog').then(({ SymbolDialog }) => ({ default: SymbolDialog })),
+)
+const ChartFormatPane = lazy(() =>
+  import('./ChartPanels').then(({ ChartFormatPane }) => ({ default: ChartFormatPane })),
+)
+const SelectDataDialog = lazy(() =>
+  import('./ChartPanels').then(({ SelectDataDialog }) => ({ default: SelectDataDialog })),
+)
 
 // Source sheet id of an in-flight copy-sheet command; the next insert-sheet
 // mutation is that copy and must journal as a duplicate, not a blank add.
@@ -718,6 +743,8 @@ export function App(): React.JSX.Element {
                 ),
               )
             },
+            readCachedFormulaValue: ({ sheetId, row, column }) =>
+              lazyWorkbookRef.current?.cachedFormulaValues.get(sheetId)?.get(`${row}:${column}`),
             refreshSparklines: (sheetId) => {
               const runtime = univerRef.current
               if (!runtime) return
@@ -3022,25 +3049,27 @@ export function App(): React.JSX.Element {
     <>
       <ToastHost />
       {!blankBackingReady && <div className="xlsx-blank-backing-guard" aria-hidden="true" />}
-      {chartDialog && chartDialogTarget && chartDialog.kind === 'format' && (
-        <ChartFormatPane
-          chart={chartDialogTarget.chart}
-          element={
-            chartElement?.visualId === chartDialogTarget.visualId ? chartElement.element : null
-          }
-          onEdit={(edit) => chartEditRef.current(chartDialog.editKey, edit)}
-          onClose={() => setChartDialog(null)}
-        />
-      )}
-      {chartDialog && chartDialogTarget && chartDialog.kind === 'select-data' && (
-        <SelectDataDialog
-          chart={chartDialogTarget.chart}
-          supported={chartDialogTarget.supported}
-          readVector={(range) => chartVectorRef.current(chartDialog.editKey, range)}
-          onApply={(edit) => chartEditRef.current(chartDialog.editKey, edit)}
-          onClose={() => setChartDialog(null)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {chartDialog && chartDialogTarget && chartDialog.kind === 'format' && (
+          <ChartFormatPane
+            chart={chartDialogTarget.chart}
+            element={
+              chartElement?.visualId === chartDialogTarget.visualId ? chartElement.element : null
+            }
+            onEdit={(edit) => chartEditRef.current(chartDialog.editKey, edit)}
+            onClose={() => setChartDialog(null)}
+          />
+        )}
+        {chartDialog && chartDialogTarget && chartDialog.kind === 'select-data' && (
+          <SelectDataDialog
+            chart={chartDialogTarget.chart}
+            supported={chartDialogTarget.supported}
+            readVector={(range) => chartVectorRef.current(chartDialog.editKey, range)}
+            onApply={(edit) => chartEditRef.current(chartDialog.editKey, edit)}
+            onClose={() => setChartDialog(null)}
+          />
+        )}
+      </Suspense>
       <ExcelShell
         onOpen={() => void handleInspectWorkbook()}
         fullscreen={display.mode === 'fullscreen'}
@@ -3162,50 +3191,52 @@ export function App(): React.JSX.Element {
           )
         }}
       />
-      {advancedFilterColumns !== null && (
-        <AdvancedFilterDialog
-          columns={advancedFilterColumns}
-          onApply={(criteria) => handleApplyAdvancedFilterImpl(dataToolsContext(), criteria)}
-          onClose={() => setAdvancedFilterColumns(null)}
-        />
-      )}
-      {symbolDialogOpen && (
-        <SymbolDialog
-          onInsert={(char) => handleInsertSymbolImpl(dataToolsContext(), char)}
-          onClose={() => setSymbolDialogOpen(false)}
-        />
-      )}
-      {screenshotDialogOpen && (
-        <ScreenshotDialog
-          onInsert={(dataUrl, width, height) =>
-            handleInsertScreenshot(visualContext(), dataUrl, width, height)
-          }
-          onClose={() => setScreenshotDialogOpen(false)}
-        />
-      )}
-      {iconsDialogOpen && (
-        <IconsDialog
-          onInsert={(dataUrl, size, name) =>
-            handleInsertIconImpl(visualContext(), dataUrl, size, name)
-          }
-          onClose={() => setIconsDialogOpen(false)}
-        />
-      )}
-      {equationDialogOpen && (
-        <EquationDialog
-          onInsert={(dataUrl, width, height) =>
-            handleInsertEquationImpl(visualContext(), dataUrl, width, height)
-          }
-          onClose={() => setEquationDialogOpen(false)}
-        />
-      )}
-      {recommendedCharts !== null && (
-        <RecommendedChartsDialog
-          recommendations={recommendedCharts}
-          onPick={(kind) => void handleInsertChartImpl(visualContext(), kind)}
-          onClose={() => setRecommendedCharts(null)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {advancedFilterColumns !== null && (
+          <AdvancedFilterDialog
+            columns={advancedFilterColumns}
+            onApply={(criteria) => handleApplyAdvancedFilterImpl(dataToolsContext(), criteria)}
+            onClose={() => setAdvancedFilterColumns(null)}
+          />
+        )}
+        {symbolDialogOpen && (
+          <SymbolDialog
+            onInsert={(char) => handleInsertSymbolImpl(dataToolsContext(), char)}
+            onClose={() => setSymbolDialogOpen(false)}
+          />
+        )}
+        {screenshotDialogOpen && (
+          <ScreenshotDialog
+            onInsert={(dataUrl, width, height) =>
+              handleInsertScreenshot(visualContext(), dataUrl, width, height)
+            }
+            onClose={() => setScreenshotDialogOpen(false)}
+          />
+        )}
+        {iconsDialogOpen && (
+          <IconsDialog
+            onInsert={(dataUrl, size, name) =>
+              handleInsertIconImpl(visualContext(), dataUrl, size, name)
+            }
+            onClose={() => setIconsDialogOpen(false)}
+          />
+        )}
+        {equationDialogOpen && (
+          <EquationDialog
+            onInsert={(dataUrl, width, height) =>
+              handleInsertEquationImpl(visualContext(), dataUrl, width, height)
+            }
+            onClose={() => setEquationDialogOpen(false)}
+          />
+        )}
+        {recommendedCharts !== null && (
+          <RecommendedChartsDialog
+            recommendations={recommendedCharts}
+            onPick={(kind) => void handleInsertChartImpl(visualContext(), kind)}
+            onClose={() => setRecommendedCharts(null)}
+          />
+        )}
+      </Suspense>
       {slicerPicker !== null && (
         <SlicerFieldPicker
           fields={slicerPicker.fields}

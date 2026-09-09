@@ -1,5 +1,36 @@
 # Migration ledger
 
+## 2026-09-08 XLSX on-demand media and command UI
+
+The blank XLSX entry previously linked the EMF/WMF converter even though it is needed only after a
+workbook media part with a metafile MIME type is rendered. `WorkbookVisuals` now recognizes the same
+metafile MIME family locally and imports the existing DOCX-engine converter on demand. The mounted
+Univer workbook, media read path, preview output, and document authority are unchanged; the complete
+converter remains embedded in the self-contained plugin resource. A package-level RED/GREEN
+regression requires the converter to be absent from the blank-editor entry and present in a deferred
+module. Seven fresh Chromium starts record XLSX bootstrap p95 at 429.8 ms under the unchanged 500 ms
+ceiling.
+
+The same blank-entry boundary now defers command-only dialogs in `ExcelShell` and `App`, including
+formatting, pivot, formula, page-layout, advanced-filter, chart, equation, screenshot, symbol, and
+icon surfaces. The symbol value helper moved into a UI-independent module so Agent and user symbol
+insertion still converge on the same cell mutation without statically linking the dialog. Every
+dialog remains embedded in the self-contained module graph and loads only when its existing state
+becomes active. Package tests require the named deferred modules; mounted browser regressions cover
+image media, symbol, advanced filter, Name Manager, Insert Function, and Header & Footer flows.
+
+## 2026-09-08 XLSX copy-value and release visual repair
+
+The retained Save As quick-access control shifted the positional QA-button indexes used by the
+XLSX release tracer, so copy-operation scenarios invoked Save As instead of Undo and Undo instead
+of Redo. The tracer now addresses Save, Undo, and Redo by their accessible command names. During
+that repair, a source formula whose mounted engine value had not settled exposed a real
+`xlsx.range.copy_values` gap: the operation now falls back to the file-backed cached formula value
+only when the live scalar is null and the source cell is a formula. The write still uses one
+mounted Univer destination mutation and the same native Undo/Redo and save path. The release
+tracer also waits for the opened workbook before Name Box navigation and asserts column widths
+against the active workbook's measured normal-font MDW.
+
 ## 2026-09-08 blank XLSX stylesheet/theme save repair
 
 Task `01a07e95-a365-7e30-bc21-1e0916b5aacb` completed 123 mounted XLSX mutations, including six

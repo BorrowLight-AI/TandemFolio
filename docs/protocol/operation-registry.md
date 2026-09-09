@@ -351,8 +351,10 @@ R2-72 migrates `paste-special:value` into
 `xlsx.range.copy_values { sourceSheet, sourceRange, destinationSheet, destinationRange }`. The
 operation materializes computed scalar values between equal-shape ranges of at most 20,000 cells,
 supports cross-sheet destinations, and rejects invalid or partially streamed source/destination
-rectangles before reading or writing. One native destination matrix write owns Undo/Redo and saved
-output; the visible Ribbon keeps its retained Univer clipboard route.
+rectangles before reading or writing. If Univer has not yet settled a formula's live scalar, the
+operation uses that exact file-backed cell's cached formula value rather than writing null. One
+native destination matrix write owns Undo/Redo and saved output; the visible Ribbon keeps its
+retained Univer clipboard route.
 
 R2-73 migrates `paste-special:formula` into
 `xlsx.range.copy_formulas { sourceSheet, sourceRange, destinationSheet, destinationRange }`. It

@@ -229,6 +229,11 @@ export interface XlsxOperationServices {
       readonly endColumn: number
     }
   }) => Promise<ReadonlyMap<string, string>>
+  readonly readCachedFormulaValue?: (input: {
+    readonly sheetId: string
+    readonly row: number
+    readonly column: number
+  }) => string | number | boolean | undefined
   readonly refreshSparklines?: (sheetId: string) => void
   readonly addChart?: (operation: AddChartOperation) => Promise<string>
   readonly addPivot?: (operation: AddPivotOperation) => string | Promise<string>
@@ -2657,7 +2662,23 @@ const handlers = {
   'xlsx.range.copy_values': (arguments_, services) => {
     const pair = resolveXlsxRangeCopyPair('xlsx.range.copy_values', arguments_, services)
     if (!pair.ok) return pair
-    const values = pair.source.getValues().map((row) => row.map((value) => ({ v: value ?? null })))
+    const formulas = pair.source.getFormulas()
+    const sourceSheetId = xlsxWorksheet(pair.runtime, pair.sourceSheet).getSheetId()
+    const sourceRow = pair.source.getRow()
+    const sourceColumn = pair.source.getColumn()
+    const values = pair.source.getValues().map((row, rowOffset) =>
+      row.map((value, columnOffset) => {
+        const cached =
+          value === null && formulas[rowOffset]?.[columnOffset]
+            ? services.readCachedFormulaValue?.({
+                sheetId: sourceSheetId,
+                row: sourceRow + rowOffset,
+                column: sourceColumn + columnOffset,
+              })
+            : undefined
+        return { v: cached ?? value ?? null }
+      }),
+    )
     pair.destination.setValues(values as ICellData[][])
     pair.destination.activate()
     return {

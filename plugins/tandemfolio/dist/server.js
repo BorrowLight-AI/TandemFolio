@@ -62180,16 +62180,16 @@ function resolveRegisteredOperation(format, requestedOperation, visibility = "ag
 // src/generated/release-readiness.json
 var release_readiness_default = {
   schemaVersion: 1,
-  ready: true,
+  ready: false,
   formats: {
-    docx: true,
-    markdown: true,
-    xlsx: true,
-    pptx: true,
-    pdf: true
+    docx: false,
+    markdown: false,
+    xlsx: false,
+    pptx: false,
+    pdf: false
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "382d34e65c377a37c1737d5ed319b8e1e168a7d7df99fe84979edb63a052499c"
+  sourceFingerprint: "ccf3c7ca35d665b72abcb055acabf9bfe70b2fffbf42c8811c8a7eec5cf3c9ac"
 };
 
 // src/capabilities.ts

@@ -597,8 +597,12 @@ describe('XLSX operation registry', () => {
         getColumn: () => 0,
         getHeight: () => 2,
         getWidth: () => 2,
+        getFormulas: () => [
+          ['=1+2', ''],
+          ['', ''],
+        ],
         getValues: () => [
-          [3, 'North'],
+          [null, 'North'],
           [7, true],
         ],
         address,
@@ -640,6 +644,8 @@ describe('XLSX operation registry', () => {
         },
         {
           runtime: () => runtime,
+          readCachedFormulaValue: ({ sheetId, row, column }) =>
+            sheetId === 'sheet-budget' && row === 0 && column === 0 ? 3 : undefined,
           loadStaged: async () => undefined,
           save: async () => ({ ok: true, fileName: 'budget.xlsx' }),
         },

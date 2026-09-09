@@ -7,16 +7,7 @@ import { useI18n, type StringKey } from './i18n/locale'
 /// active cell) and keeps the dialog open, so several symbols can be
 /// inserted in a row — Close dismisses it.
 
-/// Appends a picked symbol to whatever the cell already holds. Numbers and
-/// booleans coerce to text: Excel's Symbol dialog also turns the cell into
-/// text when characters are appended.
-export function appendSymbol(
-  existing: string | number | boolean | null | undefined,
-  char: string,
-): string {
-  if (existing === null || existing === undefined || existing === '') return char
-  return `${String(existing)}${char}`
-}
+export { appendSymbol } from './symbol'
 
 const SYMBOL_CATEGORIES: readonly {
   readonly labelKey: StringKey

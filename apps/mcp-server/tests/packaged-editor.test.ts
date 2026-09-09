@@ -162,6 +162,57 @@ describe('packaged editor UI', () => {
     expect(html).not.toMatch(/data-module="mount-app-[^"]+\.js"/)
   })
 
+  it('keeps XLSX metafile decoding on demand outside the blank-editor entry', async () => {
+    const html = await readFile(packagedXlsxEditor, 'utf8')
+    const entry = html.match(
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true">([^<]+)<\/script>/,
+    )
+    const deferredSources = [
+      ...html.matchAll(
+        /<script type="application\/x-tandemfolio-module" data-module="([^"]+)"(?: data-encoding="(identity)")?>([\s\S]*?)<\/script>/g,
+      ),
+    ].map((match) =>
+      match[2] === 'identity'
+        ? match[3]
+        : gunzipSync(Buffer.from(match[3], 'base64')).toString('utf8'),
+    )
+
+    expect(entry, 'missing gzip-encoded XLSX entry').not.toBeNull()
+    const entrySource = gunzipSync(Buffer.from(entry![2], 'base64')).toString('utf8')
+    const converterMarker = 'metafileToDataUrl: converter returned null'
+    expect(entrySource).not.toContain(converterMarker)
+    expect(deferredSources.some((source) => source.includes(converterMarker))).toBe(true)
+  })
+
+  it('keeps XLSX command dialogs outside the blank-editor entry', async () => {
+    const html = await readFile(packagedXlsxEditor, 'utf8')
+    const deferredDialogs = [
+      'FormatCellsDialog',
+      'NameManagerDialog',
+      'PivotDialog',
+      'InsertFunctionDialog',
+      'SubtotalDialog',
+      'ConsolidateDialog',
+      'GoalSeekDialog',
+      'AllowEditRangesDialog',
+      'GoToDialog',
+      'HeaderFooterDialog',
+      'AdvancedFilterDialog',
+      'SymbolDialog',
+      'ScreenshotDialog',
+      'IconsDialog',
+      'EquationDialog',
+      'RecommendedChartsDialog',
+      'ChartPanels',
+    ]
+
+    for (const dialog of deferredDialogs) {
+      expect(html, `missing deferred ${dialog} module`).toMatch(
+        new RegExp(`data-module="${dialog}-[^"]+\\.js"`),
+      )
+    }
+  })
+
   it('packages the Markdown community renderer without product AI or Electron code', async () => {
     const html = await readFile(packagedMarkdownEditor, 'utf8')
     expect(html).toContain('TandemFolio · Markdown')

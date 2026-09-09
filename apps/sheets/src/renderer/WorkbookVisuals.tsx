@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { BooleanNumber, numfmt } from '@univerjs/core'
-import { isMetafileMime, metafileToDataUrl } from '@genoffice/docx-engine/metafile'
 import { shapePreviewPath } from '@genoffice/ui'
 
 import type { createUniver } from './create-univer'
@@ -1034,6 +1033,21 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes
 }
 
+const WORKBOOK_METAFILE_MIMES = new Set([
+  'image/emf',
+  'image/x-emf',
+  'image/wmf',
+  'image/x-wmf',
+  'image/emz',
+  'image/x-emz',
+  'image/wmz',
+  'image/x-wmz',
+])
+
+function isWorkbookMetafileMime(mime: string): boolean {
+  return WORKBOOK_METAFILE_MIMES.has(mime)
+}
+
 function useWorkbookMediaUrl(
   sessionId: string | undefined,
   visualId: string,
@@ -1047,8 +1061,10 @@ function useWorkbookMediaUrl(
     void window.desktopApi
       .readWorkbookMedia({ sessionId, visualId })
       .then(async (media) => {
-        const next = isMetafileMime(media.mediaType)
-          ? await metafileToDataUrl(base64ToBytes(media.base64), media.mediaType)
+        const next = isWorkbookMetafileMime(media.mediaType)
+          ? await import('@genoffice/docx-engine/metafile').then(({ metafileToDataUrl }) =>
+              metafileToDataUrl(base64ToBytes(media.base64), media.mediaType),
+            )
           : `data:${media.mediaType};base64,${media.base64}`
         if (!isCurrent) return
         if (next) setSource(next)

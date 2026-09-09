@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { appendSymbol } from '../src/renderer/SymbolDialog'
+import { appendSymbol } from '../src/renderer/symbol'
 
 describe('appendSymbol', () => {
   it('puts the symbol alone into an empty cell', () => {

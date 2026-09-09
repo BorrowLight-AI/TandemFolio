@@ -686,8 +686,9 @@ R2-72 adds `xlsx.range.copy_values` as the first explicit clipboard replacement.
 source/destination worksheets and same-shaped A1 ranges, copies computed scalar values rather than
 formulas, supports cross-sheet targets, caps each operation at 20,000 cells, and rejects source or
 destination rectangles that are still streaming. The real-host tracer proves formula-to-value
-materialization, shared UI Undo/Redo, one Agent revision, and saved OOXML without a destination
-formula. Agent `paste-special:value` is rejected, raising the XLSX registry count to fifty-four.
+materialization, including file-cached formula fallback while the live engine value is unsettled,
+shared UI Undo/Redo, one Agent revision, and saved OOXML without a destination formula. Agent
+`paste-special:value` is rejected, raising the XLSX registry count to fifty-four.
 
 R2-73 adds `xlsx.range.copy_formulas` over the same explicit, bounded range-pair seam. It copies
 formula cells with Univer-native row/column reference translation, copies non-formula cells as

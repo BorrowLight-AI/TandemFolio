@@ -1,6 +1,18 @@
 import { expect, test, type FrameLocator } from '@playwright/test'
 import JSZip from 'jszip'
 
+function workbookSaveButton(editor: FrameLocator) {
+  return editor.getByRole('button', { name: '保存（⌘S）', exact: true })
+}
+
+function workbookUndoButton(editor: FrameLocator) {
+  return editor.getByRole('button', { name: '撤销', exact: true })
+}
+
+function workbookRedoButton(editor: FrameLocator) {
+  return editor.getByRole('button', { name: '重做', exact: true })
+}
+
 test('XLSX exposes file, save, and fullscreen as accessible icon-only controls', async ({
   page,
 }) => {
@@ -337,7 +349,7 @@ test('an MCP cell edit changes the mounted workbook revision and saved XLSX', as
     )
     .toBe('After')
 
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const zip = await JSZip.loadAsync(await readSavedWorkbook())
   const sheetXml = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
   expect(sheetXml).toContain('After')
@@ -466,7 +478,7 @@ test('the XLSX history operations undo and redo the latest mounted workbook edit
     )
     .toBe('After')
 
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const zip = await JSZip.loadAsync(await readSavedWorkbook())
   const sheetXml = await zip.file('xl/worksheets/sheet1.xml')!.async('text')
   expect(sheetXml).toContain('After')
@@ -528,7 +540,7 @@ test('the XLSX copy-values operation copies computed values through shared undo 
     .toMatchObject({ address: 'D1', value: 3 })
 
   const nameBox = editor.getByRole('textbox', { name: 'Name Box' })
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await nameBox.fill('D1')
   await nameBox.press('Enter')
   await expect
@@ -540,9 +552,7 @@ test('the XLSX copy-values operation copies computed values through shared undo 
       }),
     )
     .toMatchObject({ address: 'D1', value: null })
-  await editor.locator('button.qa-btn').nth(2).click()
-  await nameBox.fill('D1')
-  await nameBox.press('Enter')
+  await workbookRedoButton(editor).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -553,7 +563,7 @@ test('the XLSX copy-values operation copies computed values through shared undo 
     )
     .toMatchObject({ address: 'D1', value: 3 })
 
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedZip = await JSZip.loadAsync(await readSavedWorkbook())
   const sheetXml = await savedZip.file('xl/worksheets/sheet1.xml')!.async('text')
   const destinationCell = /<c r="D1"[^>]*>([\s\S]*?)<\/c>/.exec(sheetXml)?.[1]
@@ -611,15 +621,15 @@ test('the XLSX copy-formulas operation translates references through shared undo
     .toMatchObject({ selection: { activeCell: { address: 'D3' } } })
 
   const nameBox = editor.getByRole('textbox', { name: 'Name Box' })
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await nameBox.fill('D3')
   await nameBox.press('Enter')
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({ selection: { activeCell: { address: 'D3', value: null } } })
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
 
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedZip = await JSZip.loadAsync(await readSavedWorkbook())
   const sheetXml = await savedZip.file('xl/worksheets/sheet1.xml')!.async('text')
   expect(/<c r="D3"[^>]*>[\s\S]*?<f>C3\+\$A\$1\+C\$1\+\$A3<\/f>/.test(sheetXml)).toBe(true)
@@ -758,11 +768,11 @@ test('the XLSX copy-formats operation replaces only cell formats through shared 
       },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({ selection: { activeCell: { value: 99, style: { fillColor: '#FFCC99' } } } })
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({
@@ -770,7 +780,7 @@ test('the XLSX copy-formats operation replaces only cell formats through shared 
     })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const savedZip = await JSZip.loadAsync(
@@ -912,13 +922,13 @@ test('the XLSX copy-without-borders operation copies cells while preserving dest
       },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({
       selection: { activeCell: { value: 99, style: { fillColor: '#FFCC99' } } },
     })
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({
@@ -926,7 +936,7 @@ test('the XLSX copy-without-borders operation copies cells while preserving dest
     })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const savedZip = await JSZip.loadAsync(
@@ -1042,12 +1052,12 @@ test('the XLSX copy-column-widths operation copies explicit widths through share
       },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoZip = await JSZip.loadAsync(
@@ -1079,7 +1089,7 @@ test('a user grid edit is preserved by the browser XLSX save path', async ({ pag
   await page.keyboard.press('Enter')
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const download = await downloadPromise
   const savedPath = await download.path()
   expect(savedPath).not.toBeNull()
@@ -1109,7 +1119,7 @@ test('a user formula remains a formula after browser XLSX save', async ({ page }
   await page.keyboard.press('Enter')
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -1157,7 +1167,7 @@ test('an MCP range edit updates the shared grid and saved XLSX', async ({ page }
     .toMatchObject({ ok: true, revision: 1 })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -1737,9 +1747,9 @@ test('an XLSX shape registry add shares undo and survives typed browser save/reo
     })
   await expect(editor.locator('.xlsx-shape-drawn')).toHaveCount(1)
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect(editor.locator('.xlsx-shape-drawn')).toHaveCount(0)
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await expect(editor.locator('.xlsx-shape-drawn')).toHaveCount(1)
 
   const downloadPromise = page.waitForEvent('download')
@@ -2654,7 +2664,7 @@ test('the restored Home ribbon formats the active Univer selection and shares un
     .toBe(true)
   await expect(editor.locator('button[data-tip="加粗"]')).toHaveClass(/is-active/)
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -2681,7 +2691,7 @@ test('a user Ribbon format is preserved in XLSX styles on save', async ({ page }
   await expect(editor.locator('button[data-tip="加粗"]')).toHaveClass(/is-active/)
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -2706,11 +2716,11 @@ test('undo removes a Ribbon format from the XLSX that is subsequently saved', as
 
   await editor.locator('button[data-tip="加粗"]').click()
   await expect(editor.locator('button[data-tip="加粗"]')).toHaveClass(/is-active/)
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect(editor.locator('button[data-tip="加粗"]')).not.toHaveClass(/is-active/)
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -2770,7 +2780,7 @@ test('the MCP text-style registry operation shares the active Univer state and u
     .toMatchObject({ ok: true, revision: 1 })
   await expect(editor.locator('button[data-tip="倾斜"]')).toHaveClass(/is-active/)
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect(editor.locator('button[data-tip="倾斜"]')).not.toHaveClass(/is-active/)
 })
 
@@ -2978,17 +2988,17 @@ test('the XLSX range-style registry operations share state, undo, and saved outp
       },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({ selection: { activeCell: { style: { fillColor: '#DDEBF7' } } } })
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await expect
     .poll(() => page.evaluate(() => window.__codexVisualHost.lastPollArguments))
     .toMatchObject({ selection: { activeCell: { style: { fillColor: '#FFCC99' } } } })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -3090,7 +3100,7 @@ test('the XLSX number-format, merge, clear, and fill registry operations share s
       }),
     )
     .toBeNull()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -3100,7 +3110,7 @@ test('the XLSX number-format, merge, clear, and fill registry operations share s
       }),
     )
     .toBe('clear')
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -3112,7 +3122,7 @@ test('the XLSX number-format, merge, clear, and fill registry operations share s
     .toBeNull()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -3218,7 +3228,7 @@ test('the XLSX sort and remove-duplicates registry operations share state, undo,
     )
     .toMatchObject({ address: 'A5', value: null })
 
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await canvas.click({ position: { x: 70, y: 135 } })
   await expect
     .poll(() =>
@@ -3229,7 +3239,7 @@ test('the XLSX sort and remove-duplicates registry operations share state, undo,
       }),
     )
     .toBe('Alpha')
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await canvas.click({ position: { x: 70, y: 135 } })
   await expect
     .poll(() =>
@@ -3242,7 +3252,7 @@ test('the XLSX sort and remove-duplicates registry operations share state, undo,
     .toBeNull()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -3312,10 +3322,10 @@ test('the XLSX filter registry operation and Ribbon share undo and saved output'
       .toMatchObject({ ok: true, revision: index + 1 })
   }
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -3326,13 +3336,13 @@ test('the XLSX filter registry operation and Ribbon share undo and saved output'
 
   await editor.getByRole('button', { name: '数据', exact: true }).click()
   await editor.locator('.ribbon-tool.large').filter({ hasText: '筛选' }).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeDisabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await expect(workbookRedoButton(editor)).toBeDisabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
 
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -3366,7 +3376,7 @@ test('the XLSX filter registry operation and Ribbon share undo and saved output'
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -3456,11 +3466,11 @@ test('the XLSX filter criteria operations and retained Data controls share undo 
       .toMatchObject({ ok: true, revision: index + 1 })
   }
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await workbookRedoButton(editor).click()
   await editor.getByRole('button', { name: '数据', exact: true }).click()
   await editor.locator('button[data-tip="清除筛选条件"]').click()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
 
   await editor.getByRole('button', { name: '高级', exact: true }).click()
   const dialog = editor.getByRole('dialog', { name: '高级筛选' })
@@ -3474,7 +3484,7 @@ test('the XLSX filter criteria operations and retained Data controls share undo 
   await expect(dialog).toBeHidden()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const savedBytes = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -3518,7 +3528,7 @@ test('the XLSX filter criteria operations and retained Data controls share undo 
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -3565,12 +3575,12 @@ test('the XLSX row-height registry operation shares user undo and saved output',
       output: { sheet: 'Sheet1', row: 1, count: 2, heightPoints: 24.75 },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -3608,7 +3618,7 @@ test('the XLSX row-height registry operation shares user undo and saved output',
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -3649,25 +3659,25 @@ test('the XLSX column-width registry operation shares user undo and saved output
     .toMatchObject({
       ok: true,
       revision: 1,
-      output: { sheet: 'Sheet1', column: 'C', count: 2, widthCharacters: 12.4296875 },
+      output: { sheet: 'Sheet1', column: 'C', count: 2, widthCharacters: 12.5 },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
   const redoZip = await JSZip.loadAsync(redoBytes)
   const redoSheetXml = await redoZip.file('xl/worksheets/sheet1.xml')!.async('text')
   expect(redoSheetXml).toMatch(
-    /<col\b(?=[^>]*\bmin="3")(?=[^>]*\bmax="3")(?=[^>]*\bwidth="12\.4296875")(?=[^>]*\bcustomWidth="1")/,
+    /<col\b(?=[^>]*\bmin="3")(?=[^>]*\bmax="3")(?=[^>]*\bwidth="12\.5")(?=[^>]*\bcustomWidth="1")/,
   )
   expect(redoSheetXml).toMatch(
-    /<col\b(?=[^>]*\bmin="4")(?=[^>]*\bmax="4")(?=[^>]*\bwidth="12\.4296875")(?=[^>]*\bcustomWidth="1")/,
+    /<col\b(?=[^>]*\bmin="4")(?=[^>]*\bmax="4")(?=[^>]*\bwidth="12\.5")(?=[^>]*\bcustomWidth="1")/,
   )
 
   await page.reload()
@@ -3696,14 +3706,14 @@ test('the XLSX column-width registry operation shares user undo and saved output
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
     await import('node:fs/promises').then((fs) => fs.readFile(reopenedPath!)),
   )
   const reopenedSheetXml = await reopenedZip.file('xl/worksheets/sheet1.xml')!.async('text')
-  expect(reopenedSheetXml).toContain('width="12.4296875"')
+  expect(reopenedSheetXml).toContain('width="12.5"')
 })
 
 test('the XLSX freeze registry operation shares user undo and saved output', async ({ page }) => {
@@ -3738,12 +3748,12 @@ test('the XLSX freeze registry operation shares user undo and saved output', asy
       output: { sheet: 'Sheet1', frozenRows: 2, frozenColumns: 1 },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -3779,7 +3789,7 @@ test('the XLSX freeze registry operation shares user undo and saved output', asy
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -3821,12 +3831,12 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
       output: { sheet: 'Sheet1', visible: false },
     })
 
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -3860,7 +3870,7 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -3905,11 +3915,11 @@ test('the XLSX formula-view registry operation shares user undo and saved output
       output: { sheet: 'Sheet1', enabled: true },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -3935,12 +3945,12 @@ test('the XLSX formula-view registry operation shares user undo and saved output
       ),
     )
     .toMatchObject({ ok: true, revision: 2 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -3974,7 +3984,7 @@ test('the XLSX formula-view registry operation shares user undo and saved output
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4018,9 +4028,9 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
       output: { sheet: 'Sheet1', orientation: 'landscape' },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-page-orientation-undo-persist',
@@ -4039,7 +4049,7 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4065,12 +4075,12 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4104,7 +4114,7 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4148,9 +4158,9 @@ test('the XLSX page-margins registry operation shares user undo and saved output
       output: { sheet: 'Sheet1', margins: 'wide' },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-page-margins-undo-persist',
@@ -4169,7 +4179,7 @@ test('the XLSX page-margins registry operation shares user undo and saved output
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4195,12 +4205,12 @@ test('the XLSX page-margins registry operation shares user undo and saved output
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4236,7 +4246,7 @@ test('the XLSX page-margins registry operation shares user undo and saved output
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4280,9 +4290,9 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
       output: { sheet: 'Sheet1', paperSize: 9 },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-paper-size-undo-persist',
@@ -4301,7 +4311,7 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4327,12 +4337,12 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4366,7 +4376,7 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4410,9 +4420,9 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
       output: { sheet: 'Sheet1', widthPages: 2, heightPages: 3 },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-fit-to-pages-undo-persist',
@@ -4431,7 +4441,7 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4458,12 +4468,12 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4498,7 +4508,7 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4545,9 +4555,9 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
       output: { sheet: 'Sheet1', scalePercent: 80 },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-print-scale-undo-persist',
@@ -4566,7 +4576,7 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4593,11 +4603,11 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4632,7 +4642,7 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4677,9 +4687,9 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
       output: { sheet: 'Sheet1', enabled: true },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-print-gridlines-undo-persist',
@@ -4698,7 +4708,7 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4724,11 +4734,11 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4762,7 +4772,7 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4788,8 +4798,8 @@ test('the retained print-gridline Ribbon control shares user undo and saved outp
   const printGridlines = editor.locator('button[data-tip="打印网格线"]')
   await printGridlines.click()
   await expect(editor.locator('.workbook-status')).toContainText('将打印网格线')
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
 
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
@@ -4810,7 +4820,7 @@ test('the retained print-gridline Ribbon control shares user undo and saved outp
     .toMatchObject({ ok: true, revision: 1 })
 
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4820,11 +4830,11 @@ test('the retained print-gridline Ribbon control shares user undo and saved outp
   expect(undoSheetXml).not.toMatch(/<printOptions\b[^>]*\bgridLines=/)
 
   await printGridlines.click()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4844,7 +4854,7 @@ test('the retained print-gridline Ribbon control shares user undo and saved outp
   await expect(reopened.locator('button[data-tip="打印网格线"] i.check-box')).toHaveText('✓')
   await reopened.locator('button[data-tip="打印网格线"]').click()
   const disabledDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const disabledPath = await (await disabledDownloadPromise).path()
   expect(disabledPath).not.toBeNull()
   const disabledZip = await JSZip.loadAsync(
@@ -4888,9 +4898,9 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
       output: { sheet: 'Sheet1', enabled: true },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-print-headings-undo-persist',
@@ -4909,7 +4919,7 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -4935,11 +4945,11 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -4973,7 +4983,7 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
     )
     .toMatchObject({ ok: true, revision: 1 })
   const reopenedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const reopenedPath = await (await reopenedDownloadPromise).path()
   expect(reopenedPath).not.toBeNull()
   const reopenedZip = await JSZip.loadAsync(
@@ -4999,8 +5009,8 @@ test('the retained print-heading Ribbon control shares user undo and saved outpu
   const printHeadings = editor.locator('button[data-tip="打印行号列标"]')
   await printHeadings.click()
   await expect(editor.locator('.workbook-status')).toContainText('将打印行号列标')
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
 
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
@@ -5021,7 +5031,7 @@ test('the retained print-heading Ribbon control shares user undo and saved outpu
     .toMatchObject({ ok: true, revision: 1 })
 
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -5031,11 +5041,11 @@ test('the retained print-heading Ribbon control shares user undo and saved outpu
   expect(undoSheetXml).not.toMatch(/<printOptions\b[^>]*\bheadings=/)
 
   await printHeadings.click()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -5055,7 +5065,7 @@ test('the retained print-heading Ribbon control shares user undo and saved outpu
   await expect(reopened.locator('button[data-tip="打印行号列标"] i.check-box')).toHaveText('✓')
   await reopened.locator('button[data-tip="打印行号列标"]').click()
   const disabledDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const disabledPath = await (await disabledDownloadPromise).path()
   expect(disabledPath).not.toBeNull()
   const disabledZip = await JSZip.loadAsync(
@@ -5099,9 +5109,9 @@ test('the XLSX print-area registry operation shares user undo and saved output',
       output: { sheet: 'Sheet1', range: 'B2:D8' },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-print-area-undo-persist',
@@ -5120,7 +5130,7 @@ test('the XLSX print-area registry operation shares user undo and saved output',
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -5146,11 +5156,11 @@ test('the XLSX print-area registry operation shares user undo and saved output',
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -5194,7 +5204,7 @@ test('the XLSX print-area registry operation shares user undo and saved output',
       output: { sheet: 'Sheet1', range: null },
     })
   const clearedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const clearedPath = await (await clearedDownloadPromise).path()
   expect(clearedPath).not.toBeNull()
   const clearedZip = await JSZip.loadAsync(
@@ -5238,9 +5248,9 @@ test('the XLSX print-title registry operation shares user undo and saved output'
       output: { sheet: 'Sheet1', rows: '2:8' },
     })
 
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-print-titles-undo-persist',
@@ -5259,7 +5269,7 @@ test('the XLSX print-title registry operation shares user undo and saved output'
     )
     .toMatchObject({ ok: true, revision: 2 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -5285,11 +5295,11 @@ test('the XLSX print-title registry operation shares user undo and saved output'
       ),
     )
     .toMatchObject({ ok: true, revision: 3 })
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -5333,7 +5343,7 @@ test('the XLSX print-title registry operation shares user undo and saved output'
       output: { sheet: 'Sheet1', rows: null },
     })
   const clearedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const clearedPath = await (await clearedDownloadPromise).path()
   expect(clearedPath).not.toBeNull()
   const clearedZip = await JSZip.loadAsync(
@@ -5357,8 +5367,8 @@ test('the retained print-title Ribbon menu shares user undo and saved output', a
   await editor.getByRole('button', { name: '打印标题' }).click()
   await editor.getByRole('option', { name: '重复第 1 行' }).click()
   await expect(editor.locator('.workbook-status')).toContainText('第 1 行将在每页顶端重复')
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
 
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
@@ -5378,7 +5388,7 @@ test('the retained print-title Ribbon menu shares user undo and saved output', a
     )
     .toMatchObject({ ok: true, revision: 1 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -5402,11 +5412,11 @@ test('the retained print-title Ribbon menu shares user undo and saved output', a
   await editor.getByRole('button', { name: '打印标题' }).click()
   await editor.getByRole('option', { name: '重复所选行' }).click()
   await expect(editor.locator('.workbook-status')).toContainText('第 2:8 行将在每页顶端重复')
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -5431,7 +5441,7 @@ test('the retained print-title Ribbon menu shares user undo and saved output', a
   await reopened.getByRole('option', { name: '清除打印标题' }).click()
   await expect(reopened.locator('.workbook-status')).toContainText('打印标题已清除')
   const clearedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const clearedPath = await (await clearedDownloadPromise).path()
   expect(clearedPath).not.toBeNull()
   const clearedZip = await JSZip.loadAsync(
@@ -5450,6 +5460,7 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: await xlsxWithA1('Print area'),
   })
+  await expect(editor.locator('.workbook-status')).toContainText('ribbon-print-area.xlsx')
 
   const nameBox = editor.getByRole('textbox', { name: 'Name Box' })
   await nameBox.fill('B2:D8')
@@ -5467,8 +5478,8 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
   await editor.getByRole('button', { name: '打印区域' }).click()
   await editor.getByRole('option', { name: '设置打印区域' }).click()
   await expect(editor.locator('.workbook-status')).toContainText('打印区域：B2:D8')
-  await expect(editor.locator('button.qa-btn').nth(1)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
 
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
@@ -5488,7 +5499,7 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
     )
     .toMatchObject({ ok: true, revision: 1 })
   const undoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const undoPath = await (await undoDownloadPromise).path()
   expect(undoPath).not.toBeNull()
   const undoZip = await JSZip.loadAsync(
@@ -5501,11 +5512,11 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
   await nameBox.press('Enter')
   await editor.getByRole('button', { name: '打印区域' }).click()
   await editor.getByRole('option', { name: '设置打印区域' }).click()
-  await editor.locator('button.qa-btn').nth(1).click()
-  await expect(editor.locator('button.qa-btn').nth(2)).toBeEnabled()
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+  await workbookRedoButton(editor).click()
   const redoDownloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const redoPath = await (await redoDownloadPromise).path()
   expect(redoPath).not.toBeNull()
   const redoBytes = await import('node:fs/promises').then((fs) => fs.readFile(redoPath!))
@@ -5530,7 +5541,7 @@ test('the retained print-area Ribbon menu shares user undo and saved output', as
   await reopened.getByRole('option', { name: '取消打印区域' }).click()
   await expect(reopened.locator('.workbook-status')).toContainText('打印区域已清除')
   const clearedDownloadPromise = page.waitForEvent('download')
-  await reopened.locator('button.qa-btn').first().click()
+  await workbookSaveButton(reopened).click()
   const clearedPath = await (await clearedDownloadPromise).path()
   expect(clearedPath).not.toBeNull()
   const clearedZip = await JSZip.loadAsync(
@@ -5554,7 +5565,7 @@ test('a user can insert a row and the shifted cells survive save and reopen', as
   await editor.getByRole('button', { name: '插入行' }).click()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -5597,7 +5608,7 @@ test('undo reverses a user row insertion in the subsequently saved XLSX', async 
   await expect(editor.locator('.workbook-status')).toContainText('undo-insert-row.xlsx')
 
   await editor.getByRole('button', { name: '插入行' }).click()
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -5660,7 +5671,7 @@ test('an MCP row insertion updates the shared grid and survives save and reopen'
     .toMatchObject({ ok: true, revision: 1, output: { sheet: 'Sheet1', row: 1, count: 2 } })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -5726,7 +5737,7 @@ test('an MCP column insertion updates the shared grid and survives save and reop
     })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -5809,7 +5820,7 @@ test('MCP row and column deletion share the community journal and saved package'
     .toMatchObject({ ok: true, revision: 3 })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -5851,7 +5862,7 @@ test('an MCP sheet insertion creates a valid worksheet package that reopens', as
     .toMatchObject({ ok: true, revision: 1, output: { name: 'Budget' } })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -5898,13 +5909,13 @@ test('the community sheet-tab add button shares the saved workbook and undo stac
 
   await editor.locator('[data-u-comp="sheet-bar-append-button"]').first().click()
   await expect(editor.locator('[aria-label="Sheet tabs"] [role="tab"]')).toHaveCount(2)
-  await editor.locator('button.qa-btn').nth(1).click()
+  await workbookUndoButton(editor).click()
   await expect(editor.locator('[aria-label="Sheet tabs"] [role="tab"]')).toHaveCount(1)
-  await editor.locator('button.qa-btn').nth(2).click()
+  await workbookRedoButton(editor).click()
   await expect(editor.locator('[aria-label="Sheet tabs"] [role="tab"]')).toHaveCount(2)
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -5943,7 +5954,7 @@ test('an MCP sheet rename updates the tab and survives save and reopen', async (
   await expect(editor.getByRole('tab', { name: 'Summary' })).toBeVisible()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -6011,7 +6022,7 @@ test('an MCP sheet deletion removes its package parts and survives reopen', asyn
   await expect(editor.getByRole('tab', { name: 'Survivor' })).toBeVisible()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -6082,7 +6093,7 @@ test('an MCP sheet move persists the tab order and reopens in that order', async
     })
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -6125,7 +6136,7 @@ test('a user-defined name survives XLSX save and reopen through the community Na
   await dialog.getByRole('button', { name: '关闭' }).click()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))
@@ -6169,7 +6180,7 @@ test('the community Insert Function dialog writes a formula that survives XLSX s
   await expect(dialog).toBeHidden()
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const zip = await JSZip.loadAsync(
@@ -6224,7 +6235,7 @@ test('community Page Layout and Header & Footer edits survive XLSX save and reop
   await expect(editor.locator('.workbook-status')).toContainText('页眉页脚已更新')
 
   const downloadPromise = page.waitForEvent('download')
-  await editor.locator('button.qa-btn').first().click()
+  await workbookSaveButton(editor).click()
   const savedPath = await (await downloadPromise).path()
   expect(savedPath).not.toBeNull()
   const saved = await import('node:fs/promises').then((fs) => fs.readFile(savedPath!))

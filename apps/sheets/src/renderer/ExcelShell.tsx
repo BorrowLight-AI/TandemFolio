@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { platformShortcuts } from '@genoffice/i18n'
 import {
   EditorFileIcon,
@@ -17,31 +17,58 @@ import {
 } from './ribbon-icons'
 
 import { ColorDropdown } from './ColorDropdown'
-import { FormatCellsDialog } from './FormatCellsDialog'
-import { GoToDialog } from './GoToDialog'
 import { useI18n, type StringKey } from './i18n/locale'
-import { NameManagerDialog, type DefinedNameAction, type DefinedNameRow } from './NameManagerDialog'
+import type { DefinedNameAction, DefinedNameRow } from './NameManagerDialog'
 import { categoryOptionForPattern, NUMBER_FORMAT_CATEGORIES } from './number-format'
 import { type SelectionFormat } from './selection-format'
 import { fontFamilyGroups, useSystemFontFamilies } from './system-fonts'
 import { COLOR_SCHEMES, FONT_SCHEMES, THEME_PRESETS } from './themes'
 
 import type { ChartSeriesVisualState } from '../domain/chart-visual'
-import {
-  PivotDialog,
-  type PivotEditSeed,
-  type PivotField,
-  type OoXmlPivotConfig,
-} from './PivotDialog'
-import { InsertFunctionDialog } from './InsertFunctionDialog'
-import { SubtotalDialog, type SubtotalConfig } from './SubtotalDialog'
-import { ConsolidateDialog } from './ConsolidateDialog'
+import type { PivotEditSeed, PivotField, OoXmlPivotConfig } from './PivotDialog'
+import type { SubtotalConfig } from './SubtotalDialog'
 import type { ConsolidateConfig } from './consolidate'
-import { HeaderFooterDialog, type HeaderFooterResult } from './HeaderFooterDialog'
+import type { HeaderFooterResult } from './HeaderFooterDialog'
 import type { HeaderFooterParts } from './header-footer-types'
-import { GoalSeekDialog } from './GoalSeekDialog'
 import type { GoalSeekResult } from './goal-seek'
-import { AllowEditRangesDialog, type AllowEditRange } from './AllowEditRangesDialog'
+import type { AllowEditRange } from './AllowEditRangesDialog'
+
+const FormatCellsDialog = lazy(() =>
+  import('./FormatCellsDialog').then(({ FormatCellsDialog }) => ({ default: FormatCellsDialog })),
+)
+const GoToDialog = lazy(() =>
+  import('./GoToDialog').then(({ GoToDialog }) => ({ default: GoToDialog })),
+)
+const NameManagerDialog = lazy(() =>
+  import('./NameManagerDialog').then(({ NameManagerDialog }) => ({ default: NameManagerDialog })),
+)
+const PivotDialog = lazy(() =>
+  import('./PivotDialog').then(({ PivotDialog }) => ({ default: PivotDialog })),
+)
+const InsertFunctionDialog = lazy(() =>
+  import('./InsertFunctionDialog').then(({ InsertFunctionDialog }) => ({
+    default: InsertFunctionDialog,
+  })),
+)
+const SubtotalDialog = lazy(() =>
+  import('./SubtotalDialog').then(({ SubtotalDialog }) => ({ default: SubtotalDialog })),
+)
+const ConsolidateDialog = lazy(() =>
+  import('./ConsolidateDialog').then(({ ConsolidateDialog }) => ({ default: ConsolidateDialog })),
+)
+const HeaderFooterDialog = lazy(() =>
+  import('./HeaderFooterDialog').then(({ HeaderFooterDialog }) => ({
+    default: HeaderFooterDialog,
+  })),
+)
+const GoalSeekDialog = lazy(() =>
+  import('./GoalSeekDialog').then(({ GoalSeekDialog }) => ({ default: GoalSeekDialog })),
+)
+const AllowEditRangesDialog = lazy(() =>
+  import('./AllowEditRangesDialog').then(({ AllowEditRangesDialog }) => ({
+    default: AllowEditRangesDialog,
+  })),
+)
 
 // No File tab: file commands live in the macOS
 // application menu (File → Open/Save/Save As) and the toolbar icons.
@@ -511,14 +538,15 @@ export function ExcelShell({
           </footer>
         </div>
       </div>
-      {showFormatCells && (
-        <FormatCellsDialog
-          selectionFormat={selectionFormat}
-          anchorValue={onGetAnchorValue()}
-          onCommand={onCommand}
-          onClose={() => setShowFormatCells(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showFormatCells && (
+          <FormatCellsDialog
+            selectionFormat={selectionFormat}
+            anchorValue={onGetAnchorValue()}
+            onCommand={onCommand}
+            onClose={() => setShowFormatCells(false)}
+          />
+        )}
       {axisSizeTarget && (
         <AxisSizeDialog
           axis={axisSizeTarget}
@@ -632,14 +660,15 @@ export function ExcelShell({
           onClose={() => setShowGoTo(false)}
         />
       )}
-      {showHeaderFooter && (
-        <HeaderFooterDialog
-          initialHeader={pageLayout.header ?? null}
-          initialFooter={pageLayout.footer ?? null}
-          onApply={onApplyHeaderFooter}
-          onClose={() => setShowHeaderFooter(false)}
-        />
-      )}
+        {showHeaderFooter && (
+          <HeaderFooterDialog
+            initialHeader={pageLayout.header ?? null}
+            initialFooter={pageLayout.footer ?? null}
+            onApply={onApplyHeaderFooter}
+            onClose={() => setShowHeaderFooter(false)}
+          />
+        )}
+      </Suspense>
     </main>
   )
 }

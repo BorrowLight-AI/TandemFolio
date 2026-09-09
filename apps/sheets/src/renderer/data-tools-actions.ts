@@ -28,7 +28,7 @@ import {
   applyWorkbookOutlineLevels,
   type WorkbookOutlineAxis,
 } from './outline-actions'
-import { appendSymbol } from './SymbolDialog'
+import { appendSymbol } from './symbol'
 import {
   a1RangeRef,
   a1RowRangeRef,
