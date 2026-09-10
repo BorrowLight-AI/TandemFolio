@@ -62189,7 +62189,7 @@ var release_readiness_default = {
     pdf: true
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "9ecbcd09b8f20c0692f184f97d1a72ed9ad3bce499e0d2e99748fb541563f42b"
+  sourceFingerprint: "7b682cec889250a9ffa0dce00d592be43acfb5ec492b6b4908ceaa5c509a30ab"
 };
 
 // src/capabilities.ts

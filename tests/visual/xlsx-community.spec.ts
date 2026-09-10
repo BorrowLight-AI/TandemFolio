@@ -3381,7 +3381,7 @@ test('the XLSX filter registry operation and Ribbon share undo and saved output'
       commandId: 'xlsx-registry-filter-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Name' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened filter save' },
     })
   })
   await expect
@@ -3533,7 +3533,7 @@ test('the XLSX filter criteria operations and retained Data controls share undo 
       commandId: 'xlsx-registry-filter-criteria-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Name' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened criteria save' },
     })
   })
   await expect
@@ -3623,7 +3623,7 @@ test('the XLSX row-height registry operation shares user undo and saved output',
       commandId: 'xlsx-row-height-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Sized row' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened row-height save' },
     })
   })
   await expect
@@ -3711,7 +3711,7 @@ test('the XLSX column-width registry operation shares user undo and saved output
       commandId: 'xlsx-column-width-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Sized column' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened column-width save' },
     })
   })
   await expect
@@ -3794,7 +3794,7 @@ test('the XLSX freeze registry operation shares user undo and saved output', asy
       commandId: 'xlsx-sheet-freeze-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Frozen sheet' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened freeze save' },
     })
   })
   await expect
@@ -3875,7 +3875,7 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
       commandId: 'xlsx-sheet-gridlines-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Gridlines' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened gridline save' },
     })
   })
   await expect
@@ -3989,7 +3989,7 @@ test('the XLSX formula-view registry operation shares user undo and saved output
       commandId: 'xlsx-sheet-formula-view-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Formula view' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened formula-view save' },
     })
   })
   await expect
@@ -4119,7 +4119,7 @@ test('the XLSX page-orientation registry operation shares user undo and saved ou
       commandId: 'xlsx-sheet-page-orientation-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Page orientation' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened orientation save' },
     })
   })
   await expect
@@ -4251,7 +4251,7 @@ test('the XLSX page-margins registry operation shares user undo and saved output
       commandId: 'xlsx-sheet-page-margins-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Page margins' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened margins save' },
     })
   })
   await expect
@@ -4381,7 +4381,7 @@ test('the XLSX paper-size registry operation shares user undo and saved output',
       commandId: 'xlsx-sheet-paper-size-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Paper size' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened paper-size save' },
     })
   })
   await expect
@@ -4513,7 +4513,7 @@ test('the XLSX fit-to-pages registry operation shares user undo and saved output
       commandId: 'xlsx-sheet-fit-to-pages-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Fit to pages' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened fit-to-pages save' },
     })
   })
   await expect
@@ -4647,7 +4647,7 @@ test('the XLSX print-scale registry operation shares user undo and saved output'
       commandId: 'xlsx-sheet-print-scale-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Print scale' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened print-scale save' },
     })
   })
   await expect
@@ -4777,7 +4777,7 @@ test('the XLSX print-gridline registry operation shares user undo and saved outp
       commandId: 'xlsx-sheet-print-gridlines-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Print gridlines' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened print-gridline save' },
     })
   })
   await expect
@@ -4988,7 +4988,7 @@ test('the XLSX print-heading registry operation shares user undo and saved outpu
       commandId: 'xlsx-sheet-print-headings-reopened-touch',
       baseRevision: 0,
       operation: 'xlsx.cell.set_value',
-      arguments: { sheet: 'Sheet1', address: 'A1', value: 'Print headings' },
+      arguments: { sheet: 'Sheet1', address: 'B2', value: 'Reopened print-heading save' },
     })
   })
   await expect

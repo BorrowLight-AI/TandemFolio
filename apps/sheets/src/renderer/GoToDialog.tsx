@@ -15,15 +15,15 @@ export function GoToDialog({
 }: {
   readonly names: readonly GoToNameEntry[]
   /// Returns an error message, or null on success.
-  readonly onGo: (ref: string) => string | null
+  readonly onGo: (ref: string) => Promise<string | null>
   readonly onClose: () => void
 }): React.JSX.Element {
   const { t } = useI18n()
   const [reference, setReference] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const go = (ref: string): void => {
-    const failure = onGo(ref)
+  const go = async (ref: string): Promise<void> => {
+    const failure = await onGo(ref)
     setError(failure)
     if (failure === null) onClose()
   }
@@ -47,7 +47,7 @@ export function GoToDialog({
                 placeholder={t('dlgGoToRefPlaceholder')}
                 onChange={(event) => setReference(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && reference.trim() !== '') go(reference)
+                  if (event.key === 'Enter' && reference.trim() !== '') void go(reference)
                 }}
               />
             </label>
@@ -60,7 +60,7 @@ export function GoToDialog({
                     type="button"
                     data-tip={t('dlgGoToNameHint', { ref: entry.ref })}
                     onClick={() => setReference(entry.name)}
-                    onDoubleClick={() => go(entry.name)}
+                    onDoubleClick={() => void go(entry.name)}
                   >
                     <strong>{entry.name}</strong>
                     <span>{entry.ref}</span>
@@ -83,7 +83,7 @@ export function GoToDialog({
           <button
             className="primary-action"
             disabled={reference.trim() === ''}
-            onClick={() => go(reference)}
+            onClick={() => void go(reference)}
           >
             {t('dlgGoToGo')}
           </button>

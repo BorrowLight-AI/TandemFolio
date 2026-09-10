@@ -185,7 +185,9 @@ XLSX additionally tracks one workbook-readiness Promise from file selection thro
 visible/preload installation, and the next committed Univer frame. A command arriving during open
 waits on that Promise, and a successful XLSX acknowledgement is emitted only after native
 selection/history state has settled. This replaces timing luck from the former 500 ms cadence with
-an explicit format-owned readiness boundary.
+an explicit format-owned readiness boundary. Name Box and Go To navigation also await any active
+cell edit commit before changing selection, so a late edit completion cannot restore the previous
+cell after the host has observed the jump.
 
 Host context is authoritative for display mode. If new host context arrives while a display-mode request is pending, the request's later result is stale and cannot overwrite the newer mode or availability state.
 

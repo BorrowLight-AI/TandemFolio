@@ -139,7 +139,7 @@ export function activeCellLabel(ctx: DataToolsContext): string {
 /// Univer's parser yields NaN rows instead of throwing on garbage, so
 /// validity is decided by resolveGoToRef — the try/catch covers what
 /// getRange itself rejects: unknown sheet names and out-of-bounds ranges.
-export function goToReference(ctx: DataToolsContext, ref: string): string | null {
+export async function goToReference(ctx: DataToolsContext, ref: string): Promise<string | null> {
   const workbook = ctx.univerRef.current?.univerAPI.getActiveWorkbook()
   const worksheet = workbook?.getActiveSheet()
   if (!workbook || !worksheet) return t('appGoToNotReady')
@@ -156,7 +156,7 @@ export function goToReference(ctx: DataToolsContext, ref: string): string | null
       isCellEditing?(): boolean
       endEditingAsync?(save: boolean): Promise<boolean>
     }
-    if (editing.isCellEditing?.()) void editing.endEditingAsync?.(true)
+    if (editing.isCellEditing?.()) await editing.endEditingAsync?.(true)
     const range = worksheet.getRange(resolved)
     const target = workbook.getSheetBySheetId(range.getSheetId()) ?? worksheet
     workbook.setActiveRange(range)

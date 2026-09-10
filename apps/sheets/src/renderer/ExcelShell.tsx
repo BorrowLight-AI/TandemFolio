@@ -214,7 +214,7 @@ interface ExcelShellProps {
   /// A1 label of the active cell, echoed live by the Name Box.
   readonly activeCellA1: string
   /// Name Box / Go To jump; returns an error message, or null on success.
-  readonly onGoToReference: (ref: string) => string | null
+  readonly onGoToReference: (ref: string) => Promise<string | null>
   readonly onListDefinedNames: () => readonly { name: string; ref: string }[]
   readonly onApplyFormula: (formula: string) => string | null
   readonly onCreateSubtotal: (config: SubtotalConfig) => string | null
@@ -682,7 +682,7 @@ function NameBox({
   onGoTo,
 }: {
   readonly activeCellA1: string
-  readonly onGoTo: (ref: string) => string | null
+  readonly onGoTo: (ref: string) => Promise<string | null>
 }): React.JSX.Element {
   const { t } = useI18n()
   const [draft, setDraft] = useState<string | null>(null)
@@ -707,13 +707,15 @@ function NameBox({
         setDraft(null)
         setError(null)
       }}
-      onKeyDown={(event) => {
+      onKeyDown={async (event) => {
         if (event.key === 'Enter') {
-          const failure = onGoTo(draft ?? activeCellA1)
+          event.preventDefault()
+          const input = event.currentTarget
+          const failure = await onGoTo(draft ?? activeCellA1)
           setError(failure)
           if (failure === null) {
             setDraft(null)
-            event.currentTarget.blur()
+            input.blur()
           }
         } else if (event.key === 'Escape') {
           setDraft(null)

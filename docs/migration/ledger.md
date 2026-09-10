@@ -19,6 +19,14 @@ dialog remains embedded in the self-contained module graph and loads only when i
 becomes active. Package tests require the named deferred modules; mounted browser regressions cover
 image media, symbol, advanced filter, Name Manager, Insert Function, and Header & Footer flows.
 
+## 2026-09-10 XLSX Name Box selection-order repair
+
+The retained Name Box and Go To dialog now await Univer's asynchronous active-cell edit commit
+before changing the workbook selection. The former fire-and-forget commit could complete after the
+jump and restore the previous cell, leaving the host snapshot at `A1` even though the user entered a
+different range. A focused ordering test and repeated no-retry print-area Ribbon scenario cover the
+same mounted selection, undo, and saved OOXML path.
+
 ## 2026-09-08 XLSX copy-value and release visual repair
 
 The retained Save As quick-access control shifted the positional QA-button indexes used by the
