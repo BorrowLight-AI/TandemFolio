@@ -13,6 +13,10 @@ export default defineConfig({
     },
   },
   fullyParallel: false,
+  // These integration specs share one host server and deliberately restart
+  // broker state. Cross-file workers can interrupt another format's open/save
+  // lifecycle, so the release suite must exercise that shared authority serially.
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: [['list']],

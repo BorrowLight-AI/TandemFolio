@@ -179,7 +179,7 @@ accepts the source-current bundle. See [the verification record](../release/vali
 for TDD fixes, actual measurements, test results and the next release steps. Do not
 copy `approved`/`ready` flags from historical evidence or relax the fixed ceiling.
 
-`npm run test:visual:host` serves each active packaged renderer in a deterministic Codex host harness. The harness uses the real MCP Apps `AppBridge` and postMessage transport instead of replacing the renderer with a test double. Chromium is fixed to device scale factor 1, Simplified Chinese, light color scheme, and reduced motion.
+`npm run test:visual:host` serves each active packaged renderer in a deterministic Codex host harness. The harness uses the real MCP Apps `AppBridge` and postMessage transport instead of replacing the renderer with a test double. Chromium is fixed to device scale factor 1, Simplified Chinese, light color scheme, and reduced motion. The suite uses one Playwright worker because lifecycle coverage deliberately restarts the shared Broker; cross-file workers would race that shared authority.
 
 The committed matrix covers four observable host states for every active format:
 

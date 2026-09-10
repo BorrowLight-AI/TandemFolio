@@ -4,10 +4,25 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { ensureReleaseCaptureScheduling } from '../../../tools/release-gate/capture-scheduling'
 
 const root = dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))))
 
 describe('release baseline capture CLI', () => {
+  it('moves macOS captures out of inherited background scheduling only', () => {
+    const calls: Array<{ command: string; arguments_: string[] }> = []
+    const execute = (command: string, arguments_: string[]) => {
+      calls.push({ command, arguments_ })
+    }
+
+    ensureReleaseCaptureScheduling('linux', 123, execute)
+    ensureReleaseCaptureScheduling('darwin', 456, execute)
+
+    expect(calls).toEqual([
+      { command: 'taskpolicy', arguments_: ['-B', '-p', '456'] },
+    ])
+  })
+
   it('publishes the complete deterministic matrix in a checkout without release evidence', () => {
     const checkout = mkdtempSync(join(tmpdir(), 'tandemfolio-capture-cli-'))
     let result: ReturnType<typeof spawnSync>

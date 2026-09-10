@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { RELEASE_EVIDENCE_SCHEMA_VERSION } from './release-gate/contract'
+import { ensureReleaseCaptureScheduling } from './release-gate/capture-scheduling'
 import { computeReleaseSourceFingerprint } from './release-gate/fingerprint'
 import {
   createReleaseFixture,
@@ -747,6 +748,8 @@ async function main(): Promise<void> {
     process.stdout.write(`${JSON.stringify(releaseMeasurementMatrix)}\n`)
     return
   }
+
+  ensureReleaseCaptureScheduling()
 
   const output = resolve(argument('--output') ?? defaultOutput)
   const approved = process.argv.includes('--approve')
