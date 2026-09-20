@@ -1,3 +1,5 @@
+// Modified by TandemFolio contributors: add the browser UI-language preference store.
+
 export type Lang =
   | 'zh'
   | 'en'
@@ -161,24 +163,90 @@ export function defineStrings<D extends Record<string, string>>(dicts: LangDicts
 }
 
 // ---- process-wide current language ----
-// Optional holder for host adapters that coordinate multiple views.
 
-let uiLang: Lang = 'zh'
-const langListeners = new Set<(lang: Lang) => void>()
+export type UiLanguagePreference = 'system' | Lang
+
+export interface UiLanguageSnapshot {
+  readonly preference: UiLanguagePreference
+  readonly lang: Lang
+}
+
+export const UI_LANGUAGE_STORAGE_KEY = 'tandemfolio.ui-language'
+
+function storedUiLanguagePreference(): UiLanguagePreference {
+  try {
+    const stored = globalThis.localStorage?.getItem(UI_LANGUAGE_STORAGE_KEY)
+    return stored === 'system' || isLang(stored) ? stored : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+const initialUiLanguagePreference = storedUiLanguagePreference()
+const uiLanguageListeners = new Set<() => void>()
+let uiLanguageSnapshot: UiLanguageSnapshot = {
+  preference: initialUiLanguagePreference,
+  lang:
+    initialUiLanguagePreference === 'system'
+      ? normalizeLang(globalThis.navigator?.language)
+      : initialUiLanguagePreference,
+}
+
+function publishUiLanguage(preference: UiLanguagePreference): void {
+  const lang = preference === 'system' ? normalizeLang(globalThis.navigator?.language) : preference
+  if (preference === uiLanguageSnapshot.preference && lang === uiLanguageSnapshot.lang) return
+  uiLanguageSnapshot = { preference, lang }
+  for (const listener of uiLanguageListeners) listener()
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('languagechange', () => {
+    if (uiLanguageSnapshot.preference !== 'system') return
+    publishUiLanguage('system')
+  })
+  window.addEventListener('storage', (event) => {
+    if (event.key !== UI_LANGUAGE_STORAGE_KEY) return
+    const preference =
+      event.newValue === 'system' || isLang(event.newValue) ? event.newValue : 'system'
+    publishUiLanguage(preference)
+  })
+}
+
+export function getUiLanguageSnapshot(): UiLanguageSnapshot {
+  return uiLanguageSnapshot
+}
+
+export function subscribeUiLanguage(listener: () => void): () => void {
+  uiLanguageListeners.add(listener)
+  return () => uiLanguageListeners.delete(listener)
+}
+
+export function setUiLanguagePreference(preference: UiLanguagePreference): void {
+  const previous = uiLanguageSnapshot
+  publishUiLanguage(preference)
+  if (uiLanguageSnapshot === previous) return
+  try {
+    globalThis.localStorage?.setItem(UI_LANGUAGE_STORAGE_KEY, preference)
+  } catch {
+    // Storage can be unavailable in a sandboxed or privacy-restricted renderer.
+  }
+}
 
 export function getUiLang(): Lang {
-  return uiLang
+  return uiLanguageSnapshot.lang
 }
 
 export function setUiLang(lang: Lang): void {
-  if (lang === uiLang) return
-  uiLang = lang
-  for (const listener of langListeners) listener(lang)
+  setUiLanguagePreference(lang)
 }
 
 export function onUiLangChange(listener: (lang: Lang) => void): () => void {
-  langListeners.add(listener)
-  return () => langListeners.delete(listener)
+  let previous = uiLanguageSnapshot.lang
+  return subscribeUiLanguage(() => {
+    if (uiLanguageSnapshot.lang === previous) return
+    previous = uiLanguageSnapshot.lang
+    listener(previous)
+  })
 }
 
 /**

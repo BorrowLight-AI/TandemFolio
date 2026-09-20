@@ -91,6 +91,14 @@ including their workbook relationships and content-type declarations. Generated 
 persist named styles, number formats, themes, data validation, charts, and worksheet changes through
 one mounted renderer save without requiring a template or manual Save As.
 
+Interface language is renderer presentation state, not document state. A shared browser preference
+defaults to the system language, persists an explicit choice, and synchronizes same-origin editor
+views. Each format-owned locale provider applies changes without remounting its renderer; XLSX also
+switches the mounted Univer locale with stale asynchronous loads ignored. Language changes do not
+enter the operation Registry, document revision, native history, recovery bytes, or Save output.
+The source-current readiness is regenerated as `false` until this UI slice receives a fresh approved
+release-evidence capture.
+
 R6-06 makes Registry discovery bounded as capability count grows. `office_get_capabilities` now
 defaults to a schema-free summary of at most twenty Agent-visible operations, supports family
 filtering and stable cursor pagination, and returns a full schema only for one exact canonical

@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: export shared editor-language chrome.
 export { installScreenTips } from './screentip'
 export {
   installPopoverDismiss,
@@ -5,6 +6,7 @@ export {
   type PopoverDismissOptions,
 } from './popover-dismiss'
 export { Dropdown, type DropdownOption } from './dropdown'
+export { EditorLanguageMenu } from './editor-language-menu'
 export {
   ColorPicker,
   STANDARD_COLORS,

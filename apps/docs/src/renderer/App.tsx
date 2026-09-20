@@ -119,7 +119,7 @@ import { WordCountDialog, type DocStats } from './components/WordCountDialog'
 import { Ribbon } from './components/Ribbon'
 import { computeFormatState } from './components/ribbon-format-state'
 import { IconRedo, IconUndo } from './components/icons'
-import { EditorSaveIcon } from '@genoffice/ui'
+import { EditorLanguageMenu, EditorSaveIcon } from '@genoffice/ui'
 import { ToastHost } from './components/toast'
 import {
   LinkInsertModal,
@@ -3589,7 +3589,15 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [hasDoc, hasUnsavedChanges, autoSave, editor, save, lang, histState],
   )
-  const mcpDisplayAction = useMemo(() => <McpFullscreenButton />, [])
+  const mcpDisplayAction = useMemo(
+    () => (
+      <>
+        <McpFullscreenButton />
+        <EditorLanguageMenu />
+      </>
+    ),
+    [],
+  )
 
   if (!editor) return null
 

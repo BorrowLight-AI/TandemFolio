@@ -1,8 +1,10 @@
+// Modified by TandemFolio contributors: expose the shared UI-language selector.
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { platformShortcuts } from '@genoffice/i18n'
 import {
   EditorFileIcon,
   EditorFullscreenIcon,
+  EditorLanguageMenu,
   SHAPE_GALLERY_GROUPS,
   ShapePreview,
 } from '@genoffice/ui'
@@ -411,6 +413,7 @@ export function ExcelShell({
           >
             <EditorFullscreenIcon exit={fullscreen} />
           </button>
+          <EditorLanguageMenu />
           <label
             className={`autosave-toggle ${autoSave ? 'on' : ''}`}
             data-tip={t('appAutoSaveTip')}

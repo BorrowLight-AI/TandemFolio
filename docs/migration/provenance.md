@@ -1,5 +1,28 @@
 # Source provenance
 
+## 2026-09-14 interface-language preference
+
+The shared `packages/i18n/src/index.ts` runtime now owns a browser-local `system` or explicit
+19-language interface preference, including system-language and same-origin storage synchronization.
+`packages/ui/src/{editor-language-menu.tsx,index.ts,language-menu.css}` and
+`packages/ui/package.json` provide the accessible shared toolbar selector. The selector is mounted
+by the existing format-owned chrome in:
+
+- `apps/docs/src/renderer/{App.tsx,main.tsx,i18n/locale.tsx}`
+- `apps/markdown/src/renderer/{main.tsx,i18n/locale.tsx,components/Ribbon.tsx}`
+- `apps/sheets/src/renderer/{App.tsx,ExcelShell.tsx,main.tsx,univer-locales.ts,i18n/locale.tsx}`
+- `apps/slides/src/renderer/{main.tsx,i18n/locale.tsx,components/Ribbon.tsx}`
+- `apps/pdf/src/renderer/{main.tsx,i18n/locale.tsx}`
+
+These TandemFolio adaptations change only presentation locale. Each provider hot-switches without
+remounting or reparenting the retained renderer, and XLSX ignores stale deferred locale loads before
+applying them to Univer. The preference is not an MCP operation, document mutation, recovery value,
+or persisted document field. Tests under the corresponding app test directories and
+`packages/i18n/tests/ui-language.test.ts` record the preference, synchronization, provider, toolbar,
+and race boundaries. No prohibited or enterprise source is admitted.
+The change invalidates the prior source fingerprint, so generated release readiness is `false`
+until a new source-current capture is approved.
+
 ## 2026-09-08 TandemFolio packaging adaptation
 
 `apps/sheets/src/renderer/WorkbookVisuals.tsx` now defers the already admitted
@@ -376,8 +399,8 @@ The following roots are currently admitted through the explicit root workspace l
 | `apps/slides/src/renderer`, `src/main/edit-text.ts` | Complete permitted PPTX renderer source set plus the byte-identical pure text-edit mapper; original App is mounted, the retained browser API is compile-time complete, and all retained state-changing command families are registry-routed. |
 | `apps/pdf/src/renderer`, `src/domain`               | Restored and source-current-adapted non-AI community PDF UI plus browser/MCP host, PDFium/PDF-lib save boundary, 32-operation Registry, and zero-gap producer baseline.                                                                       |
 | `packages/docx-engine`                              | DOCX parse, block model, OOXML patch/save, and unknown-part preservation foundation.                                                                                                                                                         |
-| `packages/i18n`                                     | Shared localization runtime.                                                                                                                                                                                                                 |
-| `packages/ui`                                       | Shared tokens and visual primitives used by the DOCX ribbon.                                                                                                                                                                                 |
+| `packages/i18n`                                     | Shared localization catalogs, normalization, and browser-local interface-language preference runtime.                                                                                                                                                                                                                 |
+| `packages/ui`                                       | Shared tokens, visual primitives, and cross-format interface-language selector.                                                                                                                                                                                 |
 | `packages/font-metrics`                             | Retained type/interface dependency; system metric lookup is not available in the browser adapter yet.                                                                                                                                        |
 | `packages/file-parse`                               | Retained shared workspace for later audited use; not used for Agent attachments in the DOCX product.                                                                                                                                         |
 | `packages/pptx-engine`, `packages/pptx-render`      | PPTX parse, render-tree, text/layout, inheritance, object patching, and source-preserving save.                                                                                                                                              |

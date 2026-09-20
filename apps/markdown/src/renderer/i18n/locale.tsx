@@ -1,6 +1,7 @@
-import { createContext, useContext } from 'react'
+// Modified by TandemFolio contributors: support live shared UI-language switching.
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { createI18n, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, htmlLang, onUiLangChange, type Lang, type Params } from '@genoffice/i18n'
 import { strings } from './strings'
 
 const translate = createI18n(strings)
@@ -16,8 +17,18 @@ export function t(key: StringKey, params?: Params): string {
 }
 
 export function LocaleProvider({ initial, children }: { initial: Lang; children: ReactNode }) {
-  moduleLang = initial
-  return <LocaleContext.Provider value={initial}>{children}</LocaleContext.Provider>
+  const [lang, setLang] = useState(initial)
+  moduleLang = lang
+  useEffect(
+    () =>
+      onUiLangChange((next) => {
+        moduleLang = next
+        document.documentElement.lang = htmlLang(next)
+        setLang(next)
+      }),
+    [],
+  )
+  return <LocaleContext.Provider value={lang}>{children}</LocaleContext.Provider>
 }
 
 export function useI18n(): { lang: Lang; t: TFunc } {

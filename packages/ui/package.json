@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./color-picker.css": "./src/color-picker.css",
     "./dropdown.css": "./src/dropdown.css",
+    "./language-menu.css": "./src/language-menu.css",
     "./tokens.css": "./src/tokens.css",
     "./screentip.css": "./src/screentip.css"
   },
@@ -23,6 +24,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@genoffice/i18n": "*",
     "@genoffice/pptx-render": "*"
   }
 }

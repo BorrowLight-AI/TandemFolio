@@ -1,6 +1,8 @@
+// Modified by TandemFolio contributors: initialize the shared UI-language preference.
 import ReactDOM from 'react-dom/client'
-import { htmlLang, normalizeLang } from '@genoffice/i18n'
+import { getUiLanguageSnapshot, htmlLang } from '@genoffice/i18n'
 import '@genoffice/ui/tokens.css'
+import '@genoffice/ui/language-menu.css'
 import { attachMcpLiveSession } from '@tandemfolio/host-bridge'
 
 import { App } from './App'
@@ -17,7 +19,7 @@ const host = createBrowserSlidesHost()
 window.slidesApi = host.api
 if (mode !== 'audience') attachMcpLiveSession(host.adapter)
 
-const lang = normalizeLang(navigator.language)
+const lang = getUiLanguageSnapshot().lang
 document.documentElement.lang = htmlLang(lang)
 ReactDOM.createRoot(root).render(
   <LocaleProvider initial={lang}>

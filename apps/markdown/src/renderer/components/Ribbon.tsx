@@ -1,9 +1,11 @@
+// Modified by TandemFolio contributors: expose the shared UI-language selector.
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Dropdown,
   EditorFileIcon,
   EditorFullscreenIcon,
+  EditorLanguageMenu,
   EditorSaveIcon,
   useDismissablePopover,
 } from '@genoffice/ui'
@@ -303,6 +305,7 @@ export function Ribbon({
         >
           <EditorFullscreenIcon exit={fullscreen} />
         </button>
+        <EditorLanguageMenu />
       </div>
 
       <div className="ribbon-body">

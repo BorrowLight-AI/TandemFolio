@@ -320,7 +320,7 @@ import {
   shiftVisualForStructuralOp,
 } from './edit-journal'
 import { shiftPinnedCells } from './formula-closure'
-import { getLang, t, useI18n } from './i18n/locale'
+import { t, useI18n } from './i18n/locale'
 import { netAxisDelta, screenToFile } from './view-transform'
 import { selectionFormatEquals, toSelectionFormat, type SelectionFormat } from './selection-format'
 import { applyWorkbookTextReplacement } from './text-replace'
@@ -412,9 +412,13 @@ function decodeImageBase64(base64: string): ArrayBuffer {
 export function App(): React.JSX.Element {
   // Subscribe the shell to the deferred locale catalog revision. Most child
   // controls consume the context directly; App also renders translated labels.
-  useI18n()
+  const { lang } = useI18n()
   const adapterRef = useRef(new InMemoryWorkbookAdapter(initialSnapshot))
   const univerRef = useRef<UniverRuntime | null>(null)
+  useEffect(() => {
+    const runtime = univerRef.current
+    if (runtime) void applyUniverLocale(runtime, lang)
+  }, [lang])
   const lazyWorkbookRef = useRef<LazyWorkbookState | null>(null)
   const initialWorkbookLoadRef = useRef<Promise<void>>(Promise.resolve())
   const workbookReadyRef = useRef<Promise<void>>(Promise.resolve())
@@ -1317,9 +1321,6 @@ export function App(): React.JSX.Element {
     const copyMaterializeDisposable = installCopyMaterialize(runtime, lazyWorkbookRef, setMessage)
     // Active list cells expose Excel-like dropdown and input-message chrome.
     const dataValidationChromeDisposable = installActiveCellDataValidationChrome(runtime)
-    // Univer's own UI (rule-management panels, dialogs) follows the app
-    // language instead of hard-coded English.
-    void applyUniverLocale(runtime, getLang())
     // Rule-management panels show what each rule actually does: list options /
     // source range, CF formula text, ⚠ on #REF! dead rules.
     const ruleDetailDisposable = installRuleDetail(runtime)

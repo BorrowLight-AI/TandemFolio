@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: support race-safe live Univer locale switching.
 /**
  * Univer UI locale wiring. createUniver boots with en-US (the packs
  * are needed synchronously); once the runtime exists, the app language picks
@@ -11,6 +12,7 @@ import { LocaleService, LocaleType, mergeLocales, type ILocales } from '@univerj
 import type { UniverRuntime } from './univer-state'
 
 type LocalePack = Record<string, unknown>
+const localeRevisions = new WeakMap<UniverRuntime, number>()
 
 const UNIVER_LOCALES: Record<
   string,
@@ -218,9 +220,16 @@ export function univerLocaleFor(lang: string): LocaleType | null {
 }
 
 export async function applyUniverLocale(runtime: UniverRuntime, lang: string): Promise<void> {
+  const revision = (localeRevisions.get(runtime) ?? 0) + 1
+  localeRevisions.set(runtime, revision)
   const entry = UNIVER_LOCALES[lang]
-  if (!entry) return
+  const localeService = runtime.univer.__getInjector().get(LocaleService)
+  if (!entry) {
+    localeService.setLocale(LocaleType.EN_US)
+    return
+  }
   const packs = (await entry.load()).map((mod) => mod.default)
+  if (localeRevisions.get(runtime) !== revision) return
   const merged = mergeLocales(...packs) as Record<string, Record<string, unknown>>
   // sheets-ui 0.25.1 references these two keys but no shipped pack has them;
   // keep the English fallback so the raw key never surfaces (same patch as
@@ -235,7 +244,6 @@ export async function applyUniverLocale(runtime: UniverRuntime, lang: string): P
         'number in formulas.',
     },
   }
-  const localeService = runtime.univer.__getInjector().get(LocaleService)
   localeService.load({ [entry.type]: merged } as unknown as ILocales)
   localeService.setLocale(entry.type)
 }

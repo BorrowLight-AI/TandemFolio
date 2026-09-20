@@ -1,6 +1,7 @@
 // Modified by TandemFolio contributors: detach stale save bindings before browser file replacement.
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
+import { getUiLanguageSnapshot, htmlLang } from '@genoffice/i18n'
 import {
   attachMcpLiveSession,
   replaceLiveEditorDocument,
@@ -10,9 +11,15 @@ import {
   subscribeLiveEditorDisplayMode,
   toggleLiveEditorFullscreen,
 } from '@tandemfolio/host-bridge'
-import { EditorFileIcon, EditorFullscreenIcon, installScreenTips } from '@genoffice/ui'
+import {
+  EditorFileIcon,
+  EditorFullscreenIcon,
+  EditorLanguageMenu,
+  installScreenTips,
+} from '@genoffice/ui'
 import '@genoffice/ui/tokens.css'
 import '@genoffice/ui/screentip.css'
+import '@genoffice/ui/language-menu.css'
 import App from './App'
 import { LocaleProvider } from './i18n/locale'
 import { createBrowserPdfHost } from './host/browser-pdf-api'
@@ -20,6 +27,8 @@ import { createPdfCommunityCommandBridge } from './host/community-command-bridge
 import './styles.css'
 
 installScreenTips()
+const initialLang = getUiLanguageSnapshot().lang
+document.documentElement.lang = htmlLang(initialLang)
 const commandBridge = createPdfCommunityCommandBridge()
 const host = createBrowserPdfHost({ commandBridge })
 window.pdfApi = host.api
@@ -60,6 +69,7 @@ function CommunityPdfEditor(): React.ReactElement {
         >
           <EditorFullscreenIcon exit={display.mode === 'fullscreen'} />
         </button>
+        <EditorLanguageMenu />
         <input
           ref={inputRef}
           className="community-file-input"
@@ -77,7 +87,7 @@ function CommunityPdfEditor(): React.ReactElement {
         />
       </div>
       <div className="community-pdf-renderer">
-        <LocaleProvider initial="zh">
+        <LocaleProvider initial={initialLang}>
           <App
             active={editorActive}
             commandBridge={commandBridge}

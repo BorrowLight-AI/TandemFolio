@@ -37,6 +37,14 @@ codex plugin add tandemfolio@personal
 
 Start a new Codex task after installation so it discovers the plugin's Skill and MCP server. If your Codex setup already uses a marketplace named `personal`, resolve that marketplace identity before installing rather than editing its configuration by hand.
 
+## Choose the interface language
+
+Use the globe selector in the top toolbar of any DOCX, Markdown, XLSX, PPTX, or PDF editor. It
+follows the browser or operating-system language by default and offers all 19 bundled languages.
+An explicit selection is saved in this browser and synchronized to other open TandemFolio editor
+views from the same origin. Changing the interface language does not modify document content,
+revision, Undo history, recovery data, or saved files.
+
 ## Work on one editor in a browser
 
 For focused DOCX renderer work, run:

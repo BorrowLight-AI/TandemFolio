@@ -1,6 +1,8 @@
+// Modified by TandemFolio contributors: initialize the shared UI-language preference.
 import '@genoffice/ui/tokens.css'
 import '@genoffice/ui/screentip.css'
 import '@genoffice/ui/color-picker.css'
+import '@genoffice/ui/language-menu.css'
 import '@univerjs/preset-sheets-core/lib/index.css'
 import '@univerjs/preset-sheets-conditional-formatting/lib/index.css'
 import '@univerjs/preset-sheets-data-validation/lib/index.css'
@@ -12,7 +14,7 @@ import '@univerjs/preset-sheets-sort/lib/index.css'
 import '@univerjs/preset-sheets-table/lib/index.css'
 
 import ReactDOM from 'react-dom/client'
-import { htmlLang, normalizeLang } from '@genoffice/i18n'
+import { getUiLanguageSnapshot, htmlLang } from '@genoffice/i18n'
 import { installScreenTips } from '@genoffice/ui'
 
 import { App } from './App'
@@ -49,7 +51,7 @@ async function loadCellFontAliases(): Promise<void> {
 
 async function bootstrap(): Promise<void> {
   await loadCellFontAliases()
-  const lang = normalizeLang(navigator.language)
+  const lang = getUiLanguageSnapshot().lang
   setModuleLang(lang)
   document.documentElement.lang = htmlLang(lang)
   installScreenTips()

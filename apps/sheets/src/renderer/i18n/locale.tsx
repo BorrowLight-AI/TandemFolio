@@ -1,6 +1,7 @@
+// Modified by TandemFolio contributors: support live shared UI-language switching.
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { createI18n, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, htmlLang, onUiLangChange, type Lang, type Params } from '@genoffice/i18n'
 
 import type { strings as StringCatalog } from './strings'
 
@@ -53,9 +54,18 @@ export const DATE_LOCALES: Record<Lang, string> = {
 const LocaleContext = createContext({ lang: 'zh' as Lang, catalogRevision: 0 })
 
 export function LocaleProvider({ initial, children }: { initial: Lang; children: ReactNode }) {
-  const [lang] = useState<Lang>(initial)
+  const [lang, setLang] = useState<Lang>(initial)
   const [catalogRevision, setCatalogRevision] = useState(translate ? 1 : 0)
   useEffect(() => setModuleLang(lang), [lang])
+  useEffect(
+    () =>
+      onUiLangChange((next) => {
+        setModuleLang(next)
+        document.documentElement.lang = htmlLang(next)
+        setLang(next)
+      }),
+    [],
+  )
   useEffect(() => {
     if (translate) return
     let active = true

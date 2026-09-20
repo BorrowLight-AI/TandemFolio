@@ -1,17 +1,19 @@
+// Modified by TandemFolio contributors: initialize the shared UI-language preference.
 import { createRoot } from 'react-dom/client'
-import { htmlLang, normalizeLang } from '@genoffice/i18n'
+import { getUiLanguageSnapshot, htmlLang } from '@genoffice/i18n'
 import { installScreenTips } from '@genoffice/ui'
 import App from './App'
 import { LocaleProvider } from './i18n/locale'
 import '@genoffice/ui/tokens.css'
 import '@genoffice/ui/screentip.css'
 import '@genoffice/ui/dropdown.css'
+import '@genoffice/ui/language-menu.css'
 import 'katex/dist/katex.min.css'
 import './styles.css'
 
 installScreenTips()
 
-const lang = normalizeLang(navigator.language)
+const lang = getUiLanguageSnapshot().lang
 document.documentElement.lang = htmlLang(lang)
 
 const preferredTheme = localStorage.getItem('tandemfolio.theme')

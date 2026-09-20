@@ -99,6 +99,7 @@ for (const format of activeHostVisualFormats) {
       await expect(editor.locator(format.viewportSelector)).toBeVisible()
       await expect(editor.locator(format.statusSelector)).toBeVisible()
       await expect(editor.locator(format.fullscreenButtonSelector)).toBeVisible()
+      await expect(editor.locator('.editor-language-menu-select')).toBeInViewport()
       await expect(page.locator('#editor-frame')).toHaveScreenshot(
         `${format.id}-narrow-sidebar.png`,
       )
@@ -120,6 +121,7 @@ for (const format of activeHostVisualFormats) {
       await expect(editor.locator(format.viewportSelector)).toBeVisible()
       await expect(editor.locator(format.statusSelector)).toBeVisible()
       await expect(editor.locator(format.fullscreenButtonSelector)).toBeInViewport()
+      await expect(editor.locator('.editor-language-menu-select')).toBeInViewport()
       await expect(page.locator('#editor-frame')).toHaveScreenshot(`${format.id}-split-view.png`)
 
       const state = await page.evaluate(() => window.__codexVisualHost)
@@ -163,6 +165,26 @@ for (const format of activeHostVisualFormats) {
       expect(firstSize).toBeGreaterThanOrEqual(0)
       expect(firstSize).toBeLessThan(firstPoll)
       expect(firstPoll).toBeLessThan(fullscreenRequest)
+      expect(state.editorLoads).toBe(1)
+      expect(state.errors).toEqual([])
+    })
+
+    test(`${format.label} switches interface language without remounting the iframe`, async ({
+      page,
+    }) => {
+      await page.goto(editorUrl(format, SPLIT))
+      await waitForMountedHost(page)
+      await prepareFormatDocument(page, format)
+
+      const editor = page.frameLocator('#editor-frame')
+      const languageMenu = editor.locator('.editor-language-menu-select')
+      await languageMenu.selectOption('en')
+
+      await expect(languageMenu).toHaveValue('en')
+      await expect(languageMenu).toHaveAttribute('aria-label', 'Interface language')
+      await expect(editor.locator('html')).toHaveAttribute('lang', 'en-US')
+
+      const state = await page.evaluate(() => window.__codexVisualHost)
       expect(state.editorLoads).toBe(1)
       expect(state.errors).toEqual([])
     })

@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: expose the shared UI-language selector.
 /**
  * Ribbon: tab bar + grouped buttons. Same mechanism as the apps/docs Ribbon
  * (local state switches tabs, .ribbon-body dispatches); content is trimmed to slide capabilities,
@@ -13,7 +14,7 @@ import React, {
 } from 'react'
 import type { AnimEffectKind, AnimTrigger, TransitionKind } from '../../shared/ipc'
 import type { ChartStyleInfo } from '@genoffice/pptx-render'
-import { EditorFileIcon, EditorSaveIcon } from '@genoffice/ui'
+import { EditorFileIcon, EditorLanguageMenu, EditorSaveIcon } from '@genoffice/ui'
 import { ICON_COLORS } from '../insert-presets'
 import { THEME_PRESETS, type SlideThemePreset } from '../themes'
 import { restoreEditSelection } from '../TextEditOverlay'
@@ -1381,6 +1382,7 @@ export function Ribbon({
           </div>
         )}
         <HostFullscreenButton />
+        <EditorLanguageMenu />
         <button
           className="qa-btn"
           data-tip={t('ribbonSaveTip')}
