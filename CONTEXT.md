@@ -96,8 +96,8 @@ defaults to the system language, persists an explicit choice, and synchronizes s
 views. Each format-owned locale provider applies changes without remounting its renderer; XLSX also
 switches the mounted Univer locale with stale asynchronous loads ignored. Language changes do not
 enter the operation Registry, document revision, native history, recovery bytes, or Save output.
-The source-current readiness is regenerated as `false` until this UI slice receives a fresh approved
-release-evidence capture.
+The 2026-09-20 source-current five-format capture covers this UI slice and regenerates
+`ready: true`; subsequent release-relevant changes still invalidate it fail-closed.
 
 R6-06 makes Registry discovery bounded as capability count grows. `office_get_capabilities` now
 defaults to a schema-free summary of at most twenty Agent-visible operations, supports family

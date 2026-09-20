@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "ready": false,
+  "ready": true,
   "formats": {
-    "docx": false,
-    "markdown": false,
-    "xlsx": false,
-    "pptx": false,
-    "pdf": false
+    "docx": true,
+    "markdown": true,
+    "xlsx": true,
+    "pptx": true,
+    "pdf": true
   },
   "upstreamCommit": "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  "sourceFingerprint": "cd3e895da59836d4c04738d71e59491c9a888b20e99335c76a28604f55c281fa"
+  "sourceFingerprint": "8582379c493ae56e2b36483d16f058cec3b140b8d4abc4a4b7e59076bbc87ec7"
 }
