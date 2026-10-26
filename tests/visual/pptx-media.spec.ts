@@ -47,7 +47,10 @@ test('bold CJK layout advances match the glyphs painted by the browser', async (
           {
             align: 'center',
             runs: [
-              { text: '物业企业应收账款管理研究', fontFamily: '宋体', fontSize: 32, bold: true },
+              // 30 pt renders at 40 px. Linux system CJK hinting can round a
+              // fractional 42⅔ px face to 43 px per glyph; that is unrelated
+              // to the regression where layout expanded every bold glyph 4%.
+              { text: '物业企业应收账款管理研究', fontFamily: '宋体', fontSize: 30, bold: true },
             ],
           },
         ],
@@ -78,12 +81,19 @@ test('bold CJK layout advances match the glyphs painted by the browser', async (
       const context = document.createElement('canvas').getContext('2d')!
       context.font = `bold ${runs[0]!.fontSizePx}px SimSun, "Songti SC", serif`
       return {
+        fontSize: runs[0]!.fontSizePx,
+        family: runs[0]!.fontFamily,
+        advances: runs.map((run) => ({ width: run.widthPx, size: run.fontSizePx, bold: run.bold })),
         layout: runs.reduce((width, run) => width + run.widthPx, 0),
         painted: context.measureText(runs.map((run) => run.text).join('')).width,
       }
     })
-  // Canvas font-size rounding may differ by a fraction of a pixel across a line.
-  expect(Math.abs(widths.layout - widths.painted)).toBeLessThan(0.5)
+  for (const advance of widths.advances) {
+    expect(advance.bold).toBe(true)
+    expect(advance.width).toBeCloseTo(advance.size, 8)
+  }
+  // Keep the strict painted-width check without fractional-size OS hinting.
+  expect(Math.abs(widths.layout - widths.painted), JSON.stringify(widths)).toBeLessThan(0.5)
 })
 
 test('PPTX package pictures paint on the stage and thumbnail after Agent insert and saved-file reopen', async ({

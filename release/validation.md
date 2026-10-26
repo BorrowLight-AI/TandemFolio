@@ -2,16 +2,39 @@
 
 ## v0.1.0-beta.4
 
-The five-format formal capture completed at `2026-10-26T01:35:06.671Z` with
+The repaired five-format formal capture completed at `2026-10-26T03:00:05.330Z` with
 `approved: true` and `ready: true`. Its source fingerprint is
-`49bab98cd0e2043093442bbd92d228ac6c3e50e38e27c92a1dd84b4f9450319f`.
+`3fc36a39f4158fc7d283da23b1e0b2cd880dccd03df322dc7141be2754952c64`.
 Root package, lockfile and plugin manifest versions are `0.1.0-beta.4`.
 Every format retains 7 cold starts, 7 opens per fixture size and 21 interactions.
-XLSX bootstrap p95 is 479.9 ms under 500 ms; total cold start is 820.327 ms
+XLSX bootstrap p95 is 458.7 ms under 500 ms; total cold start is 798.208 ms
 under 1,400 ms. All five screenshots were reviewed and pass the unchanged
 3% comparison ceiling. This release includes the PPTX image and bold CJK layout
 repairs described below. GitHub's tag workflow checks the final source and host
 suite, then verifies the archive on Windows and macOS before publication.
+
+The first beta.4 workflow (`40255314479`) rejected the browser gate: the PPTX
+CJK painted-width fixture differed by 4 px on Linux, and ten XLSX save/undo cases
+needed retries. The PPTX fixture now uses 30 pt (40 px) to avoid cumulative
+system-font hinting at 42⅔ px; exact one-em bold advances and fractional-size
+native metrics remain asserted. The 0.5 px tolerance is unchanged.
+Final review also routes the reopen through the existing bounded renderer-commit
+helper so a hidden editor cannot strand the new readiness fence. The final
+deterministic regression holds the save response and actual workbook data read.
+XLSX now fences following commands for the complete Save/reopen lifecycle,
+including load-time decoration and native history restoration. A deterministic
+browser test reproduced premature ACK while the save reopen was held, then passed
+with the fix. The affected ten scenarios plus that regression passed 33/33 across
+three no-retry repetitions before final integration verification.
+The local complete no-retry host run passed 187/188 scenarios; the remaining
+PPTX typed-title scenario exposed Ribbon focus surviving a file picker. Focusing
+the File button reproduced it deterministically. The driver now restores body
+focus before the native Tab selection shortcut and retains the selection-ready
+assertion. That case and the bold CJK browser case then passed 20/20 across ten
+no-retry repetitions. Native PPTX render tests pass 249/249.
+`npm run check` and the six distribution tests pass. After the final bounded
+commit wait, Sheets typecheck and the delayed-save/formula-view browser cases
+pass; the formal source-current gate and final archive verification pass again.
 
 ## Historical 2026-10-24 verification
 

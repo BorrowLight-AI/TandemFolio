@@ -1,5 +1,19 @@
 # Source provenance
 
+## 2026-10-26 beta.4 CI repair
+
+The retained XLSX `apps/sheets/src/renderer/App.tsx` now fences Agent commands
+through the existing workbook-ready promise for Save as well as Open. Readiness
+includes native table decoration and undo-history restoration, preventing an edit
+accepted after download from being erased by the pending reopen's history cleanup.
+The renderer, workbook unit replacement, journal and native undo routes remain authoritative.
+A real-host regression holds both the save response and reopen data read to verify the fence.
+The existing bounded renderer-commit helper also keeps a hidden reopen progressing.
+PPTX browser regression uses an integer-pixel CJK font size for painted-width comparison,
+and still asserts exact one-em bold advances. Fractional sizes remain covered by native
+metric tests; system font hinting does not redefine the test's 0.5 px threshold.
+No retained source moved and the community commit pin is unchanged.
+
 ## 2026-10-24 release validation and compatible dependency patches
 
 The final package also reuses `tools/package-plugin.mjs`'s existing embedded gzip module vault

@@ -3898,6 +3898,84 @@ test('the XLSX gridline registry operation shares user undo and saved output', a
   expect(reopenedSheetXml).toContain('showGridLines="0"')
 })
 
+test('a command after Save waits for the reopened workbook history to settle', async ({ page }) => {
+  await page.goto('/?format=xlsx&width=720&height=900')
+  await page.waitForFunction(() => window.__codexVisualHost?.initialized)
+  const editor = page.frameLocator('#editor-frame')
+  await editor.locator('input[type="file"]:not([multiple])[accept*=".xlsx"]').setInputFiles({
+    name: 'save-readiness.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: await xlsxWithA1('Before save'),
+  })
+  await expect(editor.locator('.workbook-status')).toContainText('save-readiness.xlsx')
+  await page.evaluate(() => window.__codexVisualHost.commands.push({
+    commandId: 'before-delayed-save', baseRevision: 0,
+    operation: 'xlsx.cell.set_value', arguments: { sheet: 'Sheet1', address: 'B2', value: 'Dirty' },
+  }))
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.acknowledgements.find(
+    (entry) => entry.commandId === 'before-delayed-save',
+  ))).toMatchObject({ ok: true })
+  await editor.locator('body').evaluate(() => {
+    const w = window as typeof window & {
+      releaseSaveLoads?: () => void; heldSaveLoads?: number; releaseSaveResponse?: () => void
+    }
+    const originalSave = window.desktopApi.saveWorkbookEdits.bind(window.desktopApi)
+    const originalRead = window.desktopApi.readWorkbookRange.bind(window.desktopApi)
+    window.desktopApi.saveWorkbookEdits = async (...args) => {
+      const result = await originalSave(...args)
+      const callbacks: Array<() => void> = []
+      w.heldSaveLoads = 0
+      window.desktopApi.readWorkbookRange = async (...args) => {
+        await new Promise<void>((resolve) => {
+          callbacks.push(resolve)
+          w.heldSaveLoads = callbacks.length
+        })
+        return originalRead(...args)
+      }
+      w.releaseSaveLoads = () => {
+        window.desktopApi.readWorkbookRange = originalRead
+        for (const callback of callbacks) callback()
+      }
+      await new Promise<void>((resolve) => { w.releaseSaveResponse = resolve })
+      return result
+    }
+  })
+  const download = page.waitForEvent('download')
+  await workbookSaveButton(editor).click()
+  await download
+  await expect.poll(() => editor.locator('body').evaluate(() =>
+    typeof (window as typeof window & { releaseSaveResponse?: () => void }).releaseSaveResponse,
+  )).toBe('function')
+  await page.evaluate(() => window.__codexVisualHost.commands.push({
+    commandId: 'after-delayed-save', baseRevision: 1,
+    operation: 'xlsx.sheet.set_formula_view', arguments: { sheet: 'Sheet1', enabled: true },
+  }))
+  // Give the mounted command poll a chance to receive work while reopen is held.
+  await page.waitForTimeout(500)
+  expect(await page.evaluate(() => window.__codexVisualHost.acknowledgements.some(
+    (entry) => entry.commandId === 'after-delayed-save',
+  ))).toBe(false)
+  await editor.locator('body').evaluate(() =>
+    (window as typeof window & { releaseSaveResponse?: () => void }).releaseSaveResponse!(),
+  )
+  await expect.poll(() => editor.locator('body').evaluate(() =>
+    (window as typeof window & { heldSaveLoads?: number }).heldSaveLoads ?? 0,
+  )).toBeGreaterThan(0)
+  await page.waitForTimeout(500)
+  expect(await page.evaluate(() => window.__codexVisualHost.acknowledgements.some(
+    (entry) => entry.commandId === 'after-delayed-save',
+  ))).toBe(false)
+  await editor.locator('body').evaluate(() =>
+    (window as typeof window & { releaseSaveLoads?: () => void }).releaseSaveLoads!(),
+  )
+  await expect.poll(() => page.evaluate(() => window.__codexVisualHost.acknowledgements.find(
+    (entry) => entry.commandId === 'after-delayed-save',
+  ))).toMatchObject({ ok: true })
+  await expect(workbookUndoButton(editor)).toBeEnabled()
+  await workbookUndoButton(editor).click()
+  await expect(workbookRedoButton(editor)).toBeEnabled()
+})
+
 test('the XLSX formula-view registry operation shares user undo and saved output', async ({
   page,
 }) => {

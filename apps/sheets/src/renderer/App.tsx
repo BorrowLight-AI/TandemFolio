@@ -2683,6 +2683,9 @@ export function App(): React.JSX.Element {
     initialWorkbookLoadRef.current = new Promise<void>((resolve) => {
       resolveInitialWorkbookLoad = resolve
     })
+    // Save also replaces the native workbook. Fence following Agent commands
+    // until the replacement's cells and history are ready, just as file Open does.
+    workbookReadyRef.current = initialWorkbookLoadRef.current
     // Pivot definitions load eagerly so refresh (a synchronous apply step)
     // never waits on IPC. Best effort: a failed parse just disables refresh.
     for (const sheet of selected.sheets) {
@@ -2722,7 +2725,7 @@ export function App(): React.JSX.Element {
     applyDefinedNames(univerRef.current, selected, state)
     const runtime = univerRef.current
     if (runtime) {
-      requestAnimationFrame(() => {
+      void waitForRendererCommit().then(() => {
         if (lazyWorkbookRef.current !== state) {
           resolveInitialWorkbookLoad()
           return
@@ -2783,7 +2786,7 @@ export function App(): React.JSX.Element {
         // Registration is asynchronous and creates decoration-only history.
         // Wait until it settles before replacing those entries with the user
         // undo/redo suffix captured across a save.
-        void Promise.allSettled(tableInstalls).then(() => {
+        const historyReady = Promise.allSettled(tableInstalls).then(() => {
           if (lazyWorkbookRef.current !== state) return
           consumePendingUndoCarry(runtime, workbook.getId())
         })
@@ -2822,7 +2825,7 @@ export function App(): React.JSX.Element {
             void activateFormulaClosure(runtime, lazyWorkbookRef, setMessage)
           }, 1500)
         }
-        void Promise.all(initialLoads).finally(resolveInitialWorkbookLoad)
+        void Promise.all([...initialLoads, historyReady]).finally(resolveInitialWorkbookLoad)
       })
     }
   }
@@ -2863,7 +2866,14 @@ export function App(): React.JSX.Element {
     quiet = false,
     forceRecovery = false,
   ): Promise<SaveActionResult | undefined> {
-    return handleSaveImpl(saveContext(), mode, quiet, forceRecovery)
+    if (mode === 'recovery') return handleSaveImpl(saveContext(), mode, quiet, forceRecovery)
+    const saving = handleSaveImpl(saveContext(), mode, quiet, forceRecovery).then(async (result) => {
+      await initialWorkbookLoadRef.current
+      return result
+    })
+    // The download can be observable before its native reopen starts.
+    workbookReadyRef.current = saving.then(() => undefined)
+    return saving
   }
   closeSaveRef.current = async () => {
     const state = lazyWorkbookRef.current

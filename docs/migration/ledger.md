@@ -1,5 +1,17 @@
 # Migration ledger
 
+## 2026-10-26 beta.4 CI repair
+
+XLSX Save now publishes its pending native reopen through the same readiness fence
+as Open, including cell loading and history installation. Agent edits wait until
+the replacement workbook is ready; no alternate state or undo authority is introduced.
+The deterministic browser regression delays save completion and the reopen data read.
+The existing bounded renderer-commit wait prevents hidden-frame suspension from stranding reopen.
+PPTX painted-width regression avoids fractional-size system-font hinting while
+retaining exact bold full-width advances and fractional-size metric coverage.
+The failed beta.4 tag workflow is retained as evidence; publication requires fresh
+source-current capture and a successful replacement tag workflow.
+
 ## 2026-10-24 repaired plugin release validation
 
 Final package checking rejected the security-patched directly inlined PPTX resource at 4,005,437

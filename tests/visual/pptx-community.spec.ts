@@ -270,6 +270,10 @@ test('the original community text editor preserves a typed title through save an
   })
   await expect.poll(() => editor.locator('.thumb').count()).toBeGreaterThan(1)
 
+  // File-picking may leave focus on a Ribbon control on some hosts.
+  await editor.getByRole('button', { name: '文件', exact: true }).focus()
+  // The native Tab selection shortcut deliberately applies only on the canvas/body.
+  await editor.locator('body').evaluate(() => (document.activeElement as HTMLElement)?.blur())
   await editor.locator('body').press('Tab')
   // Selection is committed through React before the next key starts editing.
   await expect(editor.getByRole('button', { name: '加粗', exact: true })).toBeEnabled()
