@@ -1,6 +1,71 @@
-# Release evidence verification — 2026-09-20
+# Release evidence verification — 2026-10-24
 
-## Current status: beta release evidence approved
+## Current status: PPTX repair evidence approved
+
+The source-current five-format capture for the PPTX image/spacing repair is approved. The
+unchanged release gate passes and generates `ready: true`. Every format has seven cold starts,
+seven opens for each fixture size, and twenty-one interactions. All five split-view artifacts
+were reviewed against the existing pinned-source references; no masks or ceilings changed.
+
+- Capture completed: `2026-10-24T11:24:35.186Z`.
+- Source fingerprint: `aaa5535a387be49e8acc364ec23cab6d5d1ce38d0fad7a9782ee759c66c9d6ff`.
+- Local plugin version: `0.1.0-beta.3+codex.20261024pptx1` (base release version unchanged).
+- XLSX bootstrap p95: **401.8 ms < 500 ms**; total cold-start p95: **722.222 ms < 1,400 ms**.
+- Production dependency audit: **zero vulnerabilities** after compatible dependency updates.
+
+| Format | Cold start p95 | Open small | Open medium | Open large | Interaction p95 | Visual difference |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| DOCX | 324.73 | 83.9 | 135.6 | 315.7 | 5.2 | 0.9% |
+| Markdown | 265.846 | 15.3 | 59.2 | 382.8 | 2.1 | 0.7% |
+| XLSX | 722.222 | 74.7 | 110.3 | 366 | 33.2 | 1.3% |
+| PPTX | 258.917 | 113.3 | 133.2 | 209.9 | 22.8 | 2.0% |
+| PDF | 406.405 | 103.8 | 103.7 | 135.6 | 33.7 | 1.3% |
+
+Times are milliseconds. PPTX now resolves native package images for slide and master rendering,
+and full-width bold fallback text no longer gains artificial four-percent advances. Image
+replacement/history, inherited decoration, background fills, actual canvas/thumbnail paint, and
+save/reopen have focused regressions. This remains a modified community renderer, without a
+claim of WPS-identical font substitution or pixel layout.
+
+The initial unapproved capture was rejected because one XLSX bootstrap sample reached
+7,326.9 ms, exceeding the existing 500 ms ceiling. Its JSON, log, and artifacts are retained in
+`.scratch/pptx-release-validation/`. It was not approved or substituted for the later complete
+formal capture. The final capture followed the compatible dependency updates and full unit run;
+all fixed budgets pass without a performance-source or threshold change.
+
+The initial production audit found nine vulnerable packages. The final lock uses MCP SDK 1.32.2,
+Zod 4.6.7, fast-uri 3.1.9, grpc-js 1.14.6, body-parser 2.4.0, Hono 4.13.13,
+ip-address 10.7.4, prosemirror-view 1.42.8, and proxy-addr 2.0.8. No forced major upgrade,
+renderer replacement, source pin change, or additional product account/AI flow was introduced.
+
+The complete browser run covered 187 scenarios: 185 passed initially and two exposed missing
+readiness guards in the test drivers (PPTX selection before typing; XLSX file-open completion
+before the next command). Both cases passed in isolation. The drivers now wait for their existing
+native UI state, and each case passed ten subsequent no-retry repetitions. Assertions and editor
+behavior were not weakened. Logs retain the initial failures and the twenty successful repetitions.
+The native PPTX engine and render suites pass 836 and 247 tests; six distribution tests also pass.
+
+Security-patched direct inlining reached 4,005,437 PPTX bytes and was rejected by package checking.
+The existing embedded gzip module vault now carries the complete entry in 1,615,904 bytes under the
+unchanged 4 MB ceiling. Its decompressed source and graph checks pass; the final five-format
+capture above includes this actual packaged resource. The earlier approved pre-compression
+performance capture was invalidated, rather than reused after the packaging source changed.
+
+Final validation completed successfully: `npm run check` (source/manifest checks, all workspace
+typechecks and 4,920 assertions with one designed skip, source-current gate, full build, asset
+budgets, packaged MCP smoke, and licenses), the separate 836-test PPTX engine and 247-test render
+suites, six distribution tests, and the browser coverage/repetitions described above. The final
+gate was run again after rebuilding and still passed.
+
+The Codex CLI installed `tandemfolio@personal` as `0.1.0-beta.3+codex.20261024pptx1` at
+`/Users/cc/.codex/plugins/cache/personal/tandemfolio/0.1.0-beta.3+codex.20261024pptx1`.
+The installed manifest, server, and PPTX resource match the validated repository bytes exactly;
+installed-root MCP smoke passes with all 26 tools. The prior installed plugin is backed up in
+`.scratch/pptx-release-validation/previous-installed-plugin`. The presentation's SHA-256 was
+unchanged by installation. Its separate six-slide update during validation was preserved, not
+replaced with the earlier five-slide diagnostic copy. No public release/tag was created.
+
+## Historical approved capture — 2026-09-20
 
 The `v0.1.0-beta.3` source-current five-format capture records `approved: true` and
 `ready: true`, including the shared UI-language selector. XLSX bootstrap p95 is
@@ -30,7 +95,7 @@ The final-lock `npm run check`, six distribution tests, plugin validation, and s
 `f4f6b4ed5c7fab73b3cc313d284367f52db528c6cfdd6583915bc8bf46cfdb98`,
 respectively; CI will build and checksum its own platform-independent release archives.
 
-## Current measurements
+## Historical measurements — 2026-09-20
 
 Times below are nearest-rank p95 in milliseconds. Full summaries, fixture hashes,
 memory measurements, phase breakdowns and visual artifact hashes are in the JSON.

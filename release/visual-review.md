@@ -1,5 +1,17 @@
 # Community-renderer visual baseline review
 
+## 2026-10-24 PPTX repair recapture
+
+The five artifacts from the `2026-10-24T11:24:35.186Z` formal capture were reviewed.
+DOCX, Markdown, PPTX, and PDF are byte-identical to the reviewed diagnostic images; XLSX was
+inspected again after its status-strip pixel change. The native ribbons, pages/canvases, grid,
+and thumbnails remain visible. Differences against the unchanged pinned-source references are
+0.9%, 0.7%, 1.3%, 2.0%, and 1.3% respectively. No baseline or mask was replaced.
+The separate PPTX image regression additionally checks actual picture pixels after native save
+and reopen, rather than treating a blank-slide comparison as proof of image fidelity.
+
+## Earlier baseline review
+
 Reviewed on 2026-09-03 against the locally available pinned community source
 `dc4d7e5927864498913b7ba42d0da06cc7cf628e` and the five existing 720 × 900
 split-view PNGs. The manifest records their exact bytes and permitted source paths.

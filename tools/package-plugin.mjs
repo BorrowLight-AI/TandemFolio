@@ -167,7 +167,7 @@ const moduleVaultBootstrap = `(function () {
   globalThis.__genofficeModuleVaultReady.catch(function (error) { console.error(error); });
 })();`
 
-async function inlineDeferredEditor(dist) {
+async function inlineDeferredEditor(dist, format = 'XLSX') {
   await init
   let html = await readFile(join(dist, 'index.html'), 'utf8')
 
@@ -179,7 +179,7 @@ async function inlineDeferredEditor(dist) {
   html = html.replace(/<link[^>]+rel="modulepreload"[^>]*>/g, '')
 
   const entryTag = html.match(/<script[^>]+src="([^"]+\.js)"[^>]*><\/script>/)
-  if (!entryTag) throw new Error('Missing XLSX entry module.')
+  if (!entryTag) throw new Error(`Missing ${format} entry module.`)
   const entryPath = resolve(dist, entryTag[1])
   const entryModule = basename(entryPath)
   const assetDir = dirname(entryPath)
@@ -200,7 +200,7 @@ async function inlineDeferredEditor(dist) {
     ]
     if (moduleId === entryModule) {
       if (dependencies[moduleId].length > 0) {
-        throw new Error('The directly executable XLSX entry cannot have static chunk imports.')
+        throw new Error(`The directly executable ${format} entry cannot have static chunk imports.`)
       }
       const encoded = gzipSync(source, { level: 9 }).toString('base64')
       entryPayload = `<script type="application/x-tandemfolio-module" data-module="${moduleId}" data-entry="true">${encoded}</script>`
@@ -211,7 +211,7 @@ async function inlineDeferredEditor(dist) {
       `<script type="application/x-tandemfolio-module" data-module="${moduleId}">${encoded}</script>`,
     )
   }
-  if (!entryPayload) throw new Error('The XLSX entry module was not packaged.')
+  if (!entryPayload) throw new Error(`The ${format} entry module was not packaged.`)
   html = html.replace(
     entryTag[0],
     () =>
@@ -241,7 +241,10 @@ await writeFile(
   await inlineEditor(markdownEditorDist, { inlineWoff2: true }),
 )
 await writeFile(join(pluginEditors, 'xlsx/index.html'), await inlineDeferredEditor(xlsxEditorDist))
-await writeFile(join(pluginEditors, 'pptx/index.html'), await inlineEditor(pptxEditorDist))
+await writeFile(
+  join(pluginEditors, 'pptx/index.html'),
+  await inlineDeferredEditor(pptxEditorDist, 'PPTX'),
+)
 await writeFile(join(pluginEditors, 'pdf/index.html'), await inlineEditor(pdfEditorDist))
 await cp(join(root, 'apps/docs/src/renderer/fonts'), pluginFonts, {
   recursive: true,

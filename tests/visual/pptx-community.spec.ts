@@ -271,6 +271,8 @@ test('the original community text editor preserves a typed title through save an
   await expect.poll(() => editor.locator('.thumb').count()).toBeGreaterThan(1)
 
   await editor.locator('body').press('Tab')
+  // Selection is committed through React before the next key starts editing.
+  await expect(editor.getByRole('button', { name: '加粗', exact: true })).toBeEnabled()
   await editor.locator('body').press('x')
   const textEditor = editor.locator('[contenteditable="true"]')
   await expect(textEditor).toBeVisible()

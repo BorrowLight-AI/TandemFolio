@@ -288,12 +288,25 @@ describe('packaged editor UI', () => {
 
   it('packages the retained PPTX community renderer without prohibited product code', async () => {
     const html = await readFile(packagedPptxEditor, 'utf8')
+    const entry = html.match(
+      /<script type="application\/x-tandemfolio-module" data-module="([^"]+)" data-entry="true">([^<]+)<\/script>/,
+    )
+    expect(entry, 'missing self-contained compressed PPTX entry').not.toBeNull()
+    const source = gunzipSync(Buffer.from(entry![2], 'base64')).toString('utf8')
+    const packagedSource = html + source
     expect(html).toContain('TandemFolio · PPTX')
-    expect(html).toContain('stage-wrap')
-    expect(html).toContain('ribbon-body')
-    expect(html).toContain('退出全屏')
-    expect(html).not.toMatch(/src="[^"]+\.js"/)
-    expect(html).not.toMatch(
+    expect(html).toContain('data-tandemfolio-module-bootstrap')
+    expect(source).toContain('stage-wrap')
+    expect(source).toContain('ribbon-body')
+    expect(source).toContain('退出全屏')
+    const graph = JSON.parse(
+      html.match(
+        /<script type="application\/json" data-tandemfolio-module-dependencies>([^<]+)<\/script>/,
+      )![1],
+    )
+    expect(graph).toEqual({ [entry![1]]: [] })
+    expect(html).not.toMatch(/(?:src|href)="[^"]+\.(?:js|css)"/)
+    expect(packagedSource).not.toMatch(
       /Genspark|ai-(?:chat|clarify|composer|dock|login|panel)|ipcRenderer|electronApi|telemetry\.service/i,
     )
   })

@@ -1,5 +1,45 @@
 # Migration ledger
 
+## 2026-10-24 repaired plugin release validation
+
+Final package checking rejected the security-patched directly inlined PPTX resource at 4,005,437
+bytes against its unchanged 4,000,000-byte ceiling. The existing embedded gzip module vault now
+carries the complete PPTX single entry in 1,615,904 bytes. Package tests decode the entry to
+inspect retained/prohibited source and verify its dependency graph; mounted-host tests retain
+the same document, history, and save routes. No capability, budget, baseline, or source pin is
+removed or weakened to satisfy the ceiling.
+
+The PPTX repair is validated against a newly approved source-current five-format capture.
+XLSX bootstrap p95 is 401.8 ms against the unchanged 500 ms ceiling, all split-view comparisons
+are below 3%, and the release gate generates `ready: true`. A rejected diagnostic XLSX startup
+outlier is retained locally and was not approved. Production dependency patches stay within
+compatible ranges and reduce the live production audit from nine vulnerable packages to zero.
+The final editor/server bundles and local plugin cache suffix are regenerated; the upstream pin,
+mounted-authority contract, persistence targets, and public operation semantics are unchanged.
+
+## 2026-10-24 PPTX image preview and bold CJK spacing repair
+
+PPTX browser rendering omitted the native builder's media resolver. Picture objects and embedded
+media survived package save but appeared as placeholder rectangles in the live canvas and
+thumbnails; background image fills and master previews had the same missing boundary. The owned
+browser presentation adapter now resolves image references against its current native archive for
+every slide/master render, retaining native geometry, crop/effects, history, and serialized bytes.
+Byte-keyed weak caching avoids stale images after replacement or undo/reopen without creating
+another document model. Standard image MIME types and the retained SVG/metafile loading routes
+are passed to the existing loader; missing package parts remain unresolved.
+
+Three native browser integration regressions cover replacement/undo/redo, background fills, and
+master inheritance/refresh. A packaged-host pixel regression covers Agent image insertion,
+stage/thumbnail paint, Save and file reopen with one iframe mount. Manual verification of the
+reported five-slide file restores all six image objects.
+
+The retained render package's heuristic metrics previously enlarged bold CJK advances by four
+percent, inserting excess title spacing and causing premature wrapping. Full-width clusters now
+retain their one-em advance; proportional Latin estimation and exact OpenType measurement are
+unchanged. Two metric regressions and an actual browser glyph-measurement comparison cover the
+reported title pattern. This does not claim WPS-identical font metrics or rewrite the presentation's
+content. Source drift invalidates prior release evidence.
+
 ## 2026-09-08 XLSX on-demand media and command UI
 
 The blank XLSX entry previously linked the EMF/WMF converter even though it is needed only after a

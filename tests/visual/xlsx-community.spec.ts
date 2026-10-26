@@ -3984,6 +3984,10 @@ test('the XLSX formula-view registry operation shares user undo and saved output
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: redoBytes,
   })
+  // File input dispatch is not completion of the native asynchronous open.
+  await expect(reopened.locator('.workbook-status')).toContainText(
+    'registry-formula-view-reopened.xlsx',
+  )
   await page.evaluate(() => {
     window.__codexVisualHost.commands.push({
       commandId: 'xlsx-sheet-formula-view-reopened-touch',

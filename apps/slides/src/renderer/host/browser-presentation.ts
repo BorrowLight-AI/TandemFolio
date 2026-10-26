@@ -35,6 +35,20 @@ type PptxEngine = typeof import('@genoffice/pptx-engine')
 let enginePromise: Promise<PptxEngine> | null = null
 const engine = (): Promise<PptxEngine> => (enginePromise ??= import('@genoffice/pptx-engine'))
 
+const IMAGE_MIME: Readonly<Record<string, string>> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  bmp: 'image/bmp',
+  webp: 'image/webp',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  svg: 'image/svg+xml',
+  emf: 'image/x-emf',
+  wmf: 'image/x-wmf',
+}
+
 function elementText(element: SlideElement): string | undefined {
   if (element.type !== 'text' && element.type !== 'shape') return undefined
   return (element as TextElement).text?.paragraphs
@@ -95,6 +109,9 @@ export class BrowserPresentation {
   #slideClipboard: { bundle: SlideBundle; pictureData?: string } | null = null
   #lastSlidePaste: { afterIndex: number; historyLength: number } | null = null
   #masterParts = new Map<string, Slide>()
+  // Cache by the actual package bytes: replacement and history restoration may
+  // reuse a part path with different content. Weak keys release discarded media.
+  readonly #mediaUrls = new WeakMap<Uint8Array, Map<string, string>>()
   #transformPreview = false
   readonly #history: PresentationHistoryEntry[] = []
   readonly #redo: PresentationHistoryEntry[] = []
@@ -2749,13 +2766,32 @@ export class BrowserPresentation {
     return true
   }
 
+  #resolveMedia = (mediaRef: string): string | undefined => {
+    const bytes = this.#opened.archive.readBytes(mediaRef)
+    const mime = IMAGE_MIME[mediaRef.split('.').pop()?.toLowerCase() ?? '']
+    if (!bytes || !mime) return undefined
+    const cached = this.#mediaUrls.get(bytes)
+    const existing = cached?.get(mime)
+    if (existing) return existing
+    const url = `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`
+    const urls = cached ?? new Map<string, string>()
+    urls.set(mime, url)
+    this.#mediaUrls.set(bytes, urls)
+    return url
+  }
+
+  #renderSlide(slide: Slide, width: number, slideNo?: number): RenderSlide {
+    return buildRenderSlide(slide, this.#opened.deck.size, {
+      fitWidthPx: width,
+      media: this.#resolveMedia,
+      ...(slideNo !== undefined ? { slideNo } : {}),
+    })
+  }
+
   render(slideIndex: number, width = 960): RenderSlide {
     const slide = this.#opened.deck.slides[slideIndex]
     if (!slide) throw new Error(`Unknown slide: ${slideIndex + 1}`)
-    return buildRenderSlide(slide, this.#opened.deck.size, {
-      fitWidthPx: width,
-      slideNo: slideIndex + 1,
-    })
+    return this.#renderSlide(slide, width, slideIndex + 1)
   }
 
   renderAll(width = 960): RenderSlide[] {
@@ -2773,7 +2809,7 @@ export class BrowserPresentation {
         ? [
             {
               ...part,
-              slide: buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width }),
+              slide: this.#renderSlide(slide, width),
             },
           ]
         : []
@@ -2785,7 +2821,7 @@ export class BrowserPresentation {
     const slide =
       this.#masterParts.get(partPath) ?? pptx.parseMasterPart(this.#opened.archive, partPath)
     if (slide) this.#masterParts.set(partPath, slide)
-    return slide ? buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width }) : null
+    return slide ? this.#renderSlide(slide, width) : null
   }
 
   async deleteMasterObject(
@@ -2807,7 +2843,7 @@ export class BrowserPresentation {
       pptx.materializeSlide(this.#opened, index)
     }
     this.#dirty = true
-    return buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width })
+    return this.#renderSlide(slide, width)
   }
 
   async #commitMasterPart(partPath: string, slide: Slide, pptx: PptxEngine): Promise<void> {
@@ -2839,7 +2875,7 @@ export class BrowserPresentation {
     element.text.paragraphs = applyEditParagraphs(element.text.paragraphs, [...input.paragraphs])
     element.dirty = true
     await this.#commitMasterPart(input.partPath, slide, pptx)
-    return buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width })
+    return this.#renderSlide(slide, width)
   }
 
   async setMasterTransform(
@@ -2884,7 +2920,7 @@ export class BrowserPresentation {
     }
     element.dirtyTransform = true
     if (!input.preview) await this.#commitMasterPart(input.partPath, slide, pptx)
-    return buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width })
+    return this.#renderSlide(slide, width)
   }
 
   async setMasterFill(
@@ -2933,7 +2969,7 @@ export class BrowserPresentation {
             }
     element.dirtyFill = true
     await this.#commitMasterPart(input.partPath, slide, pptx)
-    return buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width })
+    return this.#renderSlide(slide, width)
   }
 
   async setMasterStroke(
@@ -2961,7 +2997,7 @@ export class BrowserPresentation {
       : undefined
     element.dirtyStroke = true
     await this.#commitMasterPart(input.partPath, slide, pptx)
-    return buildRenderSlide(slide, this.#opened.deck.size, { fitWidthPx: width })
+    return this.#renderSlide(slide, width)
   }
 
   async layouts() {

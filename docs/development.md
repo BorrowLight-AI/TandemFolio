@@ -24,6 +24,18 @@ The explicit root workspace list is a product boundary. Do not replace it with `
 
 ## Daily commands
 
+PPTX image-preview regression: run `npm run test -w @genoffice/slides --
+tests/browser-media-rendering.test.ts`, rebuild/package the editor, then run
+`npx playwright test --config playwright.host.config.ts tests/visual/pptx-media.spec.ts`.
+These checks require image data and painted stage/thumbnail pixels, beyond media retention in the
+saved ZIP. When comparing against WPS, reopen the same saved file revision in both applications:
+dates/charts added after WPS opened are content-version differences. Installed plugin resources
+and an already-mounted editor do not hot-update from a checkout build. Apply a newly validated
+plugin build and resume the exact document session to inspect the fix in Codex; do not replace
+or remount a live document through data tools. Missing installed fonts can still change glyphs,
+line wrapping, and spacing. Full-width bold fallback advances no longer add artificial four-percent
+spacing; the targeted repair still does not certify pixel parity with WPS.
+
 ```bash
 npm run dev:editor     # standalone DOCX renderer on http://localhost:5173
 npm run dev -w @genoffice/sheets # XLSX on :5174 (slides :5175, pdf :5176)
@@ -274,7 +286,9 @@ publishes only after native Windows/macOS extracted-package smoke succeeds.
 | `plugins/tandemfolio/LICENSE`, `NOTICE`                                  | Distributed attribution                     | Yes     |
 
 The packaging script in `tools/package-plugin.mjs` emits one UI resource per format while copying
-fonts separately. DOCX, Markdown, PPTX, and PDF inline their Vite CSS and JavaScript directly. XLSX
+fonts separately. DOCX, Markdown, and PDF inline their Vite CSS and JavaScript directly. PPTX
+uses the existing self-contained gzip module vault for its complete single entry after compatible
+security updates pushed direct inlining 5,437 bytes above its unchanged 4 MB budget. XLSX
 preserves Vite dynamic-import boundaries, gzip/base64 embeds every emitted module in the same HTML,
 and starts it through an in-memory blob-URL module vault; no sibling hashed chunk or network fetch
 is required. It inserts asset contents with replacement callbacks so JavaScript replacement tokens

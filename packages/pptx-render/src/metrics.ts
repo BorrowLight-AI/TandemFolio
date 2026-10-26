@@ -1,3 +1,4 @@
+// Modified by TandemFolio contributors: keep full-width fallback advances stable in bold text.
 /**
  * 2.3 Text metrics (fidelity linchpin) — font metrics abstraction layer.
  *
@@ -169,10 +170,12 @@ export class HeuristicMetrics implements FontMetricsProvider {
   measure(text: string, style: RunStyle): number {
     let em = 0
     for (const g of graphemes(text)) {
-      em += clusterAdvanceEm(g)
+      const advance = clusterAdvanceEm(g)
+      // CJK/full-width glyphs retain their advance in bold faces. Expanding
+      // them inserts gaps between runs and prematurely wraps centered titles.
+      em += advance * (style.bold && advance < 1 ? 1.04 : 1)
     }
-    const boldFactor = style.bold ? 1.04 : 1
-    return em * style.fontSizePx * boldFactor
+    return em * style.fontSizePx
   }
 }
 
