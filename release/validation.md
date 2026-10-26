@@ -1,4 +1,19 @@
-# Release evidence verification — 2026-10-24
+# Release evidence verification — 2026-10-26
+
+## v0.1.0-beta.4
+
+The five-format formal capture completed at `2026-10-26T01:35:06.671Z` with
+`approved: true` and `ready: true`. Its source fingerprint is
+`49bab98cd0e2043093442bbd92d228ac6c3e50e38e27c92a1dd84b4f9450319f`.
+Root package, lockfile and plugin manifest versions are `0.1.0-beta.4`.
+Every format retains 7 cold starts, 7 opens per fixture size and 21 interactions.
+XLSX bootstrap p95 is 479.9 ms under 500 ms; total cold start is 820.327 ms
+under 1,400 ms. All five screenshots were reviewed and pass the unchanged
+3% comparison ceiling. This release includes the PPTX image and bold CJK layout
+repairs described below. GitHub's tag workflow checks the final source and host
+suite, then verifies the archive on Windows and macOS before publication.
+
+## Historical 2026-10-24 verification
 
 ## Current status: PPTX repair evidence approved
 

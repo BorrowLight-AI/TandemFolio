@@ -67843,7 +67843,7 @@ var release_readiness_default = {
     pdf: true
   },
   upstreamCommit: "dc4d7e5927864498913b7ba42d0da06cc7cf628e",
-  sourceFingerprint: "aaa5535a387be49e8acc364ec23cab6d5d1ce38d0fad7a9782ee759c66c9d6ff"
+  sourceFingerprint: "49bab98cd0e2043093442bbd92d228ac6c3e50e38e27c92a1dd84b4f9450319f"
 };
 
 // src/capabilities.ts
